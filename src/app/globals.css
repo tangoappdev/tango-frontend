@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+
+/* This line is often not needed if you're using a modern Tailwind setup, but leaving it in is harmless */
+@import "tailwindcss"; 
+
+:root {
+--background: #ffffff;
+--foreground: #171717;
+}
+
+/* This @theme block might be specific to a library you are using, keeping it as is. */
+@theme inline {
+--color-background: var(--background);
+--color-foreground: var(--foreground);
+--font-sans: var(--font-geist-sans);
+--font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+ :root {
+ --background: #0a0a0a;
+ --foreground: #ededed;
+ }
+}
+
+body {
+ background: var(--background);
+ color: var(--foreground);
+ font-family: 'Quicksand', Arial, Helvetica, sans-serif;
+}
+
+/* --- RC-KNOB FIX --- */
+.rc-knob {
+ display: inline-block;
+ width: 50px;
+ height: 50px;
+ touch-action: none;
+ box-shadow: 5px 5px 10px #1f2126, -5px -5px 10px #41454e;
+ border-radius: 9999px;
+ background: linear-gradient(145deg, #33373e, #2b2e34);
+}
+
+.rc-knob circle {
+ fill: none;
+ stroke-width: 6;
+}
+
+.rc-knob-path {
+ stroke: #25edda;
+}
+
+.rc-knob-track {
+ stroke: #1d1f23;
+}
+
+/*
+ ===============================================
+ NEW: Custom EQ Slider Styles
+ ===============================================
+*/
+
+/* Target our specific EQ sliders by the class name you added in the HTML */
+.custom-eq-slider {
+  -webkit-appearance: none; /* Hides the default slider look in Chrome/Safari */
+  appearance: none;
+  background: transparent; /* The Tailwind bg class will handle the track itself */
+  cursor: pointer;
+  /* Add some vertical padding to make the slider easier to grab */
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* --- Styling the Thumb (the draggable circle) --- */
+
+/* For Chrome, Safari, Opera, Edge */
+.custom-eq-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Remove default thumb look */
+  appearance: none;
+  margin-top: -8px; /* This value helps vertically center the thumb on the track. (Half the thumb height minus half the track height) */
+
+  height: 32px; /* Thumb height */
+  width: 12px;  /* Thumb width */
+  background-color: #30333a; /* Your neumorphic dark gray */
+  border-radius: 6px; /* Make it a circle */
+  border: 1px solid #25edda; /* Your accent color */
+  box-shadow: 3px 3px 3px #131417, -3px -3px 3px #4d525d; /* Your neumorphic shadow */
+}
+
+/* For Firefox */
+.custom-eq-slider::-moz-range-thumb {
+  height: 32px; /* Firefox thumb height */
+  width: 12px;  /* Firefox thumb width */
+  background-color: #30333a;
+  border-radius: 6px;
+  border: 1px solid #25edda;
+  box-shadow: 3px 3px 3px #131417, -1px -1px 3px #4d525d;
+  cursor: pointer;
+}
