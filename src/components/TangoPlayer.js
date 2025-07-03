@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 // --- Constants ---
-const API_BASE_URL = 'http://localhost:3100/api';
+const API_BASE_URL = '/api';
 const CATEGORIES = {
     TRADITIONAL_GOLDEN_AGE: "Traditional (Golden Age)",
     CONTEMPORARY_TRADITIONAL: "Contemporary Traditional",
