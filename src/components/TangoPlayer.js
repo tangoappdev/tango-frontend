@@ -126,7 +126,7 @@ export default function TangoPlayer() {
             }
         } catch (err) {
             console.error("FETCH ERROR:", err);
-            setError(err.message);
+            setError(`Detailed Error: ${err.toString()}`);
         } finally {
             isFetchingRef.current = false;
             setIsLoading(false);
