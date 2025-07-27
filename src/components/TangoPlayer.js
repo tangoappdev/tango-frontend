@@ -492,7 +492,7 @@ const handleAddToQueue = (tandaToAdd) => {
     const playPauseButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#25edda] to-[#23d9c8] text-white`;
 
     return (
-        <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-[28rem] mx-auto font-sans">
+        <div className="p-4 bg-transparent text-white rounded-lg shadow-lg w-full max-w-[28rem] mx-auto font-sans">
             {menuState.visible && (
                 <ContextMenu
                     position={{ x: menuState.x, y: menuState.y }}

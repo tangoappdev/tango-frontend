@@ -1,26 +1,32 @@
-import { Quicksand } from 'next/font/google'; // 1. Import Quicksand
+import { Quicksand } from 'next/font/google';
 import "./globals.css";
 
-// 2. Configure the Quicksand font
 const quicksand = Quicksand({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-quicksand', // 3. Assign it to a CSS variable
+  variable: '--font-quicksand',
 });
 
+// --- This part remains the same ---
 export const metadata = {
   title: "TangoDJ",
   description: "Your curated Tango music experience",
 };
 
+// --- CHANGE #1: Added this viewport export to disable zooming ---
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      {/* 4. Apply the new font variable, keeping your other classes */}
       <body className={`${quicksand.variable} antialiased bg-[#30333a] text-white`}>
-        <main className="flex flex-col justify-center items-center min-h-screen p-4">
-          {children}
-        </main>
+        {/* --- CHANGE #2: Removed the <main> tag from here for a cleaner structure --- */}
+        {children}
       </body>
     </html>
   );
