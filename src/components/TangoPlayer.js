@@ -519,7 +519,7 @@ const handleAddToQueue = (tandaToAdd) => {
                 </>) : (!isLoading && !error && <span>No music loaded.</span>)}
             </div>
             <audio ref={audioRef} crossOrigin="anonymous" onEnded={handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
-            <div className="flex items-center gap-2 mb-3 px-2">
+            <div className="flex items-center gap-3 mb-3 px-1">
                 <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
                 <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}>
                     <div className="absolute top-0 left-0 w-full h-full bg-[#222429] rounded-full shadow-[inset_3px_3px_2px_#222429,inset_-3px_-3px_2px_#3e424b]"></div>
