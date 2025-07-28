@@ -31,8 +31,8 @@ export default function QueueItem({ tanda, onMenuOpen }) {
         }
 
         const styles = {
-            Vals: 'bg-blue-500 text-white',
-            Milonga: 'bg-red-500 text-white',
+            Vals:  'text-[#25edda]',
+            Milonga:  'text-[#25edda]',
         };
 
         return {
