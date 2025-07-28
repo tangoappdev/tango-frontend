@@ -529,7 +529,7 @@ const handleAddToQueue = (tandaToAdd) => {
                 </div>
                 <span className="text-xs w-10 text-left tabular-nums">{formatTime(duration)}</span>
             </div>
-            <div className="flex justify-center items-center space-x-2 sm:space-x-4 mb-4">
+            <div className="flex justify-center items-center space-x-4 sm:space-x-4 mb-4">
                 <button onClick={handleRewind} title="Previous Tanda" disabled={tandaHistory.length === 0} className={`${regularButtonStyle} p-3`}>
         <ChevronDoubleLeftIcon className="h-5 w-5" />
     </button>
