@@ -1,9 +1,8 @@
 import React from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { useSortable } from '@d-kit/sortable';
+import { CSS } from '@d-kit/utilities';
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 
-// Note: No more `isDraggable` or `onAddToQueue`. We pass `onMenuOpen` instead.
 export default function QueueItem({ tanda, onMenuOpen }) {
     if (!tanda) {
         return null;
@@ -16,7 +15,7 @@ export default function QueueItem({ tanda, onMenuOpen }) {
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: tanda.id }); // No more `disabled` property here
+    } = useSortable({ id: tanda.id });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -25,7 +24,8 @@ export default function QueueItem({ tanda, onMenuOpen }) {
         zIndex: isDragging ? 10 : 'auto',
     };
 
-        const getTagInfo = (type) => {
+    // --- START: Logic for the tag is now here ---
+    const getTagInfo = (type) => {
         if (!type || type === 'Tango') {
             return null; // Don't show a tag for regular Tangos
         }
@@ -41,11 +41,14 @@ export default function QueueItem({ tanda, onMenuOpen }) {
         };
     };
 
+    const tagInfo = getTagInfo(tanda.type);
+    // --- END: Logic for the tag ---
+
     return (
         <div 
             ref={setNodeRef} 
             style={style} 
-            {...attributes} // Attributes stay on the main div for accessibility
+            {...attributes}
             className="flex items-center p-2 rounded-md hover:bg-white/10"
         >
             <img
@@ -53,15 +56,24 @@ export default function QueueItem({ tanda, onMenuOpen }) {
                 alt={`Artwork for ${tanda.orchestra}`}
                 className="w-12 h-12 object-cover rounded-md flex-shrink-0"
             />
+            
             <div className="flex-grow mx-3 overflow-hidden">
-                <p className="text-white font-medium truncate">{tanda.orchestra}</p>
+                <div className="flex items-center gap-2">
+                    <p className="text-white font-medium truncate">{tanda.orchestra}</p>
+                    
+                    {/* --- START: Conditionally render the tag --- */}
+                    {tagInfo && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${tagInfo.style}`}>
+                            {tagInfo.text}
+                        </span>
+                    )}
+                    {/* --- END: Tag render --- */}
+
+                </div>
                 <p className="text-gray-400 text-sm truncate">{tanda.singer || 'Instrumental'}</p>
             </div>
+
             <div className="flex-shrink-0">
-                {/* This button now does EVERYTHING!
-                  - {...listeners} makes it the drag handle (on press-and-hold).
-                  - onClick={...} opens the menu (on a simple click).
-                */}
                 <button 
                     {...listeners}
                     onClick={(e) => onMenuOpen(e, tanda)}
