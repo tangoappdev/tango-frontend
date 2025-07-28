@@ -74,6 +74,28 @@ body {
   padding-bottom: 8px;
 }
 
+/* --- Styling the Track (the bar the thumb slides on) --- */
+
+/* For Chrome, Safari, Opera, Edge */
+.custom-eq-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px; /* <--- Controls the thickness */
+  cursor: pointer;
+  background: #222429;
+  border-radius: 9999px;
+  box-shadow: inset 3px 3px 2px #222429, inset -3px -3px 2px #3e424b;
+}
+
+/* For Firefox */
+.custom-eq-slider::-moz-range-track {
+  width: 100%;
+  height: 4px; /* <--- Controls the thickness */
+  cursor: pointer;
+  background: #222429;
+  border-radius: 9999px;
+  box-shadow: inset 3px 3px 2px #222429, inset -3px -3px 2px #3e424b;
+}
+
 /* --- Styling the Thumb (the draggable circle) --- */
 
 /* For Chrome, Safari, Opera, Edge */
