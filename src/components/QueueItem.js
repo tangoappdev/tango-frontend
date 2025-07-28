@@ -24,21 +24,16 @@ export default function QueueItem({ tanda, onMenuOpen }) {
         zIndex: isDragging ? 10 : 'auto',
     };
 
-    // --- START: Logic for the tag is now here ---
+        // This function now returns a color value directly, which is more reliable.
     const getTagInfo = (type) => {
-        if (!type || type === 'Tango') {
-            return null; // Don't show a tag for regular Tangos
+        if (type === 'Vals' || type === 'Milonga') {
+            return {
+                text: type,
+                color: '#25edda', // The accent color
+            };
         }
-
-        const styles = {
-            Vals:  'text-[#25edda]',
-            Milonga:  'text-[#25edda]',
-        };
-
-        return {
-            text: type,
-            style: styles[type] || 'bg-gray-500 text-white',
-        };
+        // Return null for "Tango" or any other type so no tag is shown.
+        return null;
     };
 
     const tagInfo = getTagInfo(tanda.type);
