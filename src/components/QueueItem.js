@@ -63,7 +63,7 @@ export default function QueueItem({ tanda, onMenuOpen }) {
                     
                     {/* --- START: Conditionally render the tag --- */}
                     {tagInfo && (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${tagInfo.style}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-base font-semibold ${style}`}>
                             {tagInfo.text}
                         </span>
                     )}
