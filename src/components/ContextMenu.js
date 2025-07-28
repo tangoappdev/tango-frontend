@@ -20,7 +20,7 @@ function ContextMenu({ options, position, onClose }) {
   return (
     <div
       ref={menuRef}
-      className="absolute z-20 bg-[#3e424b] rounded-md shadow-lg p-2 flex flex-col gap-1"
+      className="absolute z-20 bg-[#3e424b] rounded-md shadow-lg p-2 flex flex-col gap-1 -translate-x-full -translate-y-full"
       style={{ top: position.y, left: position.x }}
     >
       {options.map((option, index) => (
