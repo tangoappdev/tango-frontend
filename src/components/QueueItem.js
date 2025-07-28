@@ -25,6 +25,22 @@ export default function QueueItem({ tanda, onMenuOpen }) {
         zIndex: isDragging ? 10 : 'auto',
     };
 
+        const getTagInfo = (type) => {
+        if (!type || type === 'Tango') {
+            return null; // Don't show a tag for regular Tangos
+        }
+
+        const styles = {
+            Vals: 'bg-blue-500 text-white',
+            Milonga: 'bg-red-500 text-white',
+        };
+
+        return {
+            text: type,
+            style: styles[type] || 'bg-gray-500 text-white',
+        };
+    };
+
     return (
         <div 
             ref={setNodeRef} 
