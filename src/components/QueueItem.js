@@ -1,6 +1,6 @@
 import React from 'react';
-import { useSortable } from '@d-kit/sortable';
-import { CSS } from '@d-kit/utilities';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 
 export default function QueueItem({ tanda, onMenuOpen }) {
