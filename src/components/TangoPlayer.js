@@ -126,7 +126,7 @@ export default function TangoPlayer() {
             }
         } catch (err) {
             console.error("FETCH ERROR:", err);
-            setError(`Detailed Error: ${err.toString()}`);
+            setError(err.message); // Reverted to cleaner error message
         } finally {
             isFetchingRef.current = false;
             setIsLoading(false);
@@ -323,18 +323,28 @@ export default function TangoPlayer() {
         }
     }, [currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda]);
 
-    const handlePlay = useCallback(() => {
+    // --- UPDATED: More robust handlePlay function ---
+    const handlePlay = useCallback(async () => {
         if (!audioContextRef.current) {
             initAudioGraph();
         }
         
         const audioCtx = audioContextRef.current;
         if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
+            try {
+                await audioCtx.resume();
+            } catch (e) {
+                console.error("Failed to resume AudioContext:", e);
+            }
         }
 
         if (audioRef.current?.src && audioRef.current.paused) {
-            audioRef.current.play().catch(e => console.error("Play failed:", e));
+            try {
+                await audioRef.current.play();
+            } catch (e) {
+                console.error("Play failed:", e);
+                setIsPlaying(false); // Ensure UI state is correct on failure
+            }
         } else if (!currentTanda && !isLoading) {
             fetchAndFillPlaylist();
         }
