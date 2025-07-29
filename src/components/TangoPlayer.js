@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers'; // <-- 1. IMPORT THIS
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import QueueItem from './QueueItem';
 import ContextMenu from './ContextMenu';
 import {
@@ -150,19 +150,14 @@ export default function TangoPlayer() {
     }, [manualQueue, upcomingPlaylist, fetchAndFillPlaylist]);
 
     const handleQueueScroll = useCallback(() => {
-    // Check the ref to make sure the container exists and we aren't already fetching new songs
-    if (queueContainerRef.current && !isFetchingRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = queueContainerRef.current;
-
-        // Check if the user has scrolled to the bottom (with a 50px buffer for a better experience)
-        const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
-
-        if (isNearBottom) {
-            console.log("Reached bottom of queue, fetching more...");
-            fetchAndFillPlaylist();
+        if (queueContainerRef.current && !isFetchingRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = queueContainerRef.current;
+            const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
+            if (isNearBottom) {
+                fetchAndFillPlaylist();
+            }
         }
-    }
-}, [fetchAndFillPlaylist]); // This function depends on fetchAndFillPlaylist
+    }, [fetchAndFillPlaylist]);
 
     useEffect(() => {
         if (resetCounter > 0) {
@@ -198,10 +193,7 @@ export default function TangoPlayer() {
 
     const handleDragEnd = (event) => {
         const { active, over } = event;
-
-        if (!over || active.id === over.id) {
-            return;
-        }
+        if (!over || active.id === over.id) return;
 
         const isActiveInManual = manualQueueIds.includes(active.id);
         const isOverInManual = manualQueueIds.includes(over.id);
@@ -209,7 +201,6 @@ export default function TangoPlayer() {
 
         if (!draggedTanda) return;
 
-        // Scenario 1: Reordering within the manual queue
         if (isActiveInManual && isOverInManual) {
             setManualQueue((items) => {
                 const oldIndex = items.findIndex((item) => item.id === active.id);
@@ -217,7 +208,6 @@ export default function TangoPlayer() {
                 return arrayMove(items, oldIndex, newIndex);
             });
         } 
-        // Scenario 2: Dragging an item from "Upcoming" into the manual queue
         else if (!isActiveInManual && isOverInManual) {
             setUpcomingPlaylist(prev => prev.filter(t => t.id !== active.id));
             setManualQueue(items => {
@@ -229,85 +219,51 @@ export default function TangoPlayer() {
         }
     };
 
-const handlePlayNext = (tandaToPlayNext) => {
-        // If there's no song playing, or if the selected song is already playing, do nothing.
+    const handlePlayNext = (tandaToPlayNext) => {
         if (!currentTanda || currentTanda.id === tandaToPlayNext.id) {
-            // If nothing is playing, this action is ambiguous, so we'll just add it to the queue to be safe.
              if (!currentTanda) {
                 handleAddToQueue(tandaToPlayNext);
              }
             return;
         }
-
-        // Create mutable copies of the current state to work with.
         let newManualQueue = [...manualQueue];
         let newUpcomingPlaylist = [...upcomingPlaylist];
-
-        // First, remove the tanda we want to play next from wherever it might be.
         newManualQueue = newManualQueue.filter(t => t.id !== tandaToPlayNext.id);
         newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToPlayNext.id);
-
-        // Now, find the location of the currently playing song.
         const currentTandaIndexInManual = newManualQueue.findIndex(t => t.id === currentTanda.id);
 
         if (currentTandaIndexInManual !== -1) {
-            // Case 1: The currently playing song is already in the manual queue.
-            // Simply insert the next tanda after it.
             newManualQueue.splice(currentTandaIndexInManual + 1, 0, tandaToPlayNext);
         } else {
-            // Case 2: The currently playing song is in the "Up Next" list. This is the bug location.
-            // We must remove it from the upcoming playlist.
             newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== currentTanda.id);
-
-            // Now, construct the new manual queue with the current song, the next song,
-            // and any other songs that were already in the manual queue.
             newManualQueue = [currentTanda, tandaToPlayNext, ...newManualQueue];
         }
-
-        // Finally, update the state with our new, correct arrays.
         setManualQueue(newManualQueue);
         setUpcomingPlaylist(newUpcomingPlaylist);
     };
 
-const handleAddToQueue = (tandaToAdd) => {
-        // If the item is already in the manual queue, do nothing.
+    const handleAddToQueue = (tandaToAdd) => {
         if (manualQueue.some(t => t.id === tandaToAdd.id)) {
             return;
         }
-
-        // Create mutable copies of the current state to work with.
         let newManualQueue = [...manualQueue];
         let newUpcomingPlaylist = [...upcomingPlaylist];
-
-        // First, remove the tanda we are adding from the upcoming list,
-        // as it will now be managed in the manual queue.
         newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToAdd.id);
 
-        // Now, decide how to add it to the manual queue.
         if (newManualQueue.length > 0) {
-            // Case 1: Manual queue is not empty. Simply add the new tanda to the end.
             newManualQueue.push(tandaToAdd);
         } else {
-            // Case 2: Manual queue is empty.
             if (currentTanda) {
-                // The current song must be from the "Up Next" list.
-                // We must remove it from there to prevent duplication.
                 newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== currentTanda.id);
-
-                // Now, construct the new manual queue, preserving the current song at the top.
                 if (currentTanda.id === tandaToAdd.id) {
-                    // This handles the edge case of adding the currently playing song itself.
                     newManualQueue = [currentTanda];
                 } else {
                     newManualQueue = [currentTanda, tandaToAdd];
                 }
             } else {
-                // Nothing was playing, so the new queue is just the song we added.
                 newManualQueue = [tandaToAdd];
             }
         }
-
-        // Finally, update the state with our new, correct arrays.
         setManualQueue(newManualQueue);
         setUpcomingPlaylist(newUpcomingPlaylist);
     };
@@ -395,41 +351,50 @@ const handleAddToQueue = (tandaToAdd) => {
     }, [currentTanda, currentTrackIndex, isPlaying]);
 
     const handleRewind = useCallback(() => {
-        // 1. Do nothing if there's no history to go back to.
         if (tandaHistory.length === 0) {
             return;
         }
-
-        // 2. Get the last played tanda from history and update the history list.
         const previousTanda = tandaHistory[0];
         const newHistory = tandaHistory.slice(1);
         setTandaHistory(newHistory);
-
-        // 3. This is the corrected logic for building the forward queue to prevent duplicates.
-        // First, combine the entire forward-looking queue.
-        const fullForwardQueue = [
-            ...manualQueue,
-            ...upcomingPlaylist
-        ];
-        
-        // Now, construct the new queue, ensuring the currentTanda is at the front
-        // and filtering out its original copy from the rest of the list.
+        const fullForwardQueue = [...manualQueue, ...upcomingPlaylist];
         const newQueue = [
             currentTanda,
             ...fullForwardQueue.filter(t => t.id !== currentTanda?.id)
-        ].filter(Boolean); // .filter(Boolean) safely removes a null currentTanda if nothing was playing.
-
-
-        // 4. Set the previous tanda as the new current one by placing it at the front of the manual queue.
+        ].filter(Boolean);
         setManualQueue([previousTanda, ...newQueue]);
-        setUpcomingPlaylist([]); // Clear the upcoming playlist since everything is now managed in the manual queue.
-
-        // 5. Reset the track index to the start of the new tanda and maintain play state.
+        setUpcomingPlaylist([]);
         setCurrentTrackIndex(0);
         autoplayIntentRef.current = isPlaying;
-
     }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying]);
     
+    // --- NEW: useEffect for Media Session API (Background Playback) ---
+    useEffect(() => {
+        const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
+
+        // Check if the Media Session API is available
+        if ('mediaSession' in navigator && currentTanda && currentTrack) {
+            navigator.mediaSession.metadata = new window.MediaMetadata({
+                title: currentTrack.title,
+                artist: currentTanda.orchestra,
+                album: `${currentTanda.singer || 'Instrumental'} - ${currentTanda.type}`,
+                artwork: [
+                    { src: currentTanda.artwork_signed, sizes: '512x512', type: 'image/jpeg' },
+                ]
+            });
+
+            // Set up action handlers for lock screen controls
+            navigator.mediaSession.setActionHandler('play', handlePlay);
+            navigator.mediaSession.setActionHandler('pause', handlePause);
+            navigator.mediaSession.setActionHandler('previoustrack', handleSkipBackward);
+            navigator.mediaSession.setActionHandler('nexttrack', handleSkipForward);
+            // These actions can be added if you implement them
+            // navigator.mediaSession.setActionHandler('seekbackward', () => { /* ... */ });
+            // navigator.mediaSession.setActionHandler('seekforward', () => { /* ... */ });
+        }
+    }, [currentTanda, currentTrackIndex, handlePlay, handlePause, handleSkipBackward, handleSkipForward]);
+
+
     const handlePanelToggle = (panelName) => setActivePanel(prev => prev === panelName ? null : panelName);
     
     const handleEqChange = useCallback((band, value) => {
@@ -531,8 +496,8 @@ const handleAddToQueue = (tandaToAdd) => {
             </div>
             <div className="flex justify-center items-center space-x-3 sm:space-x-4 mb-4">
                 <button onClick={handleRewind} title="Previous Tanda" disabled={tandaHistory.length === 0} className={`${regularButtonStyle} p-3`}>
-        <ChevronDoubleLeftIcon className="h-5 w-5" />
-    </button>
+                    <ChevronDoubleLeftIcon className="h-5 w-5" />
+                </button>
                 <button onClick={handleSkipBackward} title="Skip Track Backward" disabled={!currentTanda} className={`${regularButtonStyle} p-3`}><ChevronLeftIcon className="h-5 w-5" /></button>
                 <button onClick={isPlaying ? handlePause : handlePlay} disabled={!currentTanda && isLoading} className={`${playPauseButtonStyle} p-4`} title={isPlaying ? "Pause" : "Play"}>{isPlaying ? <PauseIcon className="h-7 w-7" /> : <PlayIcon className="h-7 w-7" />}</button>
                 <button onClick={handleSkipForward} title="Skip Track Forward" disabled={!currentTanda} className={`${regularButtonStyle} p-3`}><ChevronRightIcon className="h-5 w-5" /></button>
@@ -560,11 +525,11 @@ const handleAddToQueue = (tandaToAdd) => {
                     <div className="p-2 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
                         <h3 className="text-lg font-semibold text-center text-gray-300 p-2">Queue</h3>
                         <div 
-            ref={queueContainerRef} 
-            onScroll={handleQueueScroll} 
-            className="max-h-80 overflow-y-auto"
-        >
-            {activePanel === 'queue' && (
+                            ref={queueContainerRef} 
+                            onScroll={handleQueueScroll} 
+                            className="max-h-80 overflow-y-auto"
+                        >
+                            {activePanel === 'queue' && (
                                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
                                     <SortableContext 
                                         items={[...manualQueueIds, ...upcomingPlaylistIds]}
