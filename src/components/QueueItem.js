@@ -24,25 +24,21 @@ export default function QueueItem({ tanda, onMenuOpen }) {
         zIndex: isDragging ? 10 : 'auto',
     };
 
-    // --- START: Logic for the tag is now here ---
+    // --- UPDATED: Logic for the tag ---
+    // This function now returns the abbreviated (M) or (V)
     const getTagInfo = (type) => {
-        if (!type || type === 'Tango') {
-            return null; // Don't show a tag for regular Tangos
+        if (type === 'Vals') {
+            return { text: '(V)', style: 'text-[#25edda]' };
         }
-
-        const styles = {
-            Vals:   'text-[#25edda]',
-            Milonga:   'text-[#25edda]',
-        };
-
-        return {
-            text: type,
-            style: styles[type] || 'bg-gray-500 text-white',
-        };
+        if (type === 'Milonga') {
+            return { text: '(M)', style: 'text-[#25edda]' };
+        }
+        // Return null for "Tango" so no tag is shown.
+        return null;
     };
 
     const tagInfo = getTagInfo(tanda.type);
-    // --- END: Logic for the tag ---
+    // --- END: Update ---
 
     return (
         <div 
@@ -58,17 +54,18 @@ export default function QueueItem({ tanda, onMenuOpen }) {
             />
             
             <div className="flex-grow mx-3 overflow-hidden">
-                <div className="flex items-center gap-1 flex-nowrap">
-                    {/* --- UPDATED: Added min-w-0 to allow truncation --- */}
-                    <p className="text-white font-medium truncate min-w-0">{tanda.orchestra}</p>
+                {/* --- REVERTED: The container no longer has flex-nowrap --- */}
+                <div className="flex items-center gap-2">
+                    {/* --- REVERTED: The orchestra name no longer has min-w-0 --- */}
+                    <p className="text-white font-medium truncate">{tanda.orchestra}</p>
                     
-                    {/* --- START: Conditionally render the tag --- */}
+                    {/* --- UPDATED: Renders the new (M) or (V) tag --- */}
                     {tagInfo && (
-                        <span className={`px-2 py-0.5 rounded-full text-s font-semibold ${tagInfo.style}`}>
-                            - {tagInfo.text}
+                        <span className={`text-s font-semibold ${tagInfo.style}`}>
+                            {tagInfo.text}
                         </span>
                     )}
-                    {/* --- END: Tag render --- */}
+                    {/* --- END: Update --- */}
 
                 </div>
                 <p className="text-gray-400 text-sm truncate">{tanda.singer || 'Instrumental'}</p>
