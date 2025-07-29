@@ -174,9 +174,44 @@ export default function TangoPlayer() {
         }
     }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist]);
 
+    const initAudioGraph = useCallback(() => {
+        if (audioContextRef.current) return;
+        const context = new (window.AudioContext || window.webkitAudioContext)();
+        if (!audioRef.current) return;
+        const source = context.createMediaElementSource(audioRef.current);
+        const lowShelf = context.createBiquadFilter();
+        lowShelf.type = 'lowshelf';
+        lowShelf.frequency.value = 320;
+        lowShelf.gain.value = eq.low;
+        const midPeaking = context.createBiquadFilter();
+        midPeaking.type = 'peaking';
+        midPeaking.frequency.value = 1000;
+        midPeaking.Q.value = 1;
+        midPeaking.gain.value = eq.mid;
+        const highShelf = context.createBiquadFilter();
+        highShelf.type = 'highshelf';
+        highShelf.frequency.value = 3200;
+        highShelf.gain.value = eq.high;
+        source.connect(lowShelf);
+        lowShelf.connect(midPeaking);
+        midPeaking.connect(highShelf);
+        highShelf.connect(context.destination);
+        audioContextRef.current = context;
+        sourceNodeRef.current = source;
+        lowShelfRef.current = lowShelf;
+        midPeakingRef.current = midPeaking;
+        highShelfRef.current = highShelf;
+    }, [eq.low, eq.mid, eq.high]);
+
+    // --- CHANGE #1: Updated the useEffect that loads tracks ---
     useEffect(() => {
         const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
         if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
+            // Ensure the audio graph is ready for the new track, especially for autoplay
+            if (!audioContextRef.current) {
+                initAudioGraph();
+            }
+            
             audioRef.current.src = trackUrl;
             audioRef.current.load();
             if (autoplayIntentRef.current) {
@@ -184,7 +219,7 @@ export default function TangoPlayer() {
                 audioRef.current.play().catch(e => setIsPlaying(false));
             }
         }
-    }, [currentTanda, currentTrackIndex]);
+    }, [currentTanda, currentTrackIndex, initAudioGraph]); // Added initAudioGraph dependency
     
     const handleSettingChange = (settingName, value) => {
         setSettings(prev => ({ ...prev, [settingName]: value }));
@@ -290,43 +325,19 @@ export default function TangoPlayer() {
         }
     }, [currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda]);
 
-    const initAudioGraph = useCallback(() => {
-        if (audioContextRef.current) return;
-        const context = new (window.AudioContext || window.webkitAudioContext)();
-        if (!audioRef.current) return;
-        const source = context.createMediaElementSource(audioRef.current);
-        const lowShelf = context.createBiquadFilter();
-        lowShelf.type = 'lowshelf';
-        lowShelf.frequency.value = 320;
-        lowShelf.gain.value = eq.low;
-        const midPeaking = context.createBiquadFilter();
-        midPeaking.type = 'peaking';
-        midPeaking.frequency.value = 1000;
-        midPeaking.Q.value = 1;
-        midPeaking.gain.value = eq.mid;
-        const highShelf = context.createBiquadFilter();
-        highShelf.type = 'highshelf';
-        highShelf.frequency.value = 3200;
-        highShelf.gain.value = eq.high;
-        source.connect(lowShelf);
-        lowShelf.connect(midPeaking);
-        midPeaking.connect(highShelf);
-        highShelf.connect(context.destination);
-        audioContextRef.current = context;
-        sourceNodeRef.current = source;
-        lowShelfRef.current = lowShelf;
-        midPeakingRef.current = midPeaking;
-        highShelfRef.current = highShelf;
-    }, [eq.low, eq.mid, eq.high]);
-
+    // --- CHANGE #2: Updated the handlePlay function ---
     const handlePlay = useCallback(() => {
+        // Always ensure the audio graph is initialized before playing
         if (!audioContextRef.current) {
             initAudioGraph();
         }
+        
+        // Always try to resume the audio context, as it may be suspended
         const audioCtx = audioContextRef.current;
         if (audioCtx && audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
+
         if (audioRef.current?.src && audioRef.current.paused) {
             audioRef.current.play().catch(e => console.error("Play failed:", e));
         } else if (!currentTanda && !isLoading) {
@@ -368,11 +379,9 @@ export default function TangoPlayer() {
         autoplayIntentRef.current = isPlaying;
     }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying]);
     
-    // --- NEW: useEffect for Media Session API (Background Playback) ---
     useEffect(() => {
         const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
 
-        // Check if the Media Session API is available
         if ('mediaSession' in navigator && currentTanda && currentTrack) {
             navigator.mediaSession.metadata = new window.MediaMetadata({
                 title: currentTrack.title,
@@ -383,14 +392,10 @@ export default function TangoPlayer() {
                 ]
             });
 
-            // Set up action handlers for lock screen controls
             navigator.mediaSession.setActionHandler('play', handlePlay);
             navigator.mediaSession.setActionHandler('pause', handlePause);
             navigator.mediaSession.setActionHandler('previoustrack', handleSkipBackward);
             navigator.mediaSession.setActionHandler('nexttrack', handleSkipForward);
-            // These actions can be added if you implement them
-            // navigator.mediaSession.setActionHandler('seekbackward', () => { /* ... */ });
-            // navigator.mediaSession.setActionHandler('seekforward', () => { /* ... */ });
         }
     }, [currentTanda, currentTrackIndex, handlePlay, handlePause, handleSkipBackward, handleSkipForward]);
 
@@ -556,5 +561,4 @@ export default function TangoPlayer() {
                 </div>
             </div>
         </div>
-    );
-}
+    )
