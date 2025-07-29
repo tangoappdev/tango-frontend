@@ -58,8 +58,8 @@ export default function QueueItem({ tanda, onMenuOpen }) {
             />
             
             <div className="flex-grow mx-3 overflow-hidden">
-                {/* --- UPDATED: This container now prevents wrapping and has less space --- */}
                 <div className="flex items-center gap-1 flex-nowrap">
+                    {/* --- UPDATED: Added min-w-0 to allow truncation --- */}
                     <p className="text-white font-medium truncate min-w-0">{tanda.orchestra}</p>
                     
                     {/* --- START: Conditionally render the tag --- */}
