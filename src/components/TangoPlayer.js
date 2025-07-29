@@ -203,11 +203,9 @@ export default function TangoPlayer() {
         highShelfRef.current = highShelf;
     }, [eq.low, eq.mid, eq.high]);
 
-    // --- CHANGE #1: Updated the useEffect that loads tracks ---
     useEffect(() => {
         const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
         if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
-            // Ensure the audio graph is ready for the new track, especially for autoplay
             if (!audioContextRef.current) {
                 initAudioGraph();
             }
@@ -219,7 +217,7 @@ export default function TangoPlayer() {
                 audioRef.current.play().catch(e => setIsPlaying(false));
             }
         }
-    }, [currentTanda, currentTrackIndex, initAudioGraph]); // Added initAudioGraph dependency
+    }, [currentTanda, currentTrackIndex, initAudioGraph]);
     
     const handleSettingChange = (settingName, value) => {
         setSettings(prev => ({ ...prev, [settingName]: value }));
@@ -325,14 +323,11 @@ export default function TangoPlayer() {
         }
     }, [currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda]);
 
-    // --- CHANGE #2: Updated the handlePlay function ---
     const handlePlay = useCallback(() => {
-        // Always ensure the audio graph is initialized before playing
         if (!audioContextRef.current) {
             initAudioGraph();
         }
         
-        // Always try to resume the audio context, as it may be suspended
         const audioCtx = audioContextRef.current;
         if (audioCtx && audioCtx.state === 'suspended') {
             audioCtx.resume();
@@ -561,4 +556,5 @@ export default function TangoPlayer() {
                 </div>
             </div>
         </div>
-    )
+    );
+}
