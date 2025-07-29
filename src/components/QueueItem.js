@@ -31,8 +31,8 @@ export default function QueueItem({ tanda, onMenuOpen }) {
         }
 
         const styles = {
-            Vals:  'text-[#25edda]',
-            Milonga:  'text-[#25edda]',
+            Vals:   'text-[#25edda]',
+            Milonga:   'text-[#25edda]',
         };
 
         return {
@@ -64,7 +64,7 @@ export default function QueueItem({ tanda, onMenuOpen }) {
                     {/* --- START: Conditionally render the tag --- */}
                     {tagInfo && (
                         <span className={`px-2 py-0.5 rounded-full text-s font-semibold ${tagInfo.style}`}>
-                            {tagInfo.text}
+                            - {tagInfo.text}
                         </span>
                     )}
                     {/* --- END: Tag render --- */}
