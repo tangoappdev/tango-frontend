@@ -68,6 +68,7 @@ export default function TangoPlayer() {
         y: 0,
         tandaId: null,
     });
+    const [isEqEnabled, setIsEqEnabled] = useState(true); // NEW STATE for dynamic EQ
 
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null); 
@@ -90,6 +91,53 @@ export default function TangoPlayer() {
     const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
     const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
     const upcomingPlaylistIds = useMemo(() => upcomingPlaylist.map(t => t.id), [upcomingPlaylist]);
+
+    // --- NEW: useEffect to handle page visibility changes ---
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                // Page is hidden (screen locked), disable EQ for background playback
+                setIsEqEnabled(false);
+            } else {
+                // Page is visible again, re-enable EQ
+                setIsEqEnabled(true);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, []);
+
+    // --- NEW: useEffect to dynamically connect/disconnect the EQ nodes ---
+    useEffect(() => {
+        const audioCtx = audioContextRef.current;
+        const source = sourceNodeRef.current;
+        const low = lowShelfRef.current;
+        const mid = midPeakingRef.current;
+        const high = highShelfRef.current;
+
+        if (audioCtx && source && low && mid && high) {
+            // Always disconnect everything first to avoid multiple connections
+            source.disconnect();
+            low.disconnect();
+            mid.disconnect();
+            high.disconnect();
+
+            if (isEqEnabled) {
+                // Connect through the EQ chain
+                source.connect(low);
+                low.connect(mid);
+                mid.connect(high);
+                high.connect(audioCtx.destination);
+            } else {
+                // Connect directly to the output, bypassing the EQ
+                source.connect(audioCtx.destination);
+            }
+        }
+    }, [isEqEnabled]); // This effect runs whenever isEqEnabled changes
 
     const fetchAndFillPlaylist = useCallback(async () => {
         if (isFetchingRef.current) return;
@@ -186,11 +234,38 @@ export default function TangoPlayer() {
         }
     }, [currentTanda, currentTrackIndex]);
     
-    // --- TEST: Temporarily disable the equalizer ---
+    // --- RE-ENABLED: Equalizer is now active again ---
     const initAudioGraph = useCallback(() => {
-        // This function is disabled for the background audio test.
-        // The audio will play directly without passing through the equalizer.
-    }, []);
+        if (audioContextRef.current) return;
+        const context = new (window.AudioContext || window.webkitAudioContext)();
+        if (!audioRef.current) return;
+        const source = context.createMediaElementSource(audioRef.current);
+        const lowShelf = context.createBiquadFilter();
+        lowShelf.type = 'lowshelf';
+        lowShelf.frequency.value = 320;
+        lowShelf.gain.value = eq.low;
+        const midPeaking = context.createBiquadFilter();
+        midPeaking.type = 'peaking';
+        midPeaking.frequency.value = 1000;
+        midPeaking.Q.value = 1;
+        midPeaking.gain.value = eq.mid;
+        const highShelf = context.createBiquadFilter();
+        highShelf.type = 'highshelf';
+        highShelf.frequency.value = 3200;
+        highShelf.gain.value = eq.high;
+        
+        // Connect the graph initially
+        source.connect(lowShelf);
+        lowShelf.connect(midPeaking);
+        midPeaking.connect(highShelf);
+        highShelf.connect(context.destination);
+
+        audioContextRef.current = context;
+        sourceNodeRef.current = source;
+        lowShelfRef.current = lowShelf;
+        midPeakingRef.current = midPeaking;
+        highShelfRef.current = highShelf;
+    }, [eq.low, eq.mid, eq.high]);
 
     const handleSettingChange = (settingName, value) => {
         setSettings(prev => ({ ...prev, [settingName]: value }));
@@ -297,7 +372,19 @@ export default function TangoPlayer() {
     }, [currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda]);
 
     const handlePlay = useCallback(async () => {
-        // We no longer need to check for the audio context here for the test
+        if (!audioContextRef.current) {
+            initAudioGraph();
+        }
+        
+        const audioCtx = audioContextRef.current;
+        if (audioCtx && audioCtx.state === 'suspended') {
+            try {
+                await audioCtx.resume();
+            } catch (e) {
+                console.error("Failed to resume AudioContext:", e);
+            }
+        }
+
         if (audioRef.current?.src && audioRef.current.paused) {
             try {
                 await audioRef.current.play();
@@ -308,7 +395,7 @@ export default function TangoPlayer() {
         } else if (!currentTanda && !isLoading) {
             fetchAndFillPlaylist();
         }
-    }, [currentTanda, isLoading, fetchAndFillPlaylist]);
+    }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph]);
     
     const handlePause = useCallback(() => {
         if (audioRef.current) audioRef.current.pause();
@@ -367,10 +454,16 @@ export default function TangoPlayer() {
 
     const handlePanelToggle = (panelName) => setActivePanel(prev => prev === panelName ? null : panelName);
     
-    // --- TEST: Temporarily disable the equalizer logic ---
+    // --- RE-ENABLED: Equalizer logic is now active again ---
     const handleEqChange = useCallback((band, value) => {
-        // This function is disabled for the background audio test.
-    }, []);
+        const gainValue = parseFloat(value);
+        setEq(prevEq => ({ ...prevEq, [band]: gainValue }));
+        const audioCtx = audioContextRef.current;
+        if (!audioCtx || !isEqEnabled) return; // Only change if EQ is enabled
+        if (band === 'low' && lowShelfRef.current) lowShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
+        if (band === 'mid' && midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
+        if (band === 'high' && highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
+    }, [isEqEnabled]); // Added isEqEnabled dependency
 
     const handleMenuOpen = useCallback((event, tanda) => {
         event.preventDefault();
@@ -450,7 +543,6 @@ export default function TangoPlayer() {
             </div>
             
             <audio ref={audioRef} crossOrigin="anonymous" onEnded={handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
-            {/* The silent audio element has been removed for this test */}
 
             <div className="flex items-center gap-3 mb-3 px-1">
                 <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
@@ -473,8 +565,15 @@ export default function TangoPlayer() {
             </div>
             <div className="flex justify-center items-center space-x-4 mt-4 border-t border-gray-700/50 pt-2">
                 <button onClick={() => handlePanelToggle('settings')} title="Settings" className={`p-2 rounded-full transition-colors ${activePanel === 'settings' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><AdjustmentsVerticalIcon className="h-6 w-6" /></button>
-                {/* --- TEST: Disable the equalizer button --- */}
-                <button onClick={() => handlePanelToggle('eq')} title="Equalizer (disabled for test)" disabled className={`p-2 rounded-full transition-colors text-gray-600 cursor-not-allowed`}><SparklesIcon className="h-6 w-6" /></button>
+                {/* --- UPDATED: EQ button is now dynamically styled --- */}
+                <button 
+                    onClick={() => isEqEnabled && handlePanelToggle('eq')} 
+                    title={isEqEnabled ? "Equalizer" : "Equalizer disabled in background"} 
+                    disabled={!isEqEnabled} 
+                    className={`p-2 rounded-full transition-colors ${!isEqEnabled ? 'text-gray-600 cursor-not-allowed' : activePanel === 'eq' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+                >
+                    <SparklesIcon className="h-6 w-6" />
+                </button>
                 <button onClick={() => handlePanelToggle('queue')} title="Queue" className={`p-2 rounded-full transition-colors ${activePanel === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><QueueListIcon className="h-6 w-6" /></button>
             </div>
             <div className={`transition-all duration-500 ease-in-out overflow-hidden ${activePanel ? 'max-h-[500px] mt-4' : 'max-h-0'}`}>
