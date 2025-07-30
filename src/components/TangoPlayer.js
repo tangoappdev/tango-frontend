@@ -124,11 +124,21 @@ export default function TangoPlayer() {
             isFetchingRef.current = false;
             setIsLoading(false);
         }
-    }, [settings, recentlyPlayedIds, upcomingPlaylist]);
+    }, [settings.categoryFilter, settings.tandaOrder, recentlyPlayedIds, upcomingPlaylist]);
+
+    // --- UPDATED: This is the corrected fetching logic ---
+    useEffect(() => {
+        // Fetch music only once when the component first loads or when settings change
+        fetchAndFillPlaylist();
+    }, [resetCounter, settings.categoryFilter, settings.tandaOrder]); // Dependencies are now stable
 
     useEffect(() => {
-        fetchAndFillPlaylist();
-    }, [fetchAndFillPlaylist, resetCounter]);
+        // This separate effect handles refilling the playlist when it gets low
+        const needsRefill = upcomingPlaylist.length > 0 && upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
+        if (needsRefill && !isFetchingRef.current) {
+            fetchAndFillPlaylist();
+        }
+    }, [upcomingPlaylist.length, fetchAndFillPlaylist]);
 
     const handleDragEnd = (event) => {
         const { active, over } = event;
