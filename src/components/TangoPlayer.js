@@ -33,14 +33,14 @@ function formatTime(seconds) {
 export default function TangoPlayer({
     settings,
     setSettings,
-    manualQueue,
+    manualQueue = [], // <-- FIX: Added default value
     setManualQueue,
-    upcomingPlaylist,
+    upcomingPlaylist = [], // <-- FIX: Added default value
     setUpcomingPlaylist,
     recentlyPlayedIds,
     setRecentlyPlayedIds,
     fetchAndFillPlaylist,
-    onQueueToggle, // <-- Prop to open/close the queue
+    onQueueToggle,
 }) {
     // --- State managed by this component ---
     const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
