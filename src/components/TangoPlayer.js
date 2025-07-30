@@ -31,7 +31,6 @@ const ORCHESTRA_TYPE_OPTIONS = Object.values(CATEGORIES).map(cat => ({ value: ca
 const TANDA_LENGTH_OPTIONS = [3, 4];
 const FREESTYLE_FETCH_BATCH_SIZE = 6;
 const PLAYLIST_REFILL_THRESHOLD = 5;
-const SILENT_AUDIO_DATA_URL = "data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSUNSAAAACgAAADIZNzM1Mjc5QWZETAAAAGkAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAADhAAAAANIAAAAA-";
 
 const initialSettings = {
     categoryFilter: CATEGORIES.TRADITIONAL_GOLDEN_AGE,
@@ -69,10 +68,8 @@ export default function TangoPlayer() {
         y: 0,
         tandaId: null,
     });
-    const [userInteracted, setUserInteracted] = useState(false); // <-- NEW STATE
 
     const audioRef = useRef(null);
-    const silentAudioRef = useRef(null); // <-- NEW REF
     const queueContainerRef = useRef(null); 
     const autoplayIntentRef = useRef(false);
     const isFetchingRef = useRef(false);
@@ -93,17 +90,6 @@ export default function TangoPlayer() {
     const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
     const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
     const upcomingPlaylistIds = useMemo(() => upcomingPlaylist.map(t => t.id), [upcomingPlaylist]);
-
-    // --- NEW: useEffect for the silent audio hack ---
-    useEffect(() => {
-        if (userInteracted && silentAudioRef.current) {
-            // Play the silent audio on a loop to keep the audio session active
-            silentAudioRef.current.play().catch(e => {
-                // This might fail if the user hasn't interacted, but it's a best effort
-                console.warn("Silent audio play failed, this is expected on some browsers before interaction.", e);
-            });
-        }
-    }, [userInteracted]);
 
     const fetchAndFillPlaylist = useCallback(async () => {
         if (isFetchingRef.current) return;
@@ -188,42 +174,9 @@ export default function TangoPlayer() {
         }
     }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist]);
 
-    const initAudioGraph = useCallback(() => {
-        if (audioContextRef.current) return;
-        const context = new (window.AudioContext || window.webkitAudioContext)();
-        if (!audioRef.current) return;
-        const source = context.createMediaElementSource(audioRef.current);
-        const lowShelf = context.createBiquadFilter();
-        lowShelf.type = 'lowshelf';
-        lowShelf.frequency.value = 320;
-        lowShelf.gain.value = eq.low;
-        const midPeaking = context.createBiquadFilter();
-        midPeaking.type = 'peaking';
-        midPeaking.frequency.value = 1000;
-        midPeaking.Q.value = 1;
-        midPeaking.gain.value = eq.mid;
-        const highShelf = context.createBiquadFilter();
-        highShelf.type = 'highshelf';
-        highShelf.frequency.value = 3200;
-        highShelf.gain.value = eq.high;
-        source.connect(lowShelf);
-        lowShelf.connect(midPeaking);
-        midPeaking.connect(highShelf);
-        highShelf.connect(context.destination);
-        audioContextRef.current = context;
-        sourceNodeRef.current = source;
-        lowShelfRef.current = lowShelf;
-        midPeakingRef.current = midPeaking;
-        highShelfRef.current = highShelf;
-    }, [eq.low, eq.mid, eq.high]);
-
     useEffect(() => {
         const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
         if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
-            if (!audioContextRef.current) {
-                initAudioGraph();
-            }
-            
             audioRef.current.src = trackUrl;
             audioRef.current.load();
             if (autoplayIntentRef.current) {
@@ -231,8 +184,14 @@ export default function TangoPlayer() {
                 audioRef.current.play().catch(e => setIsPlaying(false));
             }
         }
-    }, [currentTanda, currentTrackIndex, initAudioGraph]);
+    }, [currentTanda, currentTrackIndex]);
     
+    // --- TEST: Temporarily disable the equalizer ---
+    const initAudioGraph = useCallback(() => {
+        // This function is disabled for the background audio test.
+        // The audio will play directly without passing through the equalizer.
+    }, []);
+
     const handleSettingChange = (settingName, value) => {
         setSettings(prev => ({ ...prev, [settingName]: value }));
         setResetCounter(c => c + 1);
@@ -338,24 +297,7 @@ export default function TangoPlayer() {
     }, [currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda]);
 
     const handlePlay = useCallback(async () => {
-        // --- UPDATED: Trigger the silent audio hack on first play ---
-        if (!userInteracted) {
-            setUserInteracted(true);
-        }
-
-        if (!audioContextRef.current) {
-            initAudioGraph();
-        }
-        
-        const audioCtx = audioContextRef.current;
-        if (audioCtx && audioCtx.state === 'suspended') {
-            try {
-                await audioCtx.resume();
-            } catch (e) {
-                console.error("Failed to resume AudioContext:", e);
-            }
-        }
-
+        // We no longer need to check for the audio context here for the test
         if (audioRef.current?.src && audioRef.current.paused) {
             try {
                 await audioRef.current.play();
@@ -366,7 +308,7 @@ export default function TangoPlayer() {
         } else if (!currentTanda && !isLoading) {
             fetchAndFillPlaylist();
         }
-    }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph, userInteracted]); // Added userInteracted
+    }, [currentTanda, isLoading, fetchAndFillPlaylist]);
     
     const handlePause = useCallback(() => {
         if (audioRef.current) audioRef.current.pause();
@@ -425,14 +367,9 @@ export default function TangoPlayer() {
 
     const handlePanelToggle = (panelName) => setActivePanel(prev => prev === panelName ? null : panelName);
     
+    // --- TEST: Temporarily disable the equalizer logic ---
     const handleEqChange = useCallback((band, value) => {
-        const gainValue = parseFloat(value);
-        setEq(prevEq => ({ ...prevEq, [band]: gainValue }));
-        const audioCtx = audioContextRef.current;
-        if (!audioCtx) return;
-        if (band === 'low' && lowShelfRef.current) lowShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
-        if (band === 'mid' && midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
-        if (band === 'high' && highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
+        // This function is disabled for the background audio test.
     }, []);
 
     const handleMenuOpen = useCallback((event, tanda) => {
@@ -512,9 +449,8 @@ export default function TangoPlayer() {
                 </>) : (!isLoading && !error && <span>No music loaded.</span>)}
             </div>
             
-            {/* --- NEW: The main audio element and the silent one --- */}
             <audio ref={audioRef} crossOrigin="anonymous" onEnded={handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
-            <audio ref={silentAudioRef} loop src={SILENT_AUDIO_DATA_URL} className="hidden" />
+            {/* The silent audio element has been removed for this test */}
 
             <div className="flex items-center gap-3 mb-3 px-1">
                 <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
@@ -537,7 +473,8 @@ export default function TangoPlayer() {
             </div>
             <div className="flex justify-center items-center space-x-4 mt-4 border-t border-gray-700/50 pt-2">
                 <button onClick={() => handlePanelToggle('settings')} title="Settings" className={`p-2 rounded-full transition-colors ${activePanel === 'settings' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><AdjustmentsVerticalIcon className="h-6 w-6" /></button>
-                <button onClick={() => handlePanelToggle('eq')} title="Equalizer" className={`p-2 rounded-full transition-colors ${activePanel === 'eq' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><SparklesIcon className="h-6 w-6" /></button>
+                {/* --- TEST: Disable the equalizer button --- */}
+                <button onClick={() => handlePanelToggle('eq')} title="Equalizer (disabled for test)" disabled className={`p-2 rounded-full transition-colors text-gray-600 cursor-not-allowed`}><SparklesIcon className="h-6 w-6" /></button>
                 <button onClick={() => handlePanelToggle('queue')} title="Queue" className={`p-2 rounded-full transition-colors ${activePanel === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><QueueListIcon className="h-6 w-6" /></button>
             </div>
             <div className={`transition-all duration-500 ease-in-out overflow-hidden ${activePanel ? 'max-h-[500px] mt-4' : 'max-h-0'}`}>
