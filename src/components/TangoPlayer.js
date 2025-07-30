@@ -1,10 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import QueueItem from './QueueItem';
 import ContextMenu from './ContextMenu';
 import {
     PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
@@ -13,31 +9,19 @@ import {
 } from '@heroicons/react/24/outline';
 
 // --- Constants ---
-const API_BASE_URL = '/api';
-const CATEGORIES = {
-    TRADITIONAL_GOLDEN_AGE: "Traditional (Golden Age)",
-    CONTEMPORARY_TRADITIONAL: "Contemporary Traditional",
-    ALTERNATIVE: "Alternative / Alternativo"
-};
-const TANDA_SEQUENCES = {
-    '2TV2TM': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
-    '3TV3TM': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
-    'Just Tango': ['Tango'],
-    'Just Vals': ['Vals'],
-    'Just Milonga': ['Milonga'],
-};
-const TANDA_ORDER_OPTIONS = Object.keys(TANDA_SEQUENCES).map(key => ({ value: key, label: key }));
-const ORCHESTRA_TYPE_OPTIONS = Object.values(CATEGORIES).map(cat => ({ value: cat, label: cat }));
+const TANDA_ORDER_OPTIONS = [
+    { value: '2TV2TM', label: '2TV2TM' },
+    { value: '3TV3TM', label: '3TV3TM' },
+    { value: 'Just Tango', label: 'Just Tango' },
+    { value: 'Just Vals', label: 'Just Vals' },
+    { value: 'Just Milonga', label: 'Just Milonga' },
+];
+const ORCHESTRA_TYPE_OPTIONS = [
+    { value: "Traditional (Golden Age)", label: "Traditional (Golden Age)"},
+    { value: "Contemporary Traditional", label: "Contemporary Traditional"},
+    { value: "Alternative / Alternativo", label: "Alternative / Alternativo"}
+];
 const TANDA_LENGTH_OPTIONS = [3, 4];
-const FREESTYLE_FETCH_BATCH_SIZE = 6;
-const PLAYLIST_REFILL_THRESHOLD = 5;
-
-const initialSettings = {
-    categoryFilter: CATEGORIES.TRADITIONAL_GOLDEN_AGE,
-    tandaLength: 4,
-    tandaOrder: '2TV2TM',
-    cortinas: true,
-};
 
 function formatTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return '00:00';
@@ -46,17 +30,24 @@ function formatTime(seconds) {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
-export default function TangoPlayer() {
-    const [settings, setSettings] = useState(initialSettings);
-    const [upcomingPlaylist, setUpcomingPlaylist] = useState([]);
-    const [manualQueue, setManualQueue] = useState([]);
+export default function TangoPlayer({
+    settings,
+    setSettings,
+    manualQueue,
+    setManualQueue,
+    upcomingPlaylist,
+    setUpcomingPlaylist,
+    recentlyPlayedIds,
+    setRecentlyPlayedIds,
+    fetchAndFillPlaylist,
+    onQueueToggle, // <-- Prop to open/close the queue
+}) {
+    // --- State managed by this component ---
     const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [recentlyPlayedIds, setRecentlyPlayedIds] = useState(new Set());
     const [tandaHistory, setTandaHistory] = useState([]);
-    const [resetCounter, setResetCounter] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [volume, setVolume] = useState(1);
@@ -69,12 +60,10 @@ export default function TangoPlayer() {
         tandaId: null,
     });
     const [isMobile, setIsMobile] = useState(false);
-    const [eqNotification, setEqNotification] = useState(''); // <-- NEW: State for EQ message
+    const [eqNotification, setEqNotification] = useState('');
 
     const audioRef = useRef(null);
-    const queueContainerRef = useRef(null); 
     const autoplayIntentRef = useRef(false);
-    const isFetchingRef = useRef(false);
     const isSeekingRef = useRef(false);
     const audioContextRef = useRef(null);
     const sourceNodeRef = useRef(null);
@@ -82,120 +71,15 @@ export default function TangoPlayer() {
     const midPeakingRef = useRef(null);
     const highShelfRef = useRef(null);
     
-    const sensors = useSensors(useSensor(PointerSensor, {
-        activationConstraint: {
-            delay: 250,
-            tolerance: 5,
-        },
-    }));
-    
     useEffect(() => {
         const checkForMobile = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         setIsMobile(checkForMobile());
     }, []);
 
     const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
-    const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
-    const upcomingPlaylistIds = useMemo(() => upcomingPlaylist.map(t => t.id), [upcomingPlaylist]);
 
-    const fetchAndFillPlaylist = useCallback(async () => {
-        if (isFetchingRef.current) return;
-        isFetchingRef.current = true;
-        setIsLoading(true);
-
-        const allExcludeIds = new Set([...recentlyPlayedIds, ...upcomingPlaylist.map(t => t.id)]);
-        const params = new URLSearchParams({
-            categoryFilter: settings.categoryFilter,
-            excludeIds: Array.from(allExcludeIds).join(','),
-        });
-
-        if (settings.tandaOrder.startsWith('Just')) {
-            params.append('requiredType', TANDA_SEQUENCES[settings.tandaOrder][0]);
-            params.append('limit', FREESTYLE_FETCH_BATCH_SIZE);
-        } else {
-            params.append('tandaOrder', settings.tandaOrder);
-        }
-        
-        const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}`;
-
-        try {
-            const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error('Failed to fetch playlist from server.');
-            const data = await response.json();
-            
-            if (data.upcomingTandas && data.upcomingTandas.length > 0) {
-                setUpcomingPlaylist(prev => {
-                    const combined = [...prev, ...data.upcomingTandas];
-                    const unique = combined.filter((tanda, index, self) => index === self.findIndex((t) => (t.id === tanda.id)));
-                    return unique;
-                });
-                setError(null);
-            }
-        } catch (err) {
-            console.error("FETCH ERROR:", err);
-            setError(err.message);
-        } finally {
-            isFetchingRef.current = false;
-            setIsLoading(false);
-        }
-    }, [settings, recentlyPlayedIds, upcomingPlaylist]);
-
-    const playNextTanda = useCallback(() => {
-        const sourceTanda = manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0];
-        if (!sourceTanda) { fetchAndFillPlaylist(); return; }
-        
-        setTandaHistory(prev => [sourceTanda, ...prev].slice(0, 50));
-        setRecentlyPlayedIds(prev => new Set(prev).add(sourceTanda.id));
-        setCurrentTrackIndex(0);
-        autoplayIntentRef.current = true;
-        
-        if (manualQueue.length > 0) {
-            setManualQueue(prev => prev.slice(1));
-        } else {
-            setUpcomingPlaylist(prev => prev.slice(1));
-        }
-    }, [manualQueue, upcomingPlaylist, fetchAndFillPlaylist]);
-
-    const handleQueueScroll = useCallback(() => {
-        if (queueContainerRef.current && !isFetchingRef.current) {
-            const { scrollTop, scrollHeight, clientHeight } = queueContainerRef.current;
-            const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
-            if (isNearBottom) {
-                fetchAndFillPlaylist();
-            }
-        }
-    }, [fetchAndFillPlaylist]);
-
-    useEffect(() => {
-        if (resetCounter > 0) {
-            setUpcomingPlaylist([]);
-            setManualQueue([]);
-            setRecentlyPlayedIds(new Set());
-        }
-    }, [resetCounter]);
-
-    useEffect(() => {
-        const needsFetching = upcomingPlaylist.length === 0 || upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
-        if (needsFetching && !isFetchingRef.current) {
-            fetchAndFillPlaylist();
-        }
-    }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist]);
-
-    useEffect(() => {
-        const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
-        if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
-            audioRef.current.src = trackUrl;
-            audioRef.current.load();
-            if (autoplayIntentRef.current) {
-                autoplayIntentRef.current = false;
-                audioRef.current.play().catch(e => setIsPlaying(false));
-            }
-        }
-    }, [currentTanda, currentTrackIndex]);
-    
     const initAudioGraph = useCallback(() => {
         if (isMobile || audioContextRef.current) return;
-
         const context = new (window.AudioContext || window.webkitAudioContext)();
         if (!audioRef.current) return;
         const source = context.createMediaElementSource(audioRef.current);
@@ -223,87 +107,33 @@ export default function TangoPlayer() {
         highShelfRef.current = highShelf;
     }, [eq.low, eq.mid, eq.high, isMobile]);
 
-    const handleSettingChange = (settingName, value) => {
-        setSettings(prev => ({ ...prev, [settingName]: value }));
-        setResetCounter(c => c + 1);
-    };
-
-    const handleDragEnd = (event) => {
-        const { active, over } = event;
-        if (!over || active.id === over.id) return;
-
-        const isActiveInManual = manualQueueIds.includes(active.id);
-        const isOverInManual = manualQueueIds.includes(over.id);
-        const draggedTanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === active.id);
-
-        if (!draggedTanda) return;
-
-        if (isActiveInManual && isOverInManual) {
-            setManualQueue((items) => {
-                const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over.id);
-                return arrayMove(items, oldIndex, newIndex);
-            });
-        } 
-        else if (!isActiveInManual && isOverInManual) {
-            setUpcomingPlaylist(prev => prev.filter(t => t.id !== active.id));
-            setManualQueue(items => {
-                const newIndex = items.findIndex(item => item.id === over.id);
-                const newItems = [...items];
-                newItems.splice(newIndex, 0, draggedTanda);
-                return newItems;
-            });
-        }
-    };
-
-    const handlePlayNext = (tandaToPlayNext) => {
-        if (!currentTanda || currentTanda.id === tandaToPlayNext.id) {
-             if (!currentTanda) {
-                handleAddToQueue(tandaToPlayNext);
-             }
-            return;
-        }
-        let newManualQueue = [...manualQueue];
-        let newUpcomingPlaylist = [...upcomingPlaylist];
-        newManualQueue = newManualQueue.filter(t => t.id !== tandaToPlayNext.id);
-        newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToPlayNext.id);
-        const currentTandaIndexInManual = newManualQueue.findIndex(t => t.id === currentTanda.id);
-
-        if (currentTandaIndexInManual !== -1) {
-            newManualQueue.splice(currentTandaIndexInManual + 1, 0, tandaToPlayNext);
-        } else {
-            newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== currentTanda.id);
-            newManualQueue = [currentTanda, tandaToPlayNext, ...newManualQueue];
-        }
-        setManualQueue(newManualQueue);
-        setUpcomingPlaylist(newUpcomingPlaylist);
-    };
-
-    const handleAddToQueue = (tandaToAdd) => {
-        if (manualQueue.some(t => t.id === tandaToAdd.id)) {
-            return;
-        }
-        let newManualQueue = [...manualQueue];
-        let newUpcomingPlaylist = [...upcomingPlaylist];
-        newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToAdd.id);
-
-        if (newManualQueue.length > 0) {
-            newManualQueue.push(tandaToAdd);
-        } else {
-            if (currentTanda) {
-                newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== currentTanda.id);
-                if (currentTanda.id === tandaToAdd.id) {
-                    newManualQueue = [currentTanda];
-                } else {
-                    newManualQueue = [currentTanda, tandaToAdd];
-                }
-            } else {
-                newManualQueue = [tandaToAdd];
+    useEffect(() => {
+        const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
+        if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
+            audioRef.current.src = trackUrl;
+            audioRef.current.load();
+            if (autoplayIntentRef.current) {
+                autoplayIntentRef.current = false;
+                audioRef.current.play().catch(e => setIsPlaying(false));
             }
         }
-        setManualQueue(newManualQueue);
-        setUpcomingPlaylist(newUpcomingPlaylist);
-    };
+    }, [currentTanda, currentTrackIndex]);
+
+    const playNextTanda = useCallback(() => {
+        const sourceTanda = manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0];
+        if (!sourceTanda) { fetchAndFillPlaylist(); return; }
+        
+        setTandaHistory(prev => [sourceTanda, ...prev].slice(0, 50));
+        setRecentlyPlayedIds(prev => new Set(prev).add(sourceTanda.id));
+        setCurrentTrackIndex(0);
+        autoplayIntentRef.current = true;
+        
+        if (manualQueue.length > 0) {
+            setManualQueue(prev => prev.slice(1));
+        } else {
+            setUpcomingPlaylist(prev => prev.slice(1));
+        }
+    }, [manualQueue, upcomingPlaylist, fetchAndFillPlaylist, setManualQueue, setUpcomingPlaylist, setRecentlyPlayedIds]);
 
     const handleTrackEnded = useCallback(() => {
         const totalTracks = currentTanda?.tracks_signed?.length || 0;
@@ -366,36 +196,27 @@ export default function TangoPlayer() {
     }, [currentTanda, currentTrackIndex, isPlaying]);
 
     const handleRewind = useCallback(() => {
-        if (tandaHistory.length === 0) {
-            return;
-        }
+        if (tandaHistory.length === 0) return;
         const previousTanda = tandaHistory[0];
         const newHistory = tandaHistory.slice(1);
         setTandaHistory(newHistory);
         const fullForwardQueue = [...manualQueue, ...upcomingPlaylist];
-        const newQueue = [
-            currentTanda,
-            ...fullForwardQueue.filter(t => t.id !== currentTanda?.id)
-        ].filter(Boolean);
+        const newQueue = [currentTanda, ...fullForwardQueue.filter(t => t.id !== currentTanda?.id)].filter(Boolean);
         setManualQueue([previousTanda, ...newQueue]);
         setUpcomingPlaylist([]);
         setCurrentTrackIndex(0);
         autoplayIntentRef.current = isPlaying;
-    }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying]);
+    }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying, setManualQueue, setUpcomingPlaylist]);
     
     useEffect(() => {
         const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
-
         if ('mediaSession' in navigator && currentTanda && currentTrack) {
             navigator.mediaSession.metadata = new window.MediaMetadata({
                 title: currentTrack.title,
                 artist: currentTanda.orchestra,
                 album: `${currentTanda.singer || 'Instrumental'} - ${currentTanda.type}`,
-                artwork: [
-                    { src: currentTanda.artwork_signed, sizes: '512x512', type: 'image/jpeg' },
-                ]
+                artwork: [{ src: currentTanda.artwork_signed, sizes: '512x512', type: 'image/jpeg' }]
             });
-
             navigator.mediaSession.setActionHandler('play', handlePlay);
             navigator.mediaSession.setActionHandler('pause', handlePause);
             navigator.mediaSession.setActionHandler('previoustrack', handleSkipBackward);
@@ -403,14 +224,11 @@ export default function TangoPlayer() {
         }
     }, [currentTanda, currentTrackIndex, handlePlay, handlePause, handleSkipBackward, handleSkipForward]);
 
-
     const handlePanelToggle = (panelName) => setActivePanel(prev => prev === panelName ? null : panelName);
     
-    // --- UPDATED: handleEqChange now shows a message on mobile ---
     const handleEqChange = useCallback((band, value) => {
         if (isMobile) {
             setEqNotification('Equalizer is available on desktop only.');
-            // Clear the message after 3 seconds
             setTimeout(() => setEqNotification(''), 3000);
             return;
         }
@@ -426,25 +244,17 @@ export default function TangoPlayer() {
     const handleMenuOpen = useCallback((event, tanda) => {
         event.preventDefault();
         event.stopPropagation();
-        setMenuState({
-            visible: true,
-            x: event.pageX,
-            y: event.pageY,
-            tandaId: tanda.id,
-        });
+        setMenuState({ visible: true, x: event.pageX, y: event.pageY, tandaId: tanda.id });
     }, []);
 
     const handleMenuClose = useCallback(() => {
         setMenuState(prev => ({ ...prev, visible: false }));
     }, []);
 
-    const handleMenuAction = useCallback((action) => {
-        const tanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === menuState.tandaId);
-        if (tanda) {
-            action(tanda);
-        }
+    const handleMenuAction = useCallback((action, tanda) => {
+        action(tanda);
         handleMenuClose();
-    }, [manualQueue, upcomingPlaylist, menuState.tandaId, handleMenuClose, handlePlayNext, handleAddToQueue]);
+    }, [handleMenuClose]);
 
     const handleSeek = (event) => { if (audioRef.current?.duration) { const seekTime = Number(event.target.value); audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); } };
     const handleProgressClick = useCallback((event) => { if (!audioRef.current || !duration) return; const barElement = event.currentTarget; const rect = barElement.getBoundingClientRect(); const clickX = event.clientX - rect.left; const seekTime = (clickX / rect.width) * duration; audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); }, [duration]);
@@ -479,9 +289,9 @@ export default function TangoPlayer() {
                     position={{ x: menuState.x, y: menuState.y }}
                     onClose={handleMenuClose}
                     options={[
-                        { label: 'Play Next', action: () => handleMenuAction(handlePlayNext) },
-                        !manualQueueIds.includes(menuState.tandaId) && 
-                            { label: 'Add to Queue', action: () => handleMenuAction(handleAddToQueue) }
+                        { label: 'Play Next', action: () => handleMenuAction(handlePlayNext, menuState.tandaId) },
+                        !manualQueue.some(t=>t.id === menuState.tandaId) && 
+                            { label: 'Add to Queue', action: () => handleMenuAction(handleAddToQueue, menuState.tandaId) }
                     ].filter(Boolean)}
                 />
             )}
@@ -530,23 +340,24 @@ export default function TangoPlayer() {
                 >
                     <SparklesIcon className="h-6 w-6" />
                 </button>
-                <button onClick={() => handlePanelToggle('queue')} title="Queue" className={`p-2 rounded-full transition-colors ${activePanel === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><QueueListIcon className="h-6 w-6" /></button>
+                <button onClick={onQueueToggle} title="Queue" className={`p-2 rounded-full transition-colors ${'text-gray-400 hover:text-white'}`}>
+                    <QueueListIcon className="h-6 w-6" />
+                </button>
             </div>
+
             <div className={`transition-all duration-500 ease-in-out overflow-hidden ${activePanel ? 'max-h-[500px] mt-4' : 'max-h-0'}`}>
                 <div className={activePanel === 'settings' ? 'block' : 'hidden'}>
                     <div className="p-4 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Player Settings</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-4">
-                            <div className="flex flex-col"><label htmlFor="tandaOrder" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrder" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                            <div className="flex flex-col"><label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilter" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                            <div className="flex flex-col items-start"><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
+                            <div className="flex flex-col"><label htmlFor="tandaOrder" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrder" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => setSettings(s=>({...s, tandaOrder: e.target.value}))} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                            <div className="flex flex-col"><label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilter" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => setSettings(s=>({...s, categoryFilter: e.target.value}))} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                            <div className="flex flex-col items-start"><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => setSettings(s=>({...s, tandaLength: len}))} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
                         </div>
                     </div>
                 </div>
                 <div className={activePanel === 'eq' ? 'block' : 'hidden'}>
                     <div className="p-6 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
                         <h3 className="text-lg font-semibold mb-2 text-center text-gray-300">Equalizer</h3>
-                        
-                        {/* --- UPDATED: Conditional UI for Equalizer and Notification --- */}
                         <div className="relative">
                             {eqNotification && (
                                 <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
@@ -558,39 +369,6 @@ export default function TangoPlayer() {
                                 <div className="flex flex-col"><label htmlFor="mid-eq" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent"/></div>
                                 <div className="flex flex-col"><label htmlFor="high-eq" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent"/></div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div className={activePanel === 'queue' ? 'block' : 'hidden'}>
-                    <div className="p-2 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
-                        <h3 className="text-lg font-semibold text-center text-gray-300 p-2">Queue</h3>
-                        <div 
-                            ref={queueContainerRef} 
-                            onScroll={handleQueueScroll} 
-                            className="max-h-80 overflow-y-auto"
-                        >
-                            {activePanel === 'queue' && (
-                                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
-                                    <SortableContext 
-                                        items={[...manualQueueIds, ...upcomingPlaylistIds]}
-                                        strategy={verticalListSortingStrategy}
-                                    >
-                                        {manualQueue.map((tanda) => (
-                                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={handleMenuOpen} />
-                                        ))}
-
-                                        {manualQueue.length > 0 && upcomingPlaylist.length > 0 && (
-                                            <div className="p-2 my-2 border-b border-t border-white/10">
-                                                <p className="text-xs text-center text-gray-400 font-semibold uppercase">Up Next</p>
-                                            </div>
-                                        )}
-                                        
-                                        {upcomingPlaylist.map((tanda) => (
-                                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={handleMenuOpen} />
-                                        ))}
-                                    </SortableContext>
-                                </DndContext>
-                            )}
                         </div>
                     </div>
                 </div>
