@@ -23,6 +23,13 @@ const ORCHESTRA_TYPE_OPTIONS = [
 ];
 const TANDA_LENGTH_OPTIONS = [3, 4];
 
+const initialSettings = {
+    categoryFilter: "Traditional (Golden Age)",
+    tandaLength: 4,
+    tandaOrder: '2TV2TM',
+};
+
+
 function formatTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return '00:00';
     const minutes = Math.floor(seconds / 60);
@@ -31,11 +38,11 @@ function formatTime(seconds) {
 }
 
 export default function TangoPlayer({
-    settings,
+    settings = initialSettings, // <-- FIX: Added default value
     setSettings,
-    manualQueue = [], // <-- FIX: Added default value
+    manualQueue = [],
     setManualQueue,
-    upcomingPlaylist = [], // <-- FIX: Added default value
+    upcomingPlaylist = [],
     setUpcomingPlaylist,
     recentlyPlayedIds,
     setRecentlyPlayedIds,
