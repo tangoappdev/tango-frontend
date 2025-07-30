@@ -68,7 +68,8 @@ export default function TangoPlayer() {
         y: 0,
         tandaId: null,
     });
-    const [isMobile, setIsMobile] = useState(false); // <-- NEW: State for device type
+    const [isMobile, setIsMobile] = useState(false);
+    const [eqNotification, setEqNotification] = useState(''); // <-- NEW: State for EQ message
 
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null); 
@@ -88,12 +89,10 @@ export default function TangoPlayer() {
         },
     }));
     
-    // --- NEW: useEffect to detect mobile device on mount ---
     useEffect(() => {
-        // This check is a reliable way to detect most touch devices.
         const checkForMobile = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         setIsMobile(checkForMobile());
-    }, []); // Empty array ensures this runs only once when the component mounts.
+    }, []);
 
     const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
     const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
@@ -195,7 +194,6 @@ export default function TangoPlayer() {
     }, [currentTanda, currentTrackIndex]);
     
     const initAudioGraph = useCallback(() => {
-        // --- UPDATED: Only initialize EQ on non-mobile devices ---
         if (isMobile || audioContextRef.current) return;
 
         const context = new (window.AudioContext || window.webkitAudioContext)();
@@ -223,7 +221,7 @@ export default function TangoPlayer() {
         lowShelfRef.current = lowShelf;
         midPeakingRef.current = midPeaking;
         highShelfRef.current = highShelf;
-    }, [eq.low, eq.mid, eq.high, isMobile]); // Added isMobile dependency
+    }, [eq.low, eq.mid, eq.high, isMobile]);
 
     const handleSettingChange = (settingName, value) => {
         setSettings(prev => ({ ...prev, [settingName]: value }));
@@ -408,8 +406,14 @@ export default function TangoPlayer() {
 
     const handlePanelToggle = (panelName) => setActivePanel(prev => prev === panelName ? null : panelName);
     
+    // --- UPDATED: handleEqChange now shows a message on mobile ---
     const handleEqChange = useCallback((band, value) => {
-        if (isMobile) return; // Do nothing on mobile
+        if (isMobile) {
+            setEqNotification('Equalizer is available on desktop only.');
+            // Clear the message after 3 seconds
+            setTimeout(() => setEqNotification(''), 3000);
+            return;
+        }
         const gainValue = parseFloat(value);
         setEq(prevEq => ({ ...prevEq, [band]: gainValue }));
         const audioCtx = audioContextRef.current;
@@ -540,17 +544,21 @@ export default function TangoPlayer() {
                 </div>
                 <div className={activePanel === 'eq' ? 'block' : 'hidden'}>
                     <div className="p-6 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
-                        <h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Equalizer</h3>
-                        {/* --- UPDATED: Conditional UI for Equalizer --- */}
-                        {isMobile ? (
-                            <p className="text-center text-gray-400">Equalizer is available on desktop for the best experience.</p>
-                        ) : (
+                        <h3 className="text-lg font-semibold mb-2 text-center text-gray-300">Equalizer</h3>
+                        
+                        {/* --- UPDATED: Conditional UI for Equalizer and Notification --- */}
+                        <div className="relative">
+                            {eqNotification && (
+                                <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
+                                    <p className="text-white text-center p-4">{eqNotification}</p>
+                                </div>
+                            )}
                             <div className="flex flex-col space-y-2">
                                 <div className="flex flex-col"><label htmlFor="low-eq" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent"/></div>
                                 <div className="flex flex-col"><label htmlFor="mid-eq" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent"/></div>
                                 <div className="flex flex-col"><label htmlFor="high-eq" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent"/></div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
                 <div className={activePanel === 'queue' ? 'block' : 'hidden'}>
