@@ -6,7 +6,7 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-ki
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import QueueItem from './QueueItem';
 import ContextMenu from './ContextMenu';
-import ResponsiveQueue from './ResponsiveQueue'; // Import the new queue
+import ResponsiveQueue from './ResponsiveQueue';
 import {
     PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
     ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, AdjustmentsVerticalIcon,
@@ -47,7 +47,6 @@ function formatTime(seconds) {
 }
 
 export default function TangoPlayer() {
-    // All state is managed within this single component
     const [settings, setSettings] = useState(initialSettings);
     const [upcomingPlaylist, setUpcomingPlaylist] = useState([]);
     const [manualQueue, setManualQueue] = useState([]);
@@ -88,7 +87,10 @@ export default function TangoPlayer() {
     const fetchAndFillPlaylist = useCallback(async () => {
         if (isFetchingRef.current) return;
         isFetchingRef.current = true;
-        setIsLoading(true);
+        // Only show the main loading spinner on initial load
+        if (upcomingPlaylist.length === 0) {
+            setIsLoading(true);
+        }
 
         const allExcludeIds = new Set([...recentlyPlayedIds, ...upcomingPlaylist.map(t => t.id)]);
         const params = new URLSearchParams({
@@ -124,21 +126,24 @@ export default function TangoPlayer() {
             isFetchingRef.current = false;
             setIsLoading(false);
         }
-    }, [settings.categoryFilter, settings.tandaOrder, recentlyPlayedIds, upcomingPlaylist]);
+    }, [settings.categoryFilter, settings.tandaOrder, recentlyPlayedIds, upcomingPlaylist]); // Keep dependencies, but fix the trigger
 
     // --- UPDATED: Corrected fetching logic ---
     useEffect(() => {
-        // Fetch music when the component first loads or when settings change.
+        // This effect now ONLY runs for the initial fetch or when settings are changed.
+        setUpcomingPlaylist([]);
+        setRecentlyPlayedIds(new Set());
         fetchAndFillPlaylist();
     }, [resetCounter, settings.categoryFilter, settings.tandaOrder]);
 
     useEffect(() => {
-        // This separate effect handles refilling the playlist when it gets low.
+        // This separate effect ONLY handles refilling the playlist when it gets low.
+        // It does NOT depend on the fetchAndFillPlaylist function itself, which breaks the loop.
         const needsRefill = upcomingPlaylist.length > 0 && upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
         if (needsRefill && !isFetchingRef.current) {
             fetchAndFillPlaylist();
         }
-    }, [upcomingPlaylist.length, fetchAndFillPlaylist]);
+    }, [upcomingPlaylist.length]); // This now only depends on the length of the playlist.
 
     const handleDragEnd = (event) => {
         const { active, over } = event;
