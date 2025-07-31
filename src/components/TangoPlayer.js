@@ -193,7 +193,8 @@ export default function TangoPlayer() {
     });
     const [eqNotification, setEqNotification] = useState('');
     const [playerHeight, setPlayerHeight] = useState(0);
-    const [isDesktop, setIsDesktop] = useState(null); // <-- FIX: Start with null
+    const [hasMounted, setHasMounted] = useState(false); // <-- FIX: State to track client-side mount
+    const [isDesktop, setIsDesktop] = useState(false); // <-- Default to mobile
 
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null);
@@ -214,11 +215,15 @@ export default function TangoPlayer() {
         },
     }));
     
-    // <-- FIX: New effect to safely check for desktop on the client side
+    // <-- FIX: This combined effect handles mounting and media query checks safely
     useEffect(() => {
+        setHasMounted(true); // Indicate that we are now on the client
+
         const mediaQuery = window.matchMedia('(min-width: 1024px)');
         const handleChange = () => setIsDesktop(mediaQuery.matches);
-        handleChange(); // Set the initial value
+        
+        handleChange(); // Set the initial value on the client
+        
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
@@ -637,8 +642,8 @@ export default function TangoPlayer() {
     const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
 
-    // <-- FIX: Prevent rendering until the client has determined the screen size
-    if (isDesktop === null) {
+    // <-- FIX: Prevent rendering the full UI until the component has mounted on the client
+    if (!hasMounted) {
         return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Player...</div>;
     }
 
@@ -764,18 +769,20 @@ export default function TangoPlayer() {
             </div>
 
             {/* --- Conditional Panel Rendering --- */}
-            {isDesktop ? (
-                <DesktopQueueDrawer
-                    isOpen={activePanel === 'queue'}
-                    height={playerHeight}
-                    {...queueProps}
-                />
-            ) : (
-                <MobileQueuePanel
-                    isOpen={activePanel === 'queue'}
-                    onClose={() => handlePanelToggle('queue')}
-                    {...queueProps}
-                />
+            {hasMounted && (
+                isDesktop ? (
+                    <DesktopQueueDrawer
+                        isOpen={activePanel === 'queue'}
+                        height={playerHeight}
+                        {...queueProps}
+                    />
+                ) : (
+                    <MobileQueuePanel
+                        isOpen={activePanel === 'queue'}
+                        onClose={() => handlePanelToggle('queue')}
+                        {...queueProps}
+                    />
+                )
             )}
         </div>
     );
