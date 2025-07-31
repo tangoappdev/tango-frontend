@@ -62,21 +62,17 @@ function Queue({
         isDraggingPanel.current = false;
     };
     
+    const containerClasses = `
+        lg:relative lg:transition-all lg:duration-500 lg:ease-in-out lg:h-auto
+        ${isOpen ? 'lg:w-80 lg:ml-4' : 'lg:w-0 lg:ml-0'}
+        
+        fixed inset-0 z-10 
+        ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+        lg:opacity-100 lg:pointer-events-auto
+    `;
+
     return (
-        <div
-            className={`
-                ${/* Base container styles */''}
-                transition-all duration-500 ease-in-out
-                
-                ${/* Mobile container styles */''}
-                fixed inset-0 z-10 
-                ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-                
-                ${/* Desktop container styles */''}
-                lg:relative lg:z-auto lg:opacity-100 lg:pointer-events-auto
-                ${isOpen ? 'lg:w-80 lg:ml-4' : 'lg:w-0 lg:ml-0'}
-            `}
-        >
+        <div className={containerClasses}>
             {/* Mobile-only backdrop */}
             <div className="absolute inset-0 bg-black/60 lg:hidden" onClick={onClose}></div>
             
@@ -677,7 +673,7 @@ export default function TangoPlayer() {
     };
 
     return (
-        <div className="flex justify-center items-stretch">
+        <div className="flex justify-center items-start">
             <div className="p-2 bg-transparent text-white rounded-lg w-full max-w-[28rem] font-sans">
                 {menuState.visible && (
                     <ContextMenu
