@@ -17,7 +17,6 @@ import {
 function Queue({
     isOpen,
     onClose,
-    height,
     isDesktop,
     ...props
 }) {
@@ -63,7 +62,6 @@ function Queue({
         isDraggingPanel.current = false;
     };
     
-    // This is the container that handles the responsive positioning logic
     const containerClasses = `
         lg:relative lg:transition-all lg:duration-500 lg:ease-in-out
         ${isOpen ? 'lg:w-80 lg:ml-4' : 'lg:w-0 lg:ml-0'}
@@ -80,7 +78,6 @@ function Queue({
             
             <div
                 ref={panelRef}
-                style={isDesktop ? { height: height > 0 ? height : 'auto' } : {}}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -215,13 +212,11 @@ export default function TangoPlayer() {
         tandaId: null,
     });
     const [eqNotification, setEqNotification] = useState('');
-    const [playerHeight, setPlayerHeight] = useState(0);
     const [isDesktop, setIsDesktop] = useState(false);
     const [hasMounted, setHasMounted] = useState(false);
 
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null);
-    const playerRef = useRef(null);
     const autoplayIntentRef = useRef(false);
     const isFetchingRef = useRef(false);
     const isSeekingRef = useRef(false);
@@ -247,18 +242,6 @@ export default function TangoPlayer() {
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
     
-    useEffect(() => {
-        if (!isDesktop || !playerRef.current) return;
-        const resizeObserver = new ResizeObserver(() => {
-            if (playerRef.current) {
-                setPlayerHeight(playerRef.current.offsetHeight);
-            }
-        });
-        resizeObserver.observe(playerRef.current);
-        return () => resizeObserver.disconnect();
-    }, [isDesktop]);
-
-
     const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
     const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
     const upcomingPlaylistIds = useMemo(() => upcomingPlaylist.map(t => t.id), [upcomingPlaylist]);
@@ -690,7 +673,7 @@ export default function TangoPlayer() {
     };
 
     return (
-        <div className="flex justify-center items-start">
+        <div className="flex justify-center items-center">
             <div ref={playerRef} className="p-2 bg-transparent text-white rounded-lg w-full max-w-[28rem] font-sans">
                 {menuState.visible && (
                     <ContextMenu
