@@ -172,6 +172,7 @@ export default function TangoPlayer() {
         tandaId: null,
     });
     const [eqNotification, setEqNotification] = useState('');
+    const [hasMounted, setHasMounted] = useState(false); // <-- FIX: Initialize hasMounted state
     
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null);
@@ -190,6 +191,11 @@ export default function TangoPlayer() {
             tolerance: 5,
         },
     }));
+
+    // <-- FIX: Set hasMounted to true after the component mounts on the client
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
 
     const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
     const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
@@ -590,6 +596,11 @@ export default function TangoPlayer() {
     const handleAudioLoadedMetadata = useCallback(() => { if (audioRef.current) setDuration(audioRef.current.duration); }, []);
     const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
+
+    // <-- FIX: Show a loading state until the component has mounted on the client
+    if (!hasMounted) {
+        return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Player...</div>;
+    }
 
     if (!currentTanda && isLoading) {
         return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Music...</div>;
