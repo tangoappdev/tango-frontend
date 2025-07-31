@@ -215,6 +215,7 @@ export default function TangoPlayer() {
     });
     const [eqNotification, setEqNotification] = useState('');
     const [playerHeight, setPlayerHeight] = useState(0);
+    const [hasMounted, setHasMounted] = useState(false); // <-- FIX: State to track client-side mount
 
     const isDesktop = useMediaQuery('(min-width: 1024px)');
 
@@ -236,6 +237,11 @@ export default function TangoPlayer() {
             tolerance: 5,
         },
     }));
+
+    // <-- FIX: Effect to set hasMounted to true on the client
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
     
     // Effect to measure player height for desktop drawer
     useEffect(() => {
@@ -652,6 +658,10 @@ export default function TangoPlayer() {
     const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
 
+    // <-- FIX: Prevent rendering on server or initial client load to avoid hydration errors
+    if (!hasMounted) {
+        return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Player...</div>;
+    }
 
     if (!currentTanda && isLoading) {
         return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Music...</div>;
