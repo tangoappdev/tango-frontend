@@ -13,20 +13,14 @@ import {
 } from '@heroicons/react/24/outline';
 
 
-// --- Simplified Queue Panel ---
-// This component is now used for all screen sizes to ensure stability.
-function QueuePanel({
+// --- Unified Queue Component ---
+// This single component handles both mobile and desktop views using responsive CSS.
+function Queue({
     isOpen,
     onClose,
-    manualQueue,
-    upcomingPlaylist,
-    manualQueueIds,
-    upcomingPlaylistIds,
-    handleDragEnd,
-    handleQueueScroll,
-    queueContainerRef,
-    sensors,
-    onMenuOpen
+    height,
+    isDesktop,
+    ...props
 }) {
     const panelRef = useRef(null);
     const touchStartY = useRef(0);
@@ -34,13 +28,14 @@ function QueuePanel({
     const isDraggingPanel = useRef(false);
 
     const handleTouchStart = (e) => {
+        if (isDesktop) return;
         touchStartY.current = e.targetTouches[0].clientY;
         touchMoveY.current = touchStartY.current;
-        isDraggingPanel.current = queueContainerRef.current?.scrollTop === 0;
+        isDraggingPanel.current = props.queueContainerRef.current?.scrollTop === 0;
     };
 
     const handleTouchMove = (e) => {
-        if (!isDraggingPanel.current) return;
+        if (isDesktop || !isDraggingPanel.current) return;
         touchMoveY.current = e.targetTouches[0].clientY;
         const deltaY = touchMoveY.current - touchStartY.current;
         if (deltaY > 0) {
@@ -55,6 +50,7 @@ function QueuePanel({
     };
 
     const handleTouchEnd = () => {
+        if (isDesktop) return;
         const deltaY = touchMoveY.current - touchStartY.current;
         if (isDraggingPanel.current && deltaY > 50) {
             onClose();
@@ -67,47 +63,81 @@ function QueuePanel({
         touchMoveY.current = 0;
         isDraggingPanel.current = false;
     };
+    
+    // Base classes for the container element
+    const containerClasses = isDesktop
+        ? `relative transition-all duration-500 ease-in-out ${isOpen ? 'w-80 ml-4' : 'w-0 ml-0'}`
+        : `fixed inset-0 z-10 transition-opacity duration-300 ease-in-out ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`;
 
     return (
-        <div className={`fixed inset-0 z-10 transition-opacity duration-300 ease-in-out ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
+        <div className={containerClasses}>
+            {/* Mobile-only backdrop */}
+            {!isDesktop && <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>}
+
             <div
                 ref={panelRef}
+                style={isDesktop ? { height: height > 0 ? height : 'auto' } : {}}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className={`absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] bg-[#30333a] rounded-t-2xl shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+                className={`
+                    bg-[#30333a] shadow-lg
+                    ${isDesktop 
+                        ? `h-full w-full rounded-lg flex flex-col overflow-hidden transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0'}`
+                        : `absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] rounded-t-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`
+                    }
+                `}
             >
-                <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
-                <h3 className="text-lg font-semibold text-center text-gray-300 p-2 flex-shrink-0">Queue</h3>
-                <div
-                    ref={queueContainerRef}
-                    onScroll={handleQueueScroll}
-                    className="flex-grow overflow-y-auto px-2"
-                >
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
-                        <SortableContext
-                            items={[...manualQueueIds, ...upcomingPlaylistIds]}
-                            strategy={verticalListSortingStrategy}
-                        >
-                            {manualQueue.map((tanda) => (
-                                <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} />
-                            ))}
-
-                            {manualQueue.length > 0 && upcomingPlaylist.length > 0 && (
-                                <div className="p-2 my-2 border-b border-t border-white/10">
-                                    <p className="text-xs text-center text-gray-400 font-semibold uppercase">Up Next</p>
-                                </div>
-                            )}
-
-                            {upcomingPlaylist.map((tanda) => (
-                                <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} />
-                            ))}
-                        </SortableContext>
-                    </DndContext>
-                </div>
+                {!isDesktop && <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>}
+                <QueueContent {...props} />
             </div>
         </div>
+    );
+}
+
+
+// --- Shared QueueContent Component ---
+function QueueContent({
+    manualQueue,
+    upcomingPlaylist,
+    manualQueueIds,
+    upcomingPlaylistIds,
+    handleDragEnd,
+    handleQueueScroll,
+    queueContainerRef,
+    sensors,
+    onMenuOpen
+}) {
+    return (
+        <>
+            <h3 className="text-lg font-semibold text-center text-gray-300 p-2 flex-shrink-0">Queue</h3>
+            <div
+                ref={queueContainerRef}
+                onScroll={handleQueueScroll}
+                className="flex-grow overflow-y-auto px-2"
+            >
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+                    <SortableContext
+                        items={[...manualQueueIds, ...upcomingPlaylistIds]}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        {manualQueue.map((tanda) => (
+                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} />
+                        ))}
+
+                        {manualQueue.length > 0 && upcomingPlaylist.length > 0 && (
+                            <div className="p-2 my-2 border-b border-t border-white/10">
+                                <p className="text-xs text-center text-gray-400 font-semibold uppercase">Up Next</p>
+                            </div>
+                        )}
+
+                        {upcomingPlaylist.map((tanda) => (
+                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} />
+                        ))}
+                    </SortableContext>
+                </DndContext>
+            </div>
+        </>
     );
 }
 
@@ -172,10 +202,13 @@ export default function TangoPlayer() {
         tandaId: null,
     });
     const [eqNotification, setEqNotification] = useState('');
-    const [hasMounted, setHasMounted] = useState(false); // <-- FIX: Initialize hasMounted state
-    
+    const [playerHeight, setPlayerHeight] = useState(0);
+    const [hasMounted, setHasMounted] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(false);
+
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null);
+    const playerRef = useRef(null);
     const autoplayIntentRef = useRef(false);
     const isFetchingRef = useRef(false);
     const isSeekingRef = useRef(false);
@@ -191,11 +224,31 @@ export default function TangoPlayer() {
             tolerance: 5,
         },
     }));
-
-    // <-- FIX: Set hasMounted to true after the component mounts on the client
+    
     useEffect(() => {
         setHasMounted(true);
+        const mediaQuery = window.matchMedia('(min-width: 1024px)');
+        const handleChange = () => setIsDesktop(mediaQuery.matches);
+        handleChange();
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
+    
+    useEffect(() => {
+        if (!isDesktop) return;
+        const updateHeight = () => {
+            if (playerRef.current) {
+                setPlayerHeight(playerRef.current.offsetHeight);
+            }
+        };
+        const timeoutId = setTimeout(updateHeight, 100);
+        window.addEventListener('resize', updateHeight);
+        return () => {
+            clearTimeout(timeoutId);
+            window.removeEventListener('resize', updateHeight);
+        };
+    }, [isDesktop, currentTanda]);
+
 
     const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
     const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
@@ -306,7 +359,6 @@ export default function TangoPlayer() {
     }, [currentTanda, currentTrackIndex]);
 
     const initAudioGraph = useCallback(() => {
-        const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
         if (!isDesktop || audioContextRef.current) return;
 
 
@@ -335,7 +387,7 @@ export default function TangoPlayer() {
         lowShelfRef.current = lowShelf;
         midPeakingRef.current = midPeaking;
         highShelfRef.current = highShelf;
-    }, [eq.low, eq.mid, eq.high]);
+    }, [eq.low, eq.mid, eq.high, isDesktop]);
 
 
     const handleSettingChange = (settingName, value) => {
@@ -454,7 +506,6 @@ export default function TangoPlayer() {
 
 
     const handlePlay = useCallback(async () => {
-        const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
         if (!audioContextRef.current && isDesktop) {
             initAudioGraph();
         }
@@ -475,7 +526,7 @@ export default function TangoPlayer() {
         } else if (!currentTanda && !isLoading) {
             fetchAndFillPlaylist();
         }
-    }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph]);
+    }, [currentTanda, isLoading, fetchAndFillPlaylist, isDesktop, initAudioGraph]);
 
     const handlePause = useCallback(() => {
         if (audioRef.current) audioRef.current.pause();
@@ -544,7 +595,6 @@ export default function TangoPlayer() {
     };
 
     const handleEqChange = useCallback((band, value) => {
-        const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
         if (!isDesktop) {
             setEqNotification('Equalizer is available on desktop only.');
             setTimeout(() => setEqNotification(''), 3000);
@@ -557,7 +607,7 @@ export default function TangoPlayer() {
         if (band === 'low' && lowShelfRef.current) lowShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
         if (band === 'mid' && midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
         if (band === 'high' && highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
-    }, []);
+    }, [isDesktop]);
 
 
     const handleMenuOpen = useCallback((event, tanda) => {
@@ -597,7 +647,6 @@ export default function TangoPlayer() {
     const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
 
-    // <-- FIX: Show a loading state until the component has mounted on the client
     if (!hasMounted) {
         return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Player...</div>;
     }
@@ -628,11 +677,12 @@ export default function TangoPlayer() {
         queueContainerRef,
         sensors,
         onMenuOpen: handleMenuOpen,
+        isDesktop,
     };
 
     return (
         <div className="flex justify-center items-start">
-            <div className="p-2 bg-transparent text-white rounded-lg w-full max-w-[28rem] font-sans">
+            <div ref={playerRef} className="p-2 bg-transparent text-white rounded-lg w-full max-w-[28rem] font-sans">
                 {menuState.visible && (
                     <ContextMenu
                         position={{ x: menuState.x, y: menuState.y }}
