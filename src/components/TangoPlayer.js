@@ -673,8 +673,8 @@ export default function TangoPlayer() {
     };
 
     return (
-        <div className="flex justify-center items-center">
-            <div ref={playerRef} className="p-2 bg-transparent text-white rounded-lg w-full max-w-[28rem] font-sans">
+        <div className="flex justify-center items-stretch">
+            <div className="p-2 bg-transparent text-white rounded-lg w-full max-w-[28rem] font-sans">
                 {menuState.visible && (
                     <ContextMenu
                         position={{ x: menuState.x, y: menuState.y }}
