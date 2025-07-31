@@ -13,8 +13,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 
-// --- NEW: QueuePanel Component ---
-// This new component handles the upward-sliding queue panel, its backdrop, and swipe-to-close gestures.
+// --- QueuePanel Component (Updated) ---
+// This component handles the upward-sliding queue panel, its backdrop, and swipe-to-close gestures.
 function QueuePanel({
     isOpen,
     onClose,
@@ -31,34 +31,54 @@ function QueuePanel({
     const panelRef = useRef(null);
     const touchStartY = useRef(0);
     const touchMoveY = useRef(0);
+    // Ref to track if we are currently dragging the panel vs. scrolling the list
+    const isDraggingPanel = useRef(false);
 
     const handleTouchStart = (e) => {
         touchStartY.current = e.targetTouches[0].clientY;
-        touchMoveY.current = touchStartY.current; // Initialize move Y
+        touchMoveY.current = touchStartY.current;
+        // We only consider dragging the panel if the list is scrolled to the top.
+        isDraggingPanel.current = queueContainerRef.current?.scrollTop === 0;
     };
 
     const handleTouchMove = (e) => {
+        // If we aren't allowed to drag the panel (because the list isn't at the top), do nothing.
+        if (!isDraggingPanel.current) return;
+
         touchMoveY.current = e.targetTouches[0].clientY;
         const deltaY = touchMoveY.current - touchStartY.current;
-        // Only allow pulling down
-        if (deltaY > 0 && panelRef.current) {
-            panelRef.current.style.transform = `translateY(${deltaY}px)`;
-            panelRef.current.style.transition = 'none'; // Disable transition during drag
+
+        // Only allow pulling down. If the user tries to swipe up, let the list scroll.
+        if (deltaY > 0) {
+            // Prevent the browser's default pull-to-refresh or scroll behavior
+            e.preventDefault();
+            if (panelRef.current) {
+                panelRef.current.style.transform = `translateY(${deltaY}px)`;
+                panelRef.current.style.transition = 'none'; // Disable transition during drag
+            }
+        } else {
+            // If the user starts swiping up again, we release the drag lock to allow scrolling.
+            isDraggingPanel.current = false;
         }
     };
 
     const handleTouchEnd = () => {
         const deltaY = touchMoveY.current - touchStartY.current;
-        if (deltaY > 50) { // If swiped down more than 50px
+        // Only trigger close if we were actually dragging the panel
+        if (isDraggingPanel.current && deltaY > 50) {
             onClose();
         }
+
         // Reset panel style to allow CSS transition to take over
         if (panelRef.current) {
             panelRef.current.style.transform = '';
             panelRef.current.style.transition = '';
         }
+
+        // Reset all state for the next touch
         touchStartY.current = 0;
         touchMoveY.current = 0;
+        isDraggingPanel.current = false;
     };
 
     return (
@@ -73,7 +93,7 @@ function QueuePanel({
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className={`absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[60%] bg-[#30333a] rounded-t-2xl shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+                className={`absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] bg-[#30333a] rounded-t-2xl shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
             >
                 {/* Handle bar for visual cue */}
                 <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
