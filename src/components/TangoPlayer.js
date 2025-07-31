@@ -556,8 +556,17 @@ export default function TangoPlayer() {
 
 
 
+    // --- UPDATED: handlePanelToggle now triggers a fetch for the queue ---
+    const handlePanelToggle = (panelName) => {
+        const isOpening = activePanel !== panelName;
 
-    const handlePanelToggle = (panelName) => setActivePanel(prev => prev === panelName ? null : panelName);
+        // If we are opening the queue panel, trigger a fetch for more tandas.
+        if (panelName === 'queue' && isOpening) {
+            fetchAndFillPlaylist();
+        }
+
+        setActivePanel(prev => prev === panelName ? null : panelName);
+    };
 
     const handleEqChange = useCallback((band, value) => {
         if (isMobile) {
