@@ -13,21 +13,29 @@ import {
 } from '@heroicons/react/24/outline';
 
 
-// --- MobileQueuePanel Component ---
-function MobileQueuePanel({ isOpen, onClose, ...props }) {
+// --- Unified Queue Component ---
+// This single component handles both mobile and desktop views using responsive CSS.
+function Queue({
+    isOpen,
+    onClose,
+    height,
+    isDesktop,
+    ...props
+}) {
     const panelRef = useRef(null);
     const touchStartY = useRef(0);
     const touchMoveY = useRef(0);
     const isDraggingPanel = useRef(false);
 
     const handleTouchStart = (e) => {
+        if (isDesktop) return;
         touchStartY.current = e.targetTouches[0].clientY;
         touchMoveY.current = touchStartY.current;
         isDraggingPanel.current = props.queueContainerRef.current?.scrollTop === 0;
     };
 
     const handleTouchMove = (e) => {
-        if (!isDraggingPanel.current) return;
+        if (isDesktop || !isDraggingPanel.current) return;
         touchMoveY.current = e.targetTouches[0].clientY;
         const deltaY = touchMoveY.current - touchStartY.current;
         if (deltaY > 0) {
@@ -42,6 +50,7 @@ function MobileQueuePanel({ isOpen, onClose, ...props }) {
     };
 
     const handleTouchEnd = () => {
+        if (isDesktop) return;
         const deltaY = touchMoveY.current - touchStartY.current;
         if (isDraggingPanel.current && deltaY > 50) {
             onClose();
@@ -55,36 +64,41 @@ function MobileQueuePanel({ isOpen, onClose, ...props }) {
         isDraggingPanel.current = false;
     };
 
+    // Base classes for both mobile and desktop
+    const baseClasses = "transition-all duration-500 ease-in-out bg-[#30333a] shadow-lg";
+
+    // Mobile-specific classes
+    const mobileClasses = `fixed inset-0 z-10 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`;
+    
+    // Desktop-specific classes
+    const desktopClasses = `relative rounded-lg ${isOpen ? 'w-80 opacity-100 ml-4' : 'w-0 opacity-0 ml-0'}`;
+
     return (
-        <div className={`fixed inset-0 z-10 transition-opacity duration-300 ease-in-out ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
+        <div className={isDesktop ? desktopClasses : mobileClasses}>
+            {/* Mobile-only backdrop */}
+            {!isDesktop && <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>}
+
             <div
                 ref={panelRef}
+                style={isDesktop ? { height: height > 0 ? height : 'auto' } : {}}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className={`absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] bg-[#30333a] rounded-t-2xl shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+                className={`
+                    ${baseClasses}
+                    ${isDesktop 
+                        ? 'h-full flex flex-col overflow-hidden' 
+                        : `absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] rounded-t-2xl flex flex-col transform ${isOpen ? 'translate-y-0' : 'translate-y-full'}`
+                    }
+                `}
             >
-                <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
+                {!isDesktop && <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>}
                 <QueueContent {...props} />
             </div>
         </div>
     );
 }
 
-// --- DesktopQueueDrawer Component ---
-function DesktopQueueDrawer({ isOpen, height, ...props }) {
-    return (
-        <div
-            style={{ height: height > 0 ? height : 'auto' }}
-            className={`transition-all duration-500 ease-in-out bg-[#30333a] rounded-lg shadow-lg ${isOpen ? 'w-80 opacity-100 ml-4' : 'w-0 opacity-0 ml-0'}`}
-        >
-            <div className="h-full flex flex-col overflow-hidden">
-                <QueueContent {...props} />
-            </div>
-        </div>
-    );
-}
 
 // --- Shared QueueContent Component ---
 function QueueContent({
@@ -193,8 +207,8 @@ export default function TangoPlayer() {
     });
     const [eqNotification, setEqNotification] = useState('');
     const [playerHeight, setPlayerHeight] = useState(0);
-    const [hasMounted, setHasMounted] = useState(false); // <-- FIX: State to track client-side mount
-    const [isDesktop, setIsDesktop] = useState(false); // <-- Default to mobile
+    const [hasMounted, setHasMounted] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(false);
 
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null);
@@ -215,20 +229,15 @@ export default function TangoPlayer() {
         },
     }));
     
-    // <-- FIX: This combined effect handles mounting and media query checks safely
     useEffect(() => {
-        setHasMounted(true); // Indicate that we are now on the client
-
+        setHasMounted(true);
         const mediaQuery = window.matchMedia('(min-width: 1024px)');
         const handleChange = () => setIsDesktop(mediaQuery.matches);
-        
-        handleChange(); // Set the initial value on the client
-        
+        handleChange();
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
     
-    // Effect to measure player height for desktop drawer
     useEffect(() => {
         if (!isDesktop) return;
         const updateHeight = () => {
@@ -642,7 +651,6 @@ export default function TangoPlayer() {
     const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
 
-    // <-- FIX: Prevent rendering the full UI until the component has mounted on the client
     if (!hasMounted) {
         return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Player...</div>;
     }
@@ -673,6 +681,7 @@ export default function TangoPlayer() {
         queueContainerRef,
         sensors,
         onMenuOpen: handleMenuOpen,
+        isDesktop,
     };
 
     return (
@@ -768,21 +777,14 @@ export default function TangoPlayer() {
                 </div>
             </div>
 
-            {/* --- Conditional Panel Rendering --- */}
+            {/* --- Unified Queue Panel Rendering --- */}
             {hasMounted && (
-                isDesktop ? (
-                    <DesktopQueueDrawer
-                        isOpen={activePanel === 'queue'}
-                        height={playerHeight}
-                        {...queueProps}
-                    />
-                ) : (
-                    <MobileQueuePanel
-                        isOpen={activePanel === 'queue'}
-                        onClose={() => handlePanelToggle('queue')}
-                        {...queueProps}
-                    />
-                )
+                <Queue
+                    isOpen={activePanel === 'queue'}
+                    onClose={() => handlePanelToggle('queue')}
+                    height={playerHeight}
+                    {...queueProps}
+                />
             )}
         </div>
     );
