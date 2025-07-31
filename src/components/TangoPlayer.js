@@ -12,29 +12,8 @@ import {
     SparklesIcon, QueueListIcon
 } from '@heroicons/react/24/outline';
 
-// --- Custom Hook for Media Queries ---
-// This hook detects if the screen size matches a given query (e.g., for desktop).
-function useMediaQuery(query) {
-    const [matches, setMatches] = useState(false);
 
-    useEffect(() => {
-        // Ensure this code only runs on the client
-        if (typeof window === 'undefined') return;
-
-        const media = window.matchMedia(query);
-        if (media.matches !== matches) {
-            setMatches(media.matches);
-        }
-        const listener = () => setMatches(media.matches);
-        window.addEventListener('resize', listener);
-        return () => window.removeEventListener('resize', listener);
-    }, [matches, query]);
-
-    return matches;
-}
-
-
-// --- MobileQueuePanel Component (Previously QueuePanel) ---
+// --- MobileQueuePanel Component ---
 function MobileQueuePanel({ isOpen, onClose, ...props }) {
     const panelRef = useRef(null);
     const touchStartY = useRef(0);
@@ -93,7 +72,7 @@ function MobileQueuePanel({ isOpen, onClose, ...props }) {
     );
 }
 
-// --- NEW: DesktopQueueDrawer Component ---
+// --- DesktopQueueDrawer Component ---
 function DesktopQueueDrawer({ isOpen, height, ...props }) {
     return (
         <div
@@ -107,8 +86,7 @@ function DesktopQueueDrawer({ isOpen, height, ...props }) {
     );
 }
 
-// --- NEW: Shared QueueContent Component ---
-// To avoid duplicating the queue list JSX, we put it in its own component.
+// --- Shared QueueContent Component ---
 function QueueContent({
     manualQueue,
     upcomingPlaylist,
@@ -215,13 +193,11 @@ export default function TangoPlayer() {
     });
     const [eqNotification, setEqNotification] = useState('');
     const [playerHeight, setPlayerHeight] = useState(0);
-    const [hasMounted, setHasMounted] = useState(false); // <-- FIX: State to track client-side mount
-
-    const isDesktop = useMediaQuery('(min-width: 1024px)');
+    const [isDesktop, setIsDesktop] = useState(null); // <-- FIX: Start with null
 
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null);
-    const playerRef = useRef(null); // Ref for the main player container
+    const playerRef = useRef(null);
     const autoplayIntentRef = useRef(false);
     const isFetchingRef = useRef(false);
     const isSeekingRef = useRef(false);
@@ -237,10 +213,14 @@ export default function TangoPlayer() {
             tolerance: 5,
         },
     }));
-
-    // <-- FIX: Effect to set hasMounted to true on the client
+    
+    // <-- FIX: New effect to safely check for desktop on the client side
     useEffect(() => {
-        setHasMounted(true);
+        const mediaQuery = window.matchMedia('(min-width: 1024px)');
+        const handleChange = () => setIsDesktop(mediaQuery.matches);
+        handleChange(); // Set the initial value
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
     
     // Effect to measure player height for desktop drawer
@@ -251,7 +231,6 @@ export default function TangoPlayer() {
                 setPlayerHeight(playerRef.current.offsetHeight);
             }
         };
-        // Use a timeout to ensure content has rendered before measuring
         const timeoutId = setTimeout(updateHeight, 100);
         window.addEventListener('resize', updateHeight);
         return () => {
@@ -658,8 +637,8 @@ export default function TangoPlayer() {
     const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
 
-    // <-- FIX: Prevent rendering on server or initial client load to avoid hydration errors
-    if (!hasMounted) {
+    // <-- FIX: Prevent rendering until the client has determined the screen size
+    if (isDesktop === null) {
         return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Player...</div>;
     }
 
