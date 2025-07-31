@@ -203,6 +203,7 @@ export default function TangoPlayer() {
     });
     const [eqNotification, setEqNotification] = useState('');
     const [playerHeight, setPlayerHeight] = useState(0);
+    const [hasMounted, setHasMounted] = useState(false);
     const [isDesktop, setIsDesktop] = useState(false);
 
     const audioRef = useRef(null);
@@ -225,6 +226,7 @@ export default function TangoPlayer() {
     }));
     
     useEffect(() => {
+        setHasMounted(true);
         const mediaQuery = window.matchMedia('(min-width: 1024px)');
         const handleChange = () => setIsDesktop(mediaQuery.matches);
         handleChange();
@@ -645,8 +647,9 @@ export default function TangoPlayer() {
     const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
 
+    // <-- FIX: The entire component now returns null until it has mounted on the client
     if (!hasMounted) {
-        return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Player...</div>;
+        return null;
     }
 
     if (!currentTanda && isLoading) {
@@ -771,7 +774,6 @@ export default function TangoPlayer() {
                 </div>
             </div>
 
-            {/* --- Unified Queue Panel Rendering --- */}
             <Queue
                 isOpen={activePanel === 'queue'}
                 onClose={() => handlePanelToggle('queue')}
