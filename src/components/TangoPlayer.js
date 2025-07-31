@@ -13,13 +13,11 @@ import {
 } from '@heroicons/react/24/outline';
 
 
-// --- Unified Queue Component ---
-// This single component handles both mobile and desktop views using responsive CSS.
+// --- Unified Queue Component (CSS-Driven Responsive) ---
 function Queue({
     isOpen,
     onClose,
     height,
-    isDesktop,
     ...props
 }) {
     const panelRef = useRef(null);
@@ -28,14 +26,15 @@ function Queue({
     const isDraggingPanel = useRef(false);
 
     const handleTouchStart = (e) => {
-        if (isDesktop) return;
+        // This gesture is only for mobile, so we check with window.innerWidth
+        if (window.innerWidth >= 1024) return;
         touchStartY.current = e.targetTouches[0].clientY;
         touchMoveY.current = touchStartY.current;
         isDraggingPanel.current = props.queueContainerRef.current?.scrollTop === 0;
     };
 
     const handleTouchMove = (e) => {
-        if (isDesktop || !isDraggingPanel.current) return;
+        if (window.innerWidth >= 1024 || !isDraggingPanel.current) return;
         touchMoveY.current = e.targetTouches[0].clientY;
         const deltaY = touchMoveY.current - touchStartY.current;
         if (deltaY > 0) {
@@ -50,7 +49,7 @@ function Queue({
     };
 
     const handleTouchEnd = () => {
-        if (isDesktop) return;
+        if (window.innerWidth >= 1024) return;
         const deltaY = touchMoveY.current - touchStartY.current;
         if (isDraggingPanel.current && deltaY > 50) {
             onClose();
@@ -63,33 +62,45 @@ function Queue({
         touchMoveY.current = 0;
         isDraggingPanel.current = false;
     };
-    
-    // Base classes for the container element
-    const containerClasses = isDesktop
-        ? `relative transition-all duration-500 ease-in-out ${isOpen ? 'w-80 ml-4' : 'w-0 ml-0'}`
-        : `fixed inset-0 z-10 transition-opacity duration-300 ease-in-out ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`;
 
     return (
-        <div className={containerClasses}>
+        // This container handles the responsive positioning
+        <div
+            className={`
+                ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none lg:pointer-events-auto'}
+                transition-opacity duration-300 ease-in-out
+                fixed inset-0 z-10 lg:static lg:z-auto
+            `}
+        >
             {/* Mobile-only backdrop */}
-            {!isDesktop && <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>}
-
+            <div className="absolute inset-0 bg-black/60 lg:hidden" onClick={onClose}></div>
+            
+            {/* The Panel itself, with responsive classes */}
             <div
                 ref={panelRef}
-                style={isDesktop ? { height: height > 0 ? height : 'auto' } : {}}
+                style={{ height: props.isDesktop && height > 0 ? height : 'auto' }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 className={`
-                    bg-[#30333a] shadow-lg
-                    ${isDesktop 
-                        ? `h-full w-full rounded-lg flex flex-col overflow-hidden transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0'}`
-                        : `absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] rounded-t-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`
-                    }
+                    bg-[#30333a] shadow-2xl lg:shadow-lg flex flex-col
+                    transition-all duration-500 ease-in-out
+                    
+                    ${/* Mobile styles */''}
+                    absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] rounded-t-2xl transform
+                    ${isOpen ? 'translate-y-0' : 'translate-y-full'}
+
+                    ${/* Desktop styles */''}
+                    lg:relative lg:w-80 lg:h-full lg:rounded-lg lg:transform-none lg:mx-0
+                    lg:transition-all ${isOpen ? 'lg:ml-4 lg:opacity-100' : 'lg:ml-0 lg:w-0 lg:opacity-0' }
                 `}
             >
-                {!isDesktop && <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>}
-                <QueueContent {...props} />
+                {/* Mobile-only handle */}
+                <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0 lg:hidden"></div>
+                
+                <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
+                    <QueueContent {...props} />
+                </div>
             </div>
         </div>
     );
@@ -203,8 +214,8 @@ export default function TangoPlayer() {
     });
     const [eqNotification, setEqNotification] = useState('');
     const [playerHeight, setPlayerHeight] = useState(0);
-    const [hasMounted, setHasMounted] = useState(false);
     const [isDesktop, setIsDesktop] = useState(false);
+    const [hasMounted, setHasMounted] = useState(false);
 
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null);
@@ -647,9 +658,8 @@ export default function TangoPlayer() {
     const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
 
-    // <-- FIX: The entire component now returns null until it has mounted on the client
     if (!hasMounted) {
-        return null;
+        return <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg max-w-md mx-auto text-center">Loading Player...</div>;
     }
 
     if (!currentTanda && isLoading) {
