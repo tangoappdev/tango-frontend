@@ -63,7 +63,7 @@ function Queue({
     };
     
     const containerClasses = `
-        lg:relative lg:transition-all lg:duration-500 lg:ease-in-out lg:h-full
+        lg:relative lg:transition-all lg:duration-500 lg:ease-in-out lg:h-[520px]
         ${isOpen ? 'lg:w-80 lg:ml-4' : 'lg:w-0 lg:ml-0'}
         
         fixed inset-0 z-10 
@@ -477,7 +477,7 @@ export default function TangoPlayer() {
         const totalTracks = currentTanda?.tracks_signed?.length || 0;
         const lengthRule = (currentTanda?.type === 'Tango') ? settings.tandaLength : 3;
         if (currentTrackIndex < Math.min(totalTracks, lengthRule) - 1) {
-            autoplayIntentRef.current = true; // <-- FIX: Set autoplay intent
+            autoplayIntentRef.current = true;
             setCurrentTrackIndex(prev => prev + 1);
         } else {
             playNextTanda();
@@ -641,18 +641,18 @@ export default function TangoPlayer() {
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
 
     if (!hasMounted) {
-        return <div className="p-4 sm:p-8">
+        return <div className="p-2 sm:p-4">
             <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Loading Player...</div>
         </div>;
     }
 
     if (!currentTanda && isLoading) {
-        return <div className="p-4 sm:p-8">
+        return <div className="p-2 sm:p-4">
             <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Loading Music...</div>
         </div>;
     }
     if (!currentTanda && error) {
-        return <div className="p-4 sm:p-8">
+        return <div className="p-2 sm:p-4">
             <div className="p-4 bg-red-800 text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Error: {error} <button onClick={() => setResetCounter(c => c + 1)} className="ml-2 px-2 py-1 bg-blue-600 rounded text-white text-sm">Retry</button></div>
         </div>;
     }
@@ -680,7 +680,7 @@ export default function TangoPlayer() {
     };
 
     return (
-        <div className="p-4 sm:p-8 flex justify-center items-start">
+        <div className="p-2 sm:p-4 flex justify-center items-start">
             <div className="p-2 bg-transparent text-white rounded-lg w-full max-w-[32rem] font-sans">
                 {menuState.visible && (
                     <ContextMenu
