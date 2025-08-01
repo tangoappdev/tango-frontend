@@ -82,7 +82,7 @@ function Queue({
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 className={`
-                    bg-[#30333a] shadow-2xl lg:shadow-lg flex flex-col h-full
+                    bg-[#30333a] shadow-2xl lg:shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] flex flex-col 
                     transition-all duration-500 ease-in-out
                     
                     ${/* Mobile panel styles */''}
@@ -90,7 +90,7 @@ function Queue({
                     ${isOpen ? 'translate-y-0' : 'translate-y-full'}
 
                     ${/* Desktop panel styles */''}
-                    lg:relative lg:w-full lg:rounded-lg lg:transform-none lg:mx-0
+                    lg:relative lg:h-full lg:w-full lg:rounded-lg lg:transform-none lg:mx-0
                     lg:transition-opacity ${isOpen ? 'lg:opacity-100' : 'lg:opacity-0' }
                 `}
             >
