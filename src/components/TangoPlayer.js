@@ -13,27 +13,21 @@ import {
 } from '@heroicons/react/24/outline';
 
 
-// --- Unified Queue Component (CSS-Driven Responsive) ---
-function Queue({
-    isOpen,
-    onClose,
-    isDesktop,
-    ...props
-}) {
+// --- MobileQueuePanel Component ---
+function MobileQueuePanel({ isOpen, onClose, ...props }) {
     const panelRef = useRef(null);
     const touchStartY = useRef(0);
     const touchMoveY = useRef(0);
     const isDraggingPanel = useRef(false);
 
     const handleTouchStart = (e) => {
-        if (isDesktop) return;
         touchStartY.current = e.targetTouches[0].clientY;
         touchMoveY.current = touchStartY.current;
         isDraggingPanel.current = props.queueContainerRef.current?.scrollTop === 0;
     };
 
     const handleTouchMove = (e) => {
-        if (isDesktop || !isDraggingPanel.current) return;
+        if (!isDraggingPanel.current) return;
         touchMoveY.current = e.targetTouches[0].clientY;
         const deltaY = touchMoveY.current - touchStartY.current;
         if (deltaY > 0) {
@@ -48,7 +42,6 @@ function Queue({
     };
 
     const handleTouchEnd = () => {
-        if (isDesktop) return;
         const deltaY = touchMoveY.current - touchStartY.current;
         if (isDraggingPanel.current && deltaY > 50) {
             onClose();
@@ -61,50 +54,37 @@ function Queue({
         touchMoveY.current = 0;
         isDraggingPanel.current = false;
     };
-    
-    const containerClasses = `
-        lg:relative lg:transition-all lg:duration-500 lg:ease-in-out lg:h-auto
-        ${isOpen ? 'lg:w-80 lg:ml-4' : 'lg:w-0 lg:ml-0'}
-        
-        fixed inset-0 z-10 
-        ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-        lg:opacity-100 lg:pointer-events-auto
-    `;
 
     return (
-        <div className={containerClasses}>
-            {/* Mobile-only backdrop */}
-            <div className="absolute inset-0 bg-black/60 lg:hidden" onClick={onClose}></div>
-            
+        <div className={`fixed inset-0 z-10 transition-opacity duration-300 ease-in-out ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
             <div
                 ref={panelRef}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className={`
-                    bg-[#30333a] shadow-2xl lg:shadow-lg flex flex-col h-full
-                    transition-all duration-500 ease-in-out
-                    
-                    ${/* Mobile panel styles */''}
-                    absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] rounded-t-2xl transform
-                    ${isOpen ? 'translate-y-0' : 'translate-y-full'}
-
-                    ${/* Desktop panel styles */''}
-                    lg:relative lg:w-full lg:rounded-lg lg:transform-none lg:mx-0
-                    lg:transition-opacity ${isOpen ? 'lg:opacity-100' : 'lg:opacity-0' }
-                `}
+                className={`absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] bg-[#30333a] rounded-t-2xl shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
             >
-                {/* Mobile-only handle */}
-                <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0 lg:hidden"></div>
-                
-                <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-                    <QueueContent {...props} />
-                </div>
+                <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
+                <QueueContent {...props} />
             </div>
         </div>
     );
 }
 
+// --- DesktopQueueDrawer Component ---
+function DesktopQueueDrawer({ isOpen, height, ...props }) {
+    return (
+        <div
+            style={{ height: height > 0 ? height : 'auto' }}
+            className={`transition-all duration-500 ease-in-out bg-[#30333a] rounded-lg shadow-lg ${isOpen ? 'w-80 opacity-100 ml-4' : 'w-0 opacity-0 ml-0'}`}
+        >
+            <div className={`h-full flex flex-col overflow-hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
+                 <QueueContent {...props} />
+            </div>
+        </div>
+    );
+}
 
 // --- Shared QueueContent Component ---
 function QueueContent({
@@ -212,11 +192,13 @@ export default function TangoPlayer() {
         tandaId: null,
     });
     const [eqNotification, setEqNotification] = useState('');
+    const [playerHeight, setPlayerHeight] = useState(0);
     const [isDesktop, setIsDesktop] = useState(false);
     const [hasMounted, setHasMounted] = useState(false);
 
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null);
+    const playerRef = useRef(null);
     const autoplayIntentRef = useRef(false);
     const isFetchingRef = useRef(false);
     const isSeekingRef = useRef(false);
@@ -242,6 +224,21 @@ export default function TangoPlayer() {
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
     
+    useEffect(() => {
+        if (!isDesktop || !playerRef.current) return;
+        
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                setPlayerHeight(entry.contentRect.height);
+            }
+        });
+
+        resizeObserver.observe(playerRef.current);
+
+        return () => resizeObserver.disconnect();
+    }, [isDesktop]);
+
+
     const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
     const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
     const upcomingPlaylistIds = useMemo(() => upcomingPlaylist.map(t => t.id), [upcomingPlaylist]);
@@ -674,7 +671,7 @@ export default function TangoPlayer() {
 
     return (
         <div className="flex justify-center items-start">
-            <div className="p-2 bg-transparent text-white rounded-lg w-full max-w-[28rem] font-sans">
+            <div ref={playerRef} className="p-2 bg-transparent text-white rounded-lg w-full max-w-[28rem] font-sans">
                 {menuState.visible && (
                     <ContextMenu
                         position={{ x: menuState.x, y: menuState.y }}
