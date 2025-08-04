@@ -202,7 +202,6 @@ export default function TangoPlayer() {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [volume, setVolume] = useState(1);
-    const [activeLeftPanel, setActiveLeftPanel] = useState('settings'); // For Desktop
     const [activePanel, setActivePanel] = useState(null); // For Mobile
     const [eq, setEq] = useState({ low: 0, mid: 0, high: 0 });
     const [menuState, setMenuState] = useState({
@@ -691,35 +690,33 @@ export default function TangoPlayer() {
             <div className="hidden lg:flex justify-center items-center w-full h-full p-4">
                 <div className="w-full max-w-7xl h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-6 flex gap-6">
 
-                    {/* ====== COLUMN 1: SETTINGS & EQ (LEFT) ====== */}
+                    {/* ====== COLUMN 1: SETTINGS & EQ (LEFT) - UPDATED ====== */}
                     <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
-                        <div className="flex-shrink-0 flex items-center justify-center p-2 bg-transparent">
-                            <div className="flex items-center space-x-2 bg-[#30333a] p-1 rounded-full w-full">
-                                <button onClick={() => setActiveLeftPanel('settings')} title="Settings" className={`w-1/2 py-1.5 text-sm rounded-full transition-colors duration-300 flex items-center justify-center gap-1 ${activeLeftPanel === 'settings' ? 'bg-[#25edda] text-black font-semibold' : 'text-gray-400 hover:text-white'}`}><AdjustmentsVerticalIcon className="h-5 w-5" /> Settings</button>
-                                <button onClick={() => setActiveLeftPanel('eq')} title="Equalizer" className={`w-1/2 py-1.5 text-sm rounded-full transition-colors duration-300 flex items-center justify-center gap-1 ${activeLeftPanel === 'eq' ? 'bg-[#25edda] text-black font-semibold' : 'text-gray-400 hover:text-white'}`}><SparklesIcon className="h-5 w-5" /> EQ</button>
-                            </div>
-                        </div>
+                        {/* The content area will now scroll if needed */}
                         <div className="flex-grow overflow-y-auto p-4">
-                            {activeLeftPanel === 'settings' && (
-                               <div>
-                                    <h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Player Settings</h3>
-                                    <div className="grid grid-cols-1 gap-y-4">
-                                        <div><label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrderDesktop" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                                        <div><label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                                        <div><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
-                                    </div>
+                           
+                            {/* --- Settings Panel Content --- */}
+                            <div>
+                                <h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Player Settings</h3>
+                                <div className="grid grid-cols-1 gap-y-4">
+                                    <div><label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrderDesktop" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                                    <div><label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                                    <div><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
                                 </div>
-                            )}
-                            {activeLeftPanel === 'eq' && (
-                                <div>
-                                   <h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Equalizer</h3>
-                                   <div className="flex flex-col space-y-4">
-                                        <div className="flex flex-col"><label htmlFor="low-eq-desktop" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
-                                        <div className="flex flex-col"><label htmlFor="mid-eq-desktop" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
-                                        <div className="flex flex-col"><label htmlFor="high-eq-desktop" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
-                                   </div>
-                                </div>
-                            )}
+                            </div>
+
+                            {/* --- Visual Separator --- */}
+                            <hr className="my-6 border-white/10" />
+
+                            {/* --- EQ Panel Content --- */}
+                            <div>
+                               <h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Equalizer</h3>
+                               <div className="flex flex-col space-y-4">
+                                    <div className="flex flex-col"><label htmlFor="low-eq-desktop" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
+                                    <div className="flex flex-col"><label htmlFor="mid-eq-desktop" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
+                                    <div className="flex flex-col"><label htmlFor="high-eq-desktop" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
+                               </div>
+                            </div>
                         </div>
                     </div>
                     
