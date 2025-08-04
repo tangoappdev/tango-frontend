@@ -123,7 +123,7 @@ function QueueContent({
             <div
                 ref={queueContainerRef}
                 onScroll={handleQueueScroll}
-                className="flex-grow overflow-y-auto px-3 h-full"
+                className="flex-grow overflow-y-auto p-3 px-3 h-full"
             >
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
                     <SortableContext
