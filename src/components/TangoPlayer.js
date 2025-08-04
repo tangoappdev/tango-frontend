@@ -64,7 +64,7 @@ function Queue({
     
     const containerClasses = `
         lg:relative lg:transition-all lg:duration-500 lg:ease-in-out lg:h-[520px]
-        ${isOpen ? 'lg:w-80 lg:ml-4' : 'lg:w-0 lg:ml-0'}
+        ${isOpen ? 'lg:w-100 lg:ml-4' : 'lg:w-0 lg:ml-0'}
         
         fixed inset-0 z-10 
         ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
