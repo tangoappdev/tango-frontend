@@ -689,7 +689,7 @@ export default function TangoPlayer() {
             {/* ====== DESKTOP 3-COLUMN LAYOUT (HIDDEN ON MOBILE) ====== */}
             {/* =================================================================== */}
             <div className="hidden lg:flex justify-center items-center w-full h-full p-4">
-                <div className="w-full max-w-7xl h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl shadow-2xl p-6 flex gap-6 border border-white/10">
+                <div className="w-full max-w-7xl h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-6 flex gap-6">
 
                     {/* ====== COLUMN 1: SETTINGS & EQ (LEFT) ====== */}
                     <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
