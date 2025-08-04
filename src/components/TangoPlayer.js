@@ -693,7 +693,7 @@ export default function TangoPlayer() {
                     {/* ====== COLUMN 1: SETTINGS & EQ (LEFT) - UPDATED ====== */}
                     <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
                         {/* The content area will now scroll if needed */}
-                        <div className="flex-grow overflow-y-auto p-4">
+                        <div className="flex-grow overflow-y-auto p-5">
                            
                             {/* --- Settings Panel Content --- */}
                             <div>
