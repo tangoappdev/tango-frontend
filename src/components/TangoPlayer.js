@@ -764,4 +764,3 @@ export default function TangoPlayer() {
         </div>
     );
 }
-
