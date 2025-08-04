@@ -1,6 +1,5 @@
 'use client';
 
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -14,109 +13,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 
+// --- Shared Panel Content Components ---
 
-
-// --- Unified Queue Component (CSS-Driven Responsive) ---
-function Queue({
-    isOpen,
-    onClose,
-    isDesktop,
-    ...props
-}) {
-    const panelRef = useRef(null);
-    const touchStartY = useRef(0);
-    const touchMoveY = useRef(0);
-    const isDraggingPanel = useRef(false);
-
-
-    const handleTouchStart = (e) => {
-        if (isDesktop) return;
-        touchStartY.current = e.targetTouches[0].clientY;
-        touchMoveY.current = touchStartY.current;
-        isDraggingPanel.current = props.queueContainerRef.current?.scrollTop === 0;
-    };
-
-
-    const handleTouchMove = (e) => {
-        if (isDesktop || !isDraggingPanel.current) return;
-        touchMoveY.current = e.targetTouches[0].clientY;
-        const deltaY = touchMoveY.current - touchStartY.current;
-        if (deltaY > 0) {
-            e.preventDefault();
-            if (panelRef.current) {
-                panelRef.current.style.transform = `translateY(${deltaY}px)`;
-                panelRef.current.style.transition = 'none';
-            }
-        } else {
-            isDraggingPanel.current = false;
-        }
-    };
-
-
-    const handleTouchEnd = () => {
-        if (isDesktop) return;
-        const deltaY = touchMoveY.current - touchStartY.current;
-        if (isDraggingPanel.current && deltaY > 50) {
-            onClose();
-        }
-        if (panelRef.current) {
-            panelRef.current.style.transform = '';
-            panelRef.current.style.transition = '';
-        }
-        touchStartY.current = 0;
-        touchMoveY.current = 0;
-        isDraggingPanel.current = false;
-    };
-   
-    const containerClasses = `
-        lg:relative lg:transition-all lg:duration-500 lg:ease-in-out lg:h-[520px]
-        ${isOpen ? 'lg:w-100 lg:ml-4' : 'lg:w-0 lg:ml-0'}
-       
-        fixed inset-0 z-10
-        ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-        lg:opacity-100 lg:pointer-events-auto
-    `;
-
-
-    return (
-        <div className={containerClasses}>
-            {/* Mobile-only backdrop */}
-            <div className="absolute inset-0 bg-black/60 lg:hidden" onClick={onClose}></div>
-           
-            <div
-                ref={panelRef}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                className={`
-                    bg-[#30333a] shadow-2xl lg:shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] flex flex-col
-                    transition-all duration-500 ease-in-out
-                   
-                    ${/* Mobile panel styles */''}
-                    absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] rounded-t-2xl transform
-                    ${isOpen ? 'translate-y-0' : 'translate-y-full'}
-
-
-                    ${/* Desktop panel styles */''}
-                    lg:relative lg:h-full lg:w-full lg:rounded-lg lg:transform-none lg:mx-0
-                    lg:transition-opacity ${isOpen ? 'lg:opacity-100' : 'lg:opacity-0' }
-                `}
-            >
-                {/* Mobile-only handle */}
-                <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0 lg:hidden"></div>
-               
-                <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-                    <QueueContent {...props} />
-                </div>
-            </div>
-        </div>
-    );
-}
-
-
-
-
-// --- Shared QueueContent Component ---
 function QueueContent({
     manualQueue,
     upcomingPlaylist,
@@ -145,13 +43,11 @@ function QueueContent({
                             <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} />
                         ))}
 
-
                         {manualQueue.length > 0 && upcomingPlaylist.length > 0 && (
                             <div className="p-2 my-2 border-b border-t border-white/10">
                                 <p className="text-xs text-center text-gray-400 font-semibold uppercase">Up Next</p>
                             </div>
                         )}
-
 
                         {upcomingPlaylist.map((tanda) => (
                             <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} />
@@ -163,8 +59,38 @@ function QueueContent({
     );
 }
 
+function EqContent({ eq, handleEqChange, eqNotification }) {
+    return (
+        <div className="p-4 h-full flex flex-col">
+            <h3 className="text-lg font-semibold mb-2 text-center text-gray-300">Equalizer</h3>
+            <div className="relative flex-grow">
+                {eqNotification && (
+                    <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
+                        <p className="text-white text-center p-4">{eqNotification}</p>
+                    </div>
+                )}
+                <div className="flex flex-col space-y-2 justify-center h-full">
+                    <div className="flex flex-col"><label htmlFor="low-eq" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>
+                    <div className="flex flex-col"><label htmlFor="mid-eq" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>
+                    <div className="flex flex-col"><label htmlFor="high-eq" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
-
+function SettingsContent({ settings, handleSettingChange, TANDA_ORDER_OPTIONS, ORCHESTRA_TYPE_OPTIONS, TANDA_LENGTH_OPTIONS }) {
+    return (
+        <div className="p-4 h-full flex flex-col">
+            <h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Player Settings</h3>
+            <div className="grid grid-cols-1 gap-y-4">
+                <div className="flex flex-col"><label htmlFor="tandaOrder" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrder" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                <div className="flex flex-col"><label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilter" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                <div className="flex flex-col items-start"><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
+            </div>
+        </div>
+    );
+}
 
 // --- Constants ---
 const API_BASE_URL = '/api';
@@ -187,8 +113,6 @@ const FREESTYLE_FETCH_BATCH_SIZE = 6;
 const PLAYLIST_REFILL_THRESHOLD = 5;
 
 
-
-
 const initialSettings = {
     categoryFilter: CATEGORIES.TRADITIONAL_GOLDEN_AGE,
     tandaLength: 4,
@@ -197,16 +121,12 @@ const initialSettings = {
 };
 
 
-
-
 function formatTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return '00:00';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
-
-
 
 
 export default function TangoPlayer() {
@@ -223,7 +143,11 @@ export default function TangoPlayer() {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [volume, setVolume] = useState(1);
-    const [activePanel, setActivePanel] = useState(null);
+    const [activePanels, setActivePanels] = useState({
+        queue: false,
+        eq: false,
+        settings: false,
+    });
     const [eq, setEq] = useState({ low: 0, mid: 0, high: 0 });
     const [menuState, setMenuState] = useState({
         visible: false,
@@ -234,7 +158,6 @@ export default function TangoPlayer() {
     const [eqNotification, setEqNotification] = useState('');
     const [isDesktop, setIsDesktop] = useState(false);
     const [hasMounted, setHasMounted] = useState(false);
-
 
     const audioRef = useRef(null);
     const queueContainerRef = useRef(null);
@@ -247,14 +170,13 @@ export default function TangoPlayer() {
     const midPeakingRef = useRef(null);
     const highShelfRef = useRef(null);
 
-
     const sensors = useSensors(useSensor(PointerSensor, {
         activationConstraint: {
             delay: 250,
             tolerance: 5,
         },
     }));
-   
+    
     useEffect(() => {
         setHasMounted(true);
         const mediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -263,20 +185,16 @@ export default function TangoPlayer() {
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
-   
+    
     const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
     const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
     const upcomingPlaylistIds = useMemo(() => upcomingPlaylist.map(t => t.id), [upcomingPlaylist]);
-
-
 
 
     const fetchAndFillPlaylist = useCallback(async () => {
         if (isFetchingRef.current) return;
         isFetchingRef.current = true;
         setIsLoading(true);
-
-
 
 
         const allExcludeIds = new Set([...recentlyPlayedIds, ...upcomingPlaylist.map(t => t.id)]);
@@ -286,8 +204,6 @@ export default function TangoPlayer() {
         });
 
 
-
-
         if (settings.tandaOrder.startsWith('Just')) {
             params.append('requiredType', TANDA_SEQUENCES[settings.tandaOrder][0]);
             params.append('limit', FREESTYLE_FETCH_BATCH_SIZE);
@@ -295,17 +211,13 @@ export default function TangoPlayer() {
             params.append('tandaOrder', settings.tandaOrder);
         }
 
-
         const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}`;
-
-
 
 
         try {
             const response = await fetch(apiUrl);
             if (!response.ok) throw new Error('Failed to fetch playlist from server.');
             const data = await response.json();
-
 
             if (data.upcomingTandas && data.upcomingTandas.length > 0) {
                 setUpcomingPlaylist(prev => {
@@ -325,18 +237,14 @@ export default function TangoPlayer() {
     }, [settings, recentlyPlayedIds, upcomingPlaylist]);
 
 
-
-
     const playNextTanda = useCallback(() => {
         const sourceTanda = manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0];
         if (!sourceTanda) { fetchAndFillPlaylist(); return; }
-
 
         setTandaHistory(prev => [sourceTanda, ...prev].slice(0, 50));
         setRecentlyPlayedIds(prev => new Set(prev).add(sourceTanda.id));
         setCurrentTrackIndex(0);
         autoplayIntentRef.current = true;
-
 
         if (manualQueue.length > 0) {
             setManualQueue(prev => prev.slice(1));
@@ -344,8 +252,6 @@ export default function TangoPlayer() {
             setUpcomingPlaylist(prev => prev.slice(1));
         }
     }, [manualQueue, upcomingPlaylist, fetchAndFillPlaylist]);
-
-
 
 
     const handleQueueScroll = useCallback(() => {
@@ -359,8 +265,6 @@ export default function TangoPlayer() {
     }, [fetchAndFillPlaylist]);
 
 
-
-
     useEffect(() => {
         if (resetCounter > 0) {
             setUpcomingPlaylist([]);
@@ -370,16 +274,12 @@ export default function TangoPlayer() {
     }, [resetCounter]);
 
 
-
-
     useEffect(() => {
         const needsFetching = upcomingPlaylist.length === 0 || upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
         if (needsFetching && !isFetchingRef.current) {
             fetchAndFillPlaylist();
         }
     }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist]);
-
-
 
 
     useEffect(() => {
@@ -394,11 +294,8 @@ export default function TangoPlayer() {
         }
     }, [currentTanda, currentTrackIndex]);
 
-
     const initAudioGraph = useCallback(() => {
         if (!isDesktop || audioContextRef.current) return;
-
-
 
 
         const context = new (window.AudioContext || window.webkitAudioContext)();
@@ -429,14 +326,10 @@ export default function TangoPlayer() {
     }, [eq.low, eq.mid, eq.high, isDesktop]);
 
 
-
-
     const handleSettingChange = (settingName, value) => {
         setSettings(prev => ({ ...prev, [settingName]: value }));
         setResetCounter(c => c + 1);
     };
-
-
 
 
     const handleDragEnd = (event) => {
@@ -444,18 +337,12 @@ export default function TangoPlayer() {
         if (!over || active.id === over.id) return;
 
 
-
-
         const isActiveInManual = manualQueueIds.includes(active.id);
         const isOverInManual = manualQueueIds.includes(over.id);
         const draggedTanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === active.id);
 
 
-
-
         if (!draggedTanda) return;
-
-
 
 
         if (isActiveInManual && isOverInManual) {
@@ -477,8 +364,6 @@ export default function TangoPlayer() {
     };
 
 
-
-
     const handlePlayNext = (tandaToPlayNext) => {
         if (!currentTanda || currentTanda.id === tandaToPlayNext.id) {
             if (!currentTanda) {
@@ -493,8 +378,6 @@ export default function TangoPlayer() {
         const currentTandaIndexInManual = newManualQueue.findIndex(t => t.id === currentTanda.id);
 
 
-
-
         if (currentTandaIndexInManual !== -1) {
             newManualQueue.splice(currentTandaIndexInManual + 1, 0, tandaToPlayNext);
         } else {
@@ -506,8 +389,6 @@ export default function TangoPlayer() {
     };
 
 
-
-
     const handleAddToQueue = (tandaToAdd) => {
         if (manualQueue.some(t => t.id === tandaToAdd.id)) {
             return;
@@ -515,8 +396,6 @@ export default function TangoPlayer() {
         let newManualQueue = [...manualQueue];
         let newUpcomingPlaylist = [...upcomingPlaylist];
         newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToAdd.id);
-
-
 
 
         if (newManualQueue.length > 0) {
@@ -538,8 +417,6 @@ export default function TangoPlayer() {
     };
 
 
-
-
     const handleTrackEnded = useCallback(() => {
         const totalTracks = currentTanda?.tracks_signed?.length || 0;
         const lengthRule = (currentTanda?.type === 'Tango') ? settings.tandaLength : 3;
@@ -550,8 +427,6 @@ export default function TangoPlayer() {
             playNextTanda();
         }
     }, [currentTanda, currentTrackIndex, settings.tandaLength, playNextTanda]);
-
-
 
 
     const handleSkipForward = useCallback(() => {
@@ -567,20 +442,15 @@ export default function TangoPlayer() {
     }, [currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda]);
 
 
-
-
     const handlePlay = useCallback(async () => {
         if (!audioContextRef.current && isDesktop) {
             initAudioGraph();
         }
 
-
         const audioCtx = audioContextRef.current;
         if (audioCtx && audioCtx.state === 'suspended') {
             await audioCtx.resume();
         }
-
-
 
 
         if (audioRef.current?.src && audioRef.current.paused) {
@@ -595,11 +465,9 @@ export default function TangoPlayer() {
         }
     }, [currentTanda, isLoading, fetchAndFillPlaylist, isDesktop, initAudioGraph]);
 
-
     const handlePause = useCallback(() => {
         if (audioRef.current) audioRef.current.pause();
     }, []);
-
 
     const handleSkipBackward = useCallback(() => {
         if (!currentTanda || !audioRef.current) return;
@@ -612,8 +480,6 @@ export default function TangoPlayer() {
             autoplayIntentRef.current = isPlaying;
         }
     }, [currentTanda, currentTrackIndex, isPlaying]);
-
-
 
 
     const handleRewind = useCallback(() => {
@@ -634,11 +500,8 @@ export default function TangoPlayer() {
         autoplayIntentRef.current = isPlaying;
     }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying]);
 
-
     useEffect(() => {
         const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
-
-
 
 
         if ('mediaSession' in navigator && currentTanda && currentTrack) {
@@ -652,8 +515,6 @@ export default function TangoPlayer() {
             });
 
 
-
-
             navigator.mediaSession.setActionHandler('play', handlePlay);
             navigator.mediaSession.setActionHandler('pause', handlePause);
             navigator.mediaSession.setActionHandler('previoustrack', handleSkipBackward);
@@ -662,16 +523,12 @@ export default function TangoPlayer() {
     }, [currentTanda, currentTrackIndex, handlePlay, handlePause, handleSkipBackward, handleSkipForward]);
 
 
-
-
     const handlePanelToggle = (panelName) => {
-        const isOpening = activePanel !== panelName;
-        if (panelName === 'queue' && isOpening) {
+        setActivePanels(prev => ({ ...prev, [panelName]: !prev[panelName] }));
+        if (panelName === 'queue' && !activePanels.queue) {
             fetchAndFillPlaylist();
         }
-        setActivePanel(prev => prev === panelName ? null : panelName);
     };
-
 
     const handleEqChange = useCallback((band, value) => {
         if (!isDesktop) {
@@ -689,8 +546,6 @@ export default function TangoPlayer() {
     }, [isDesktop]);
 
 
-
-
     const handleMenuOpen = useCallback((event, tanda) => {
         event.preventDefault();
         event.stopPropagation();
@@ -703,13 +558,9 @@ export default function TangoPlayer() {
     }, []);
 
 
-
-
     const handleMenuClose = useCallback(() => {
         setMenuState(prev => ({ ...prev, visible: false }));
     }, []);
-
-
 
 
     const handleMenuAction = useCallback((action) => {
@@ -719,8 +570,6 @@ export default function TangoPlayer() {
         }
         handleMenuClose();
     }, [manualQueue, upcomingPlaylist, menuState.tandaId, handleMenuClose, handlePlayNext, handleAddToQueue]);
-
-
 
 
     const handleSeek = (event) => { if (audioRef.current?.duration) { const seekTime = Number(event.target.value); audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); } };
@@ -734,26 +583,22 @@ export default function TangoPlayer() {
     const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
     const handleAudioPause = useCallback(() => setIsPlaying(false), []);
 
-
     if (!hasMounted) {
-        return <div className="p-2 sm:p-4">
-            <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Loading Player...</div>
+        return <div className="p-1 sm:p-1 flex justify-center items-start">
+            <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[35rem] mx-auto text-center">Loading Player...</div>
         </div>;
     }
 
-
     if (!currentTanda && isLoading) {
-        return <div className="p-2 sm:p-4">
-            <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Loading Music...</div>
+        return <div className="p-1 sm:p-1 flex justify-center items-start">
+            <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[35rem] mx-auto text-center">Loading Music...</div>
         </div>;
     }
     if (!currentTanda && error) {
-        return <div className="p-2 sm:p-4">
-            <div className="p-4 bg-red-800 text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Error: {error} <button onClick={() => setResetCounter(c => c + 1)} className="ml-2 px-2 py-1 bg-blue-600 rounded text-white text-sm">Retry</button></div>
+        return <div className="p-1 sm:p-1 flex justify-center items-start">
+            <div className="p-4 bg-red-800 text-white rounded-lg shadow-lg w-full max-w-[35rem] mx-auto text-center">Error: {error} <button onClick={() => setResetCounter(c => c + 1)} className="ml-2 px-2 py-1 bg-blue-600 rounded text-white text-sm">Retry</button></div>
         </div>;
     }
-
-
 
 
     const currentTrackTitle = currentTanda?.tracks_signed?.[currentTrackIndex]?.title || '...';
@@ -763,7 +608,6 @@ export default function TangoPlayer() {
     const regularButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#33373e] to-[#2b2e34]`;
     const primaryButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#25edda] to-[#23d9c8] text-white`;
     const playPauseButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#25edda] to-[#23d9c8] text-white`;
-
 
     const queueProps = {
         manualQueue,
@@ -778,9 +622,18 @@ export default function TangoPlayer() {
         isDesktop,
     };
 
-
     return (
         <div className="p-1 sm:p-1 flex w-full max-w-[50rem] justify-center items-start">
+            {hasMounted && isDesktop && (
+                <div className="flex-shrink-0 w-64 flex flex-col space-y-4">
+                    <div className={`transition-all duration-500 ease-in-out bg-[#30333a] rounded-lg shadow-lg h-[260px] ${activePanels.eq ? 'opacity-100' : 'opacity-0'}`}>
+                        <EqContent eq={eq} handleEqChange={handleEqChange} eqNotification={eqNotification} />
+                    </div>
+                    <div className={`transition-all duration-500 ease-in-out bg-[#30333a] rounded-lg shadow-lg h-[260px] ${activePanels.settings ? 'opacity-100' : 'opacity-0'}`}>
+                        <SettingsContent settings={settings} handleSettingChange={handleSettingChange} TANDA_ORDER_OPTIONS={TANDA_ORDER_OPTIONS} ORCHESTRA_TYPE_OPTIONS={ORCHESTRA_TYPE_OPTIONS} TANDA_LENGTH_OPTIONS={TANDA_LENGTH_OPTIONS} />
+                    </div>
+                </div>
+            )}
             <div className="p-1 bg-transparent text-white rounded-lg w-full max-w-[30rem] font-sans">
                 {menuState.visible && (
                     <ContextMenu
@@ -808,10 +661,7 @@ export default function TangoPlayer() {
                     </>) : (!isLoading && !error && <span>No music loaded.</span>)}
                 </div>
 
-
                 <audio ref={audioRef} crossOrigin="anonymous" onEnded={handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
-
-
 
 
                 <div className="flex items-center gap-3 mb-3 px-1">
@@ -834,52 +684,28 @@ export default function TangoPlayer() {
                     <button onClick={playNextTanda} disabled={isLoading || upcomingPlaylist.length <= 1} className={`${primaryButtonStyle} p-3`} title="Next Tanda"><ChevronDoubleRightIcon className="h-5 w-5" /></button>
                 </div>
                 <div className="flex justify-center items-center space-x-4 mt-4 border-t border-gray-700/50 pt-2">
-                    <button onClick={() => handlePanelToggle('settings')} title="Settings" className={`p-2 rounded-full transition-colors ${activePanel === 'settings' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><AdjustmentsVerticalIcon className="h-6 w-6" /></button>
+                    <button onClick={() => handlePanelToggle('settings')} title="Settings" className={`p-2 rounded-full transition-colors ${activePanels.settings ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><AdjustmentsVerticalIcon className="h-6 w-6" /></button>
                     <button
                         onClick={() => handlePanelToggle('eq')}
                         title="Equalizer"
-                        className={`p-2 rounded-full transition-colors ${activePanel === 'eq' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+                        className={`p-2 rounded-full transition-colors ${activePanels.eq ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
                     >
                         <SparklesIcon className="h-6 w-6" />
                     </button>
-                    <button onClick={() => handlePanelToggle('queue')} title="Queue" className={`p-2 rounded-full transition-colors ${activePanel === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><QueueListIcon className="h-6 w-6" /></button>
+                    <button onClick={() => handlePanelToggle('queue')} title="Queue" className={`p-2 rounded-full transition-colors ${activePanels.queue ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><QueueListIcon className="h-6 w-6" /></button>
                 </div>
 
-
-                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${activePanel && activePanel !== 'queue' ? 'max-h-[500px] mt-4' : 'max-h-0'}`}>
-                    <div className={activePanel === 'settings' ? 'block' : 'hidden'}>
-                        <div className="p-4 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Player Settings</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-4">
-                                <div className="flex flex-col"><label htmlFor="tandaOrder" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrder" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                                <div className="flex flex-col"><label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilter" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                                <div className="flex flex-col items-start"><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className={activePanel === 'eq' ? 'block' : 'hidden'}>
-                        <div className="p-6 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
-                            <h3 className="text-lg font-semibold mb-2 text-center text-gray-300">Equalizer</h3>
-                            <div className="relative">
-                                {eqNotification && (
-                                    <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
-                                        <p className="text-white text-center p-4">{eqNotification}</p>
-                                    </div>
-                                )}
-                                <div className="flex flex-col space-y-2">
-                                    <div className="flex flex-col"><label htmlFor="low-eq" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>
-                                    <div className="flex flex-col"><label htmlFor="mid-eq" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>
-                                    <div className="flex flex-col"><label htmlFor="high-eq" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${!isDesktop && activePanels.settings ? 'max-h-[500px] mt-4' : 'max-h-0'}`}>
+                    <SettingsContent settings={settings} handleSettingChange={handleSettingChange} TANDA_ORDER_OPTIONS={TANDA_ORDER_OPTIONS} ORCHESTRA_TYPE_OPTIONS={ORCHESTRA_TYPE_OPTIONS} TANDA_LENGTH_OPTIONS={TANDA_LENGTH_OPTIONS} />
+                </div>
+                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${!isDesktop && activePanels.eq ? 'max-h-[500px] mt-4' : 'max-h-0'}`}>
+                    <EqContent eq={eq} handleEqChange={handleEqChange} eqNotification={eqNotification} />
                 </div>
             </div>
 
-
             {hasMounted && (
                 <Queue
-                    isOpen={activePanel === 'queue'}
+                    isOpen={activePanels.queue}
                     onClose={() => handlePanelToggle('queue')}
                     isDesktop={isDesktop}
                     {...queueProps}
@@ -888,6 +714,3 @@ export default function TangoPlayer() {
         </div>
     );
 }
-
-
-
