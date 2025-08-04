@@ -692,8 +692,8 @@ export default function TangoPlayer() {
                 <div className="w-full max-w-7xl h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl shadow-2xl p-6 flex gap-6 border border-white/10">
 
                     {/* ====== COLUMN 1: SETTINGS & EQ (LEFT) ====== */}
-                    <div className="w-3/10 flex flex-col bg-[#30333a] rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
-                        <div className="flex-shrink-0 flex items-center justify-center p-2 bg-[#30333a]">
+                    <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
+                        <div className="flex-shrink-0 flex items-center justify-center p-2 bg-transparent">
                             <div className="flex items-center space-x-2 bg-[#30333a] p-1 rounded-full w-full">
                                 <button onClick={() => setActiveLeftPanel('settings')} title="Settings" className={`w-1/2 py-1.5 text-sm rounded-full transition-colors duration-300 flex items-center justify-center gap-1 ${activeLeftPanel === 'settings' ? 'bg-[#25edda] text-black font-semibold' : 'text-gray-400 hover:text-white'}`}><AdjustmentsVerticalIcon className="h-5 w-5" /> Settings</button>
                                 <button onClick={() => setActiveLeftPanel('eq')} title="Equalizer" className={`w-1/2 py-1.5 text-sm rounded-full transition-colors duration-300 flex items-center justify-center gap-1 ${activeLeftPanel === 'eq' ? 'bg-[#25edda] text-black font-semibold' : 'text-gray-400 hover:text-white'}`}><SparklesIcon className="h-5 w-5" /> EQ</button>
@@ -724,7 +724,7 @@ export default function TangoPlayer() {
                     </div>
                     
                     {/* ====== COLUMN 2: PLAYER (CENTER) ====== */}
-                    <div className="w-4/10 flex flex-col">
+                    <div className="w-[44%] flex flex-col">
                         <h2 className="text-2xl font-bold mb-4 text-center text-gray-200">TangoDJ</h2>
                         <div className="flex-grow flex flex-col items-center justify-center gap-6">
                             <div className="flex items-center gap-6">
@@ -759,8 +759,8 @@ export default function TangoPlayer() {
                     </div>
 
                     {/* ====== COLUMN 3: QUEUE (RIGHT) ====== */}
-                    <div className="w-3/10 flex flex-col bg-[#30333a] rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
-                        <h3 className="text-lg font-semibold text-center text-gray-300 p-3 flex-shrink-0 bg-[#30333a]">Up Next</h3>
+                    <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
+                        <h3 className="text-lg font-semibold text-center text-gray-300 p-3 flex-shrink-0 bg-transparent">Up Next</h3>
                         <div className="flex-grow overflow-y-auto"><QueueContent {...queueProps} /></div>
                     </div>
                 </div>
