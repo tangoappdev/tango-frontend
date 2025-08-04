@@ -624,6 +624,16 @@ export default function TangoPlayer() {
 
     return (
         <div className="p-1 sm:p-1 flex w-full max-w-[50rem] justify-center items-start">
+            {hasMounted && isDesktop && (
+                <div className="flex flex-col space-y-4">
+                    <div className={`transition-all duration-500 ease-in-out bg-[#30333a] rounded-lg shadow-lg w-64 h-[260px] ${activePanels.eq ? 'opacity-100' : 'opacity-0'}`}>
+                        <EqContent eq={eq} handleEqChange={handleEqChange} eqNotification={eqNotification} />
+                    </div>
+                    <div className={`transition-all duration-500 ease-in-out bg-[#30333a] rounded-lg shadow-lg w-64 h-[260px] ${activePanels.settings ? 'opacity-100' : 'opacity-0'}`}>
+                        <SettingsContent settings={settings} handleSettingChange={handleSettingChange} TANDA_ORDER_OPTIONS={TANDA_ORDER_OPTIONS} ORCHESTRA_TYPE_OPTIONS={ORCHESTRA_TYPE_OPTIONS} TANDA_LENGTH_OPTIONS={TANDA_LENGTH_OPTIONS} />
+                    </div>
+                </div>
+            )}
             <div className="p-1 bg-transparent text-white rounded-lg w-full max-w-[30rem] font-sans">
                 {menuState.visible && (
                     <ContextMenu
