@@ -662,11 +662,11 @@ export default function TangoPlayer() {
     const displayTandaLength = currentTanda ? ((currentTanda.type === 'Tango') ? settings.tandaLength : 3) : '?';
     const displayTotalTracks = currentTanda?.tracks_signed?.length || 0;
     
-    // New, softer button styles
-    const baseButtonClasses = "rounded-full text-gray-300 transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-md";
-    const regularButtonStyle = `${baseButtonClasses} bg-gray-800 shadow-md hover:bg-gray-700 hover:shadow-lg hover:scale-105 active:scale-100 active:shadow-inner`;
-    const primaryButtonStyle = regularButtonStyle; 
-    const playPauseButtonStyle = `${baseButtonClasses} bg-[#25edda] text-black shadow-lg hover:shadow-xl hover:scale-105 active:scale-100`;
+    // --- Restored Original Neumorphic Button Styles ---
+    const baseButtonClasses = "rounded-full text-gray-300 transition-all duration-200 ease-in-out shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[inset_5px_5px_10px_#131417,inset_-5px_-5px_10px_#4d525d] hover:text-[#25edda]";
+    const regularButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#33373e] to-[#2b2e34]`;
+    const primaryButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#25edda] to-[#23d9c8] text-white`;
+    const playPauseButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#25edda] to-[#23d9c8] text-white`;
 
     const queueProps = {
         manualQueue,
@@ -693,26 +693,20 @@ export default function TangoPlayer() {
 
                     {/* ====== COLUMN 1: SETTINGS & EQ (LEFT) ====== */}
                     <div className="w-1/4 flex flex-col bg-black/20 rounded-xl shadow-inner overflow-hidden">
-                        {/* Left Panel Navigation */}
                         <div className="flex-shrink-0 flex items-center justify-center p-2 bg-black/20">
                             <div className="flex items-center space-x-2 bg-gray-900/50 p-1 rounded-full w-full">
-                                <button onClick={() => setActiveLeftPanel('settings')} title="Settings" className={`w-1/2 py-1.5 text-sm rounded-full transition-colors duration-300 flex items-center justify-center gap-1 ${activeLeftPanel === 'settings' ? 'bg-[#25edda] text-black font-semibold' : 'text-gray-400 hover:text-white'}`}>
-                                    <AdjustmentsVerticalIcon className="h-5 w-5" /> Settings
-                                </button>
-                                <button onClick={() => setActiveLeftPanel('eq')} title="Equalizer" className={`w-1/2 py-1.5 text-sm rounded-full transition-colors duration-300 flex items-center justify-center gap-1 ${activeLeftPanel === 'eq' ? 'bg-[#25edda] text-black font-semibold' : 'text-gray-400 hover:text-white'}`}>
-                                    <SparklesIcon className="h-5 w-5" /> EQ
-                                </button>
+                                <button onClick={() => setActiveLeftPanel('settings')} title="Settings" className={`w-1/2 py-1.5 text-sm rounded-full transition-colors duration-300 flex items-center justify-center gap-1 ${activeLeftPanel === 'settings' ? 'bg-[#25edda] text-black font-semibold' : 'text-gray-400 hover:text-white'}`}><AdjustmentsVerticalIcon className="h-5 w-5" /> Settings</button>
+                                <button onClick={() => setActiveLeftPanel('eq')} title="Equalizer" className={`w-1/2 py-1.5 text-sm rounded-full transition-colors duration-300 flex items-center justify-center gap-1 ${activeLeftPanel === 'eq' ? 'bg-[#25edda] text-black font-semibold' : 'text-gray-400 hover:text-white'}`}><SparklesIcon className="h-5 w-5" /> EQ</button>
                             </div>
                         </div>
-                        {/* Conditional Panel Content */}
                         <div className="flex-grow overflow-y-auto p-4">
                             {activeLeftPanel === 'settings' && (
                                <div>
                                     <h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Player Settings</h3>
                                     <div className="grid grid-cols-1 gap-y-4">
-                                        <div><label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrderDesktop" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-md bg-gray-800/50 text-white p-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] border border-white/10">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-3 -translate-y-1/2 pointer-events-none" /></div></div>
-                                        <div><label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-md bg-gray-800/50 text-white p-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] border border-white/10">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-3 -translate-y-1/2 pointer-events-none" /></div></div>
-                                        <div><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-md text-sm transition-all duration-200 ease-in-out text-center ${settings.tandaLength === len ? 'bg-[#25edda] text-black font-bold' : 'text-gray-300 bg-gray-800/50 hover:bg-gray-700/50 border border-white/10'}`}>{len} Tangos</button>))}</div></div>
+                                        <div><label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrderDesktop" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                                        <div><label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                                        <div><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
                                     </div>
                                 </div>
                             )}
@@ -746,14 +740,19 @@ export default function TangoPlayer() {
                             <audio ref={audioRef} crossOrigin="anonymous" onEnded={handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
                             <div className="flex items-center gap-3 mb-3 px-1">
                                 <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
-                                <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}><div className="absolute top-0 left-0 w-full h-full bg-black/30 rounded-full shadow-inner"></div><div className="absolute top-0 left-0 h-full bg-[#25edda] rounded-l-full" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div><div className="absolute top-1/2 w-4 h-4 bg-white rounded-full shadow-lg transition-transform duration-200 group-hover:scale-110 pointer-events-none" style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%`, transform: 'translate(-50%, -50%)' }}></div><input type="range" min="0" max={duration || 1} value={currentTime} onMouseDown={handleSeekingStart} onTouchStart={handleSeekingStart} onChange={handleSeek} onMouseUp={handleSeekingEnd} onTouchEnd={handleSeekingEnd} disabled={!currentTanda || duration === 0} className="absolute top-0 left-0 w-full h-full opacity-0 m-0 p-0 cursor-pointer" aria-label="Track progress" /></div>
+                                <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}>
+                                    <div className="absolute top-0 left-0 w-full h-full bg-[#222429] rounded-full shadow-[inset_3px_3px_2px_#222429,inset_-3px_-3px_2px_#3e424b]"></div>
+                                    <div className="absolute top-0 left-0 h-full bg-[#25edda] rounded-l-full" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
+                                    <div className="absolute top-1/2 w-4 h-4 bg-[#30333a] rounded-full shadow-[2px_2px_1px_#222429,-2px_-2px_1px_#3e424b] pointer-events-none" style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%`, transform: 'translate(-50%, -50%)' }}></div>
+                                    <input type="range" min="0" max={duration || 1} value={currentTime} onMouseDown={handleSeekingStart} onTouchStart={handleSeekingStart} onChange={handleSeek} onMouseUp={handleSeekingEnd} onTouchEnd={handleSeekingEnd} disabled={!currentTanda || duration === 0} className="absolute top-0 left-0 w-full h-full opacity-0 m-0 p-0 cursor-pointer" aria-label="Track progress" />
+                                </div>
                                 <span className="text-xs w-10 text-left tabular-nums">{formatTime(duration)}</span>
                             </div>
                             <div className="flex justify-center items-center space-x-4 mb-2">
                                 <button onClick={handleRewind} title="Previous Tanda" disabled={tandaHistory.length === 0} className={`${regularButtonStyle} p-3`}><ChevronDoubleLeftIcon className="h-5 w-5" /></button>
-                                <button onClick={handleSkipBackward} title="Previous Track" disabled={!currentTanda} className={`${regularButtonStyle} p-4`}><ChevronLeftIcon className="h-6 w-6" /></button>
-                                <button onClick={isPlaying ? handlePause : handlePlay} disabled={!currentTanda && isLoading} className={`${playPauseButtonStyle} p-5`} title={isPlaying ? "Pause" : "Play"}>{isPlaying ? <PauseIcon className="h-8 w-8" /> : <PlayIcon className="h-8 w-8" />}</button>
-                                <button onClick={handleSkipForward} title="Next Track" disabled={!currentTanda} className={`${regularButtonStyle} p-4`}><ChevronRightIcon className="h-6 w-6" /></button>
+                                <button onClick={handleSkipBackward} title="Previous Track" disabled={!currentTanda} className={`${regularButtonStyle} p-3`}><ChevronLeftIcon className="h-5 w-5" /></button>
+                                <button onClick={isPlaying ? handlePause : handlePlay} disabled={!currentTanda && isLoading} className={`${playPauseButtonStyle} p-4`} title={isPlaying ? "Pause" : "Play"}>{isPlaying ? <PauseIcon className="h-7 w-7" /> : <PlayIcon className="h-7 w-7" />}</button>
+                                <button onClick={handleSkipForward} title="Next Track" disabled={!currentTanda} className={`${regularButtonStyle} p-3`}><ChevronRightIcon className="h-5 w-5" /></button>
                                 <button onClick={playNextTanda} disabled={isLoading || (manualQueue.length === 0 && upcomingPlaylist.length <= 1)} className={`${primaryButtonStyle} p-3`} title="Next Tanda"><ChevronDoubleRightIcon className="h-5 w-5" /></button>
                             </div>
                         </div>
@@ -781,7 +780,12 @@ export default function TangoPlayer() {
                     </div>
                     <div className="flex items-center gap-3 mb-3 px-1">
                         <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
-                        <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}><div className="absolute top-0 left-0 w-full h-full bg-[#222429] rounded-full shadow-[inset_3px_3px_2px_#222429,inset_-3px_-3px_2px_#3e424b]"></div><div className="absolute top-0 left-0 h-full bg-[#25edda] rounded-l-full" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div><div className="absolute top-1/2 w-4 h-4 bg-[#30333a] rounded-full shadow-[2px_2px_1px_#222429,-2px_-2px_1px_#3e424b] pointer-events-none" style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%`, transform: 'translate(-50%, -50%)' }}></div><input type="range" min="0" max={duration || 1} value={currentTime} onMouseDown={handleSeekingStart} onTouchStart={handleSeekingStart} onChange={handleSeek} onMouseUp={handleSeekingEnd} onTouchEnd={handleSeekingEnd} disabled={!currentTanda || duration === 0} className="absolute top-0 left-0 w-full h-full opacity-0 m-0 p-0 cursor-pointer" aria-label="Track progress" /></div>
+                        <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}>
+                            <div className="absolute top-0 left-0 w-full h-full bg-[#222429] rounded-full shadow-[inset_3px_3px_2px_#222429,inset_-3px_-3px_2px_#3e424b]"></div>
+                            <div className="absolute top-0 left-0 h-full bg-[#25edda] rounded-l-full" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
+                            <div className="absolute top-1/2 w-4 h-4 bg-[#30333a] rounded-full shadow-[2px_2px_1px_#222429,-2px_-2px_1px_#3e424b] pointer-events-none" style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%`, transform: 'translate(-50%, -50%)' }}></div>
+                            <input type="range" min="0" max={duration || 1} value={currentTime} onMouseDown={handleSeekingStart} onTouchStart={handleSeekingStart} onChange={handleSeek} onMouseUp={handleSeekingEnd} onTouchEnd={handleSeekingEnd} disabled={!currentTanda || duration === 0} className="absolute top-0 left-0 w-full h-full opacity-0 m-0 p-0 cursor-pointer" aria-label="Track progress" />
+                        </div>
                         <span className="text-xs w-10 text-left tabular-nums">{formatTime(duration)}</span>
                     </div>
                     <div className="flex justify-center items-center space-x-3 sm:space-x-4 mb-4">
@@ -796,8 +800,6 @@ export default function TangoPlayer() {
                         <button onClick={() => handlePanelToggle('eq')} title="Equalizer" className={`p-2 rounded-full transition-colors ${activePanel === 'eq' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><SparklesIcon className="h-6 w-6" /></button>
                         <button onClick={() => handlePanelToggle('queue')} title="Queue" className={`p-2 rounded-full transition-colors ${activePanel === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><QueueListIcon className="h-6 w-6" /></button>
                     </div>
-                    
-                    {/* THIS IS THE CORRECTED SECTION */}
                     <div className={`transition-all duration-500 ease-in-out overflow-hidden ${activePanel && activePanel !== 'queue' ? 'max-h-[500px] mt-4' : 'max-h-0'}`}>
                         <div className={activePanel === 'settings' ? 'block' : 'hidden'}>
                             <div className="p-4 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Player Settings</h3>
