@@ -759,7 +759,7 @@ export default function TangoPlayer() {
                     </div>
 
                     {/* ====== COLUMN 3: QUEUE (RIGHT) ====== */}
-                    <div className="w-1/4 flex flex-col bg-black/20 rounded-xl shadow-inner overflow-hidden">
+                    <div className="w-1/4 flex flex-col bg-[#30333a] rounded-xl shadow-[inset_3px_3px_2px_#222429,inset_-3px_-3px_2px_#3e424b] overflow-hidden">
                         <h3 className="text-lg font-semibold text-center text-gray-300 p-3 flex-shrink-0 bg-black/20">Up Next</h3>
                         <div className="flex-grow overflow-y-auto"><QueueContent {...queueProps} /></div>
                     </div>
