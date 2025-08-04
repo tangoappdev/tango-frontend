@@ -767,7 +767,7 @@ export default function TangoPlayer() {
             {/* ====== ORIGINAL MOBILE LAYOUT (HIDDEN ON DESKTOP) ====== */}
             {/* =================================================================== */}
             <div className="block lg:hidden p-2 sm:p-4">
-                <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto">
+                <div className="p-1 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto">
                     <h2 className="text-xl font-semibold mb-4 text-center">TangoDJ</h2>
                     <div className="flex justify-center mb-4">
                         {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-64 h-64 object-cover rounded-lg shadow-md" />) : (<div className="w-64 h-64 bg-gray-700 rounded-lg shadow-md flex items-center justify-center text-gray-500">Artwork</div>)}
