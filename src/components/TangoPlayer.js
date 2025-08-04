@@ -760,6 +760,7 @@ export default function TangoPlayer() {
                         <h3 className="text-lg font-semibold text-center text-gray-300 p-3 flex-shrink-0">Up Next</h3>
                         <div className="flex-grow overflow-y-auto shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
                             <QueueContent {...queueProps} />
+                        </div>
                     </div>
                 </div>
             </div>
