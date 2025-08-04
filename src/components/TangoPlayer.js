@@ -123,7 +123,7 @@ function QueueContent({
             <div
                 ref={queueContainerRef}
                 onScroll={handleQueueScroll}
-                className="flex-grow overflow-y-auto px-2 h-full"
+                className="flex-grow overflow-y-auto px-3 h-full"
             >
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
                     <SortableContext
@@ -691,7 +691,7 @@ export default function TangoPlayer() {
                 <div className="w-full max-w-7xl h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-6 flex gap-6">
 
                     {/* ====== COLUMN 1: SETTINGS & EQ (LEFT) - UPDATED ====== */}
-                    <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
+                    <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl overflow-hidden">
                         {/* The content area will now scroll if needed */}
                         <div className="flex-grow overflow-y-auto p-5">
                            
@@ -722,7 +722,7 @@ export default function TangoPlayer() {
                     
                     {/* ====== COLUMN 2: PLAYER (CENTER) ====== */}
                     <div className="w-[44%] flex flex-col">
-                        <h2 className="text-2xl font-bold mb-4 text-center text-gray-200">TangoDJ</h2>
+                        <h2 className="text-2xl mb-4 text-center text-gray-200">Virtual Tango DJ</h2>
                         <div className="flex-grow flex flex-col items-center justify-center gap-6">
                             <div className="flex items-center gap-6">
                                 {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-56 h-56 object-cover rounded-lg shadow-lg" />) : (<div className="w-56 h-56 bg-gray-900/50 rounded-lg shadow-lg flex items-center justify-center text-gray-500">Artwork</div>)}
@@ -735,7 +735,7 @@ export default function TangoPlayer() {
                         </div>
                         <div className="flex-shrink-0">
                             <audio ref={audioRef} crossOrigin="anonymous" onEnded={handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
-                            <div className="flex items-center gap-3 mb-3 px-1">
+                            <div className="flex items-center gap-4 mb-3 px-4">
                                 <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
                                 <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}>
                                     <div className="absolute top-0 left-0 w-full h-full bg-[#222429] rounded-full shadow-[inset_3px_3px_2px_#222429,inset_-3px_-3px_2px_#3e424b]"></div>
