@@ -680,7 +680,7 @@ export default function TangoPlayer() {
     };
 
     return (
-        <div className="p-1 sm:p-1 flex w-full max-w-[35rem] justify-center items-start">
+        <div className="p-1 sm:p-1 flex w-full max-w-[50rem] justify-center items-start">
             <div className="p-1 bg-transparent text-white rounded-lg w-full max-w-[30rem] font-sans">
                 {menuState.visible && (
                     <ContextMenu
