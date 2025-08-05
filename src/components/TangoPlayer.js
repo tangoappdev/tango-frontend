@@ -558,9 +558,46 @@ export default function TangoPlayer() {
         autoplayIntentRef.current = isPlaying;
     }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying]);
 
-    const handleShuffle = useCallback(() => {
-        setUpcomingPlaylist([]);
-    }, []);
+    const handleShuffle = useCallback(async () => {
+        if (isFetchingRef.current) return; // Prevent multiple requests
+        isFetchingRef.current = true;
+        setIsLoading(true);
+
+        // This logic is copied from fetchAndFillPlaylist to build the API request
+        const allExcludeIds = new Set([...recentlyPlayedIds, ...manualQueue.map(t => t.id)]);
+        const params = new URLSearchParams({
+            categoryFilter: settings.categoryFilter,
+            excludeIds: Array.from(allExcludeIds).join(','),
+        });
+
+        if (settings.tandaOrder.startsWith('Just')) {
+            params.append('requiredType', TANDA_SEQUENCES[settings.tandaOrder][0]);
+            params.append('limit', FREESTYLE_FETCH_BATCH_SIZE);
+        } else {
+            params.append('tandaOrder', settings.tandaOrder);
+        }
+        const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}`;
+
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error('Failed to fetch new playlist.');
+            const data = await response.json();
+
+            if (data.upcomingTandas && data.upcomingTandas.length > 0) {
+                // The key change: We REPLACE the playlist directly in one step
+                setUpcomingPlaylist(data.upcomingTandas);
+            } else {
+                // If we get no tandas back, clear the existing ones
+                setUpcomingPlaylist([]);
+            }
+        } catch (err) {
+            console.error("SHUFFLE FETCH ERROR:", err);
+            setError(err.message);
+        } finally {
+            isFetchingRef.current = false;
+            setIsLoading(false);
+        }
+    }, [settings, recentlyPlayedIds, manualQueue]); // Add necessary dependencies
 
     useEffect(() => {
         const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
@@ -652,7 +689,7 @@ export default function TangoPlayer() {
         </div>;
     }
 
-    if (!currentTanda && isLoading) {
+    if (!currentTanda && isLoading && tandaHistory.length === 0) {
         return <div className="p-2 sm:p-4">
             <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Loading Music...</div>
         </div>;
@@ -763,31 +800,45 @@ export default function TangoPlayer() {
                     </div>
 
                     {/* ====== COLUMN 3: QUEUE (RIGHT) ====== */}
-                    <div className="w-[28%] flex flex-col p-3 bg-[#30333a] rounded-xl overflow-hidden">
-                        <h3 className="text-lg text-center text-gray-300 mb-3 flex-shrink-0">Up Next</h3>
-                        <div className="flex-grow overflow-y-auto rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
-                            <QueueContent {...queueProps} />
-                        </div>
-                        {/* --- New Buttons Footer --- */}
-                        <div className="flex-shrink-0 mt-4 w-full gap-3 flex justify-around items-center">
-                            <button 
-                                onClick={handleShuffle} 
-                                title="Shuffle Playlist" 
-                                className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}
-                            >
-                                <ArrowsRightLeftIcon className="h-5 w-5" />
-                                Shuffle
-                            </button>
-                            <button 
-                                onClick={() => handleSettingChange('cortinas', !settings.cortinas)} 
-                                title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
-                                className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${settings.cortinas ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}
-                            >
-                                <MusicalNoteIcon className="h-5 w-5" />
-                                Cortinas
-                            </button>
-                        </div>
-                    </div>
+<div className="w-[28%] flex flex-col bg-[#30333a] p-3 rounded-xl overflow-hidden">
+    <h3 className="text-lg text-center text-gray-300 mb-3 flex-shrink-0">Up Next</h3>
+    
+    {/* Container for the list and the loading overlay */}
+    <div className="relative flex-grow rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
+        
+        {/* The actual list content */}
+        <div className="w-full h-full overflow-y-auto">
+            <QueueContent {...queueProps} />
+        </div>
+
+        {/* The Loading Overlay (only appears when isLoading is true) */}
+        {isLoading && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
+                <p className="text-white font-semibold">Refreshing...</p>
+            </div>
+        )}
+    </div>
+
+    {/* --- New Buttons Footer --- */}
+    <div className="flex-shrink-0 mt-4 w-full gap-3 flex justify-around items-center">
+        <button 
+            onClick={handleShuffle} 
+            title="Shuffle Playlist" 
+            className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}
+        >
+            <ArrowsRightLeftIcon className="h-5 w-5" />
+            Shuffle
+        </button>
+        <button 
+            onClick={() => handleSettingChange('cortinas', !settings.cortinas)} 
+            title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
+            className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${settings.cortinas ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}
+        >
+            <MusicalNoteIcon className="h-5 w-5" />
+            Cortinas
+        </button>
+    </div>
+</div>
                 </div>
             </div>
 
