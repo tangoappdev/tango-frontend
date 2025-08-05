@@ -195,6 +195,7 @@ export default function TangoPlayer() {
     const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState(null);
     const [recentlyPlayedIds, setRecentlyPlayedIds] = useState(new Set());
     const [tandaHistory, setTandaHistory] = useState([]);
@@ -288,6 +289,7 @@ export default function TangoPlayer() {
         } finally {
             isFetchingRef.current = false;
             setIsLoading(false);
+            setIsRefreshing(false); // Also hide the refresh overlay here
         }
     }, [settings, recentlyPlayedIds, upcomingPlaylist]);
 
@@ -385,6 +387,7 @@ export default function TangoPlayer() {
         setSettings(prev => ({ ...prev, [settingName]: value }));
         // Only reset the playlist if the order or category changes, not for cortinas
         if (settingName === 'tandaOrder' || settingName === 'categoryFilter' || settingName === 'tandaLength') {
+            setIsRefreshing(true); // Show the overlay
             setResetCounter(c => c + 1);
         }
     };
@@ -559,11 +562,10 @@ export default function TangoPlayer() {
     }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying]);
 
     const handleShuffle = useCallback(async () => {
-        if (isFetchingRef.current) return; // Prevent multiple requests
+        if (isFetchingRef.current) return;
         isFetchingRef.current = true;
-        setIsLoading(true);
+        setIsRefreshing(true); // Show the overlay
 
-        // This logic is copied from fetchAndFillPlaylist to build the API request
         const allExcludeIds = new Set([...recentlyPlayedIds, ...manualQueue.map(t => t.id)]);
         const params = new URLSearchParams({
             categoryFilter: settings.categoryFilter,
@@ -582,12 +584,9 @@ export default function TangoPlayer() {
             const response = await fetch(apiUrl);
             if (!response.ok) throw new Error('Failed to fetch new playlist.');
             const data = await response.json();
-
             if (data.upcomingTandas && data.upcomingTandas.length > 0) {
-                // The key change: We REPLACE the playlist directly in one step
                 setUpcomingPlaylist(data.upcomingTandas);
             } else {
-                // If we get no tandas back, clear the existing ones
                 setUpcomingPlaylist([]);
             }
         } catch (err) {
@@ -595,9 +594,9 @@ export default function TangoPlayer() {
             setError(err.message);
         } finally {
             isFetchingRef.current = false;
-            setIsLoading(false);
+            setIsRefreshing(false); // Hide the overlay
         }
-    }, [settings, recentlyPlayedIds, manualQueue]); // Add necessary dependencies
+    }, [settings, recentlyPlayedIds, manualQueue]);
 
     useEffect(() => {
         const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
@@ -811,12 +810,12 @@ export default function TangoPlayer() {
             <QueueContent {...queueProps} />
         </div>
 
-        {/* The Loading Overlay (only appears when isLoading is true) */}
-        {isLoading && (
-            <div className="absolute inset-0 bg-[#30333a80] backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
-                <p className="text-white font-semibold">Refreshing...</p>
-            </div>
-        )}
+        {/* The Loading Overlay (only appears when isRefreshing is true) */}
+{isRefreshing && (
+    <div className="absolute inset-0 bg-[#30333a80] backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
+        <p className="text-white font-semibold">Refreshing...</p>
+    </div>
+)}
     </div>
 
     {/* --- New Buttons Footer --- */}
@@ -847,7 +846,7 @@ export default function TangoPlayer() {
             {/* =================================================================== */}
             <div className="block lg:hidden p-2 sm:p-4">
                 <div className="p-1 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto">
-                    <h2 className="text-xl mt-4 text-center">Virtual Tango DJ</h2>
+                    <h2 className="text-xl mb-4 text-center">Virtual Tango DJ</h2>
                     <div className="flex justify-center mb-4">
                         {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-64 h-64 object-cover rounded-lg shadow-md" />) : (<div className="w-64 h-64 bg-gray-700 rounded-lg shadow-md flex items-center justify-center text-gray-500">Artwork</div>)}
                     </div>
