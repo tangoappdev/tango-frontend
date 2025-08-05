@@ -749,7 +749,7 @@ export default function TangoPlayer() {
             {/* =================================================================== */}
             <div className="hidden lg:flex justify-center items-center w-full h-full p-4">
                 {/* --- CHANGED LINE: Added transition and conditional max-width --- */}
-                <div className={`w-full h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-6 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-7xl' : 'max-w-lg'}`}>
+                <div className={`w-full h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-4 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-7xl' : 'max-w-lg'}`}>
 
                     {/* --- CHANGED LINE: Wrapped in conditional render --- */}
                     {sidebarsVisible && (
