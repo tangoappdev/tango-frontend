@@ -690,16 +690,21 @@ export default function TangoPlayer() {
     }
 
     if (!currentTanda && isLoading && tandaHistory.length === 0 && resetCounter === 0) {
-        return <div className="p-2 sm:p-4">
-            <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">Loading Music...</div>
+    return (
+        <div className="p-2 sm:p-4">
+            <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">
+                
                 {/* === START: NEW LOADER CODE === */}
                 <div className="flex flex-col items-center justify-center gap-4 py-8">
                     <VinylLoader className="h-24 w-24" />
                     <p className="text-lg font-semibold">Loading Music...</p>
                 </div>
                 {/* === END: NEW LOADER CODE === */}
-        </div>;
-    }
+
+            </div>
+        </div>
+    );
+}
     if (!currentTanda && error) {
         return <div className="p-2 sm:p-4">
             <div className="p-4 bg-red-800 text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">Error: {error} <button onClick={() => setResetCounter(c => c + 1)} className="ml-2 px-2 py-1 bg-blue-600 rounded text-white text-sm">Retry</button></div>
