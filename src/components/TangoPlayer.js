@@ -6,6 +6,7 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-ki
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import QueueItem from './QueueItem';
 import ContextMenu from './ContextMenu';
+import VinylLoader from './VinylLoader.svg';
 import {
     PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
     ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, AdjustmentsVerticalIcon,
@@ -684,18 +685,24 @@ export default function TangoPlayer() {
 
     if (!hasMounted) {
         return <div className="p-2 sm:p-4">
-            <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Loading Player...</div>
+            <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">Loading Player...</div>
         </div>;
     }
 
     if (!currentTanda && isLoading && tandaHistory.length === 0 && resetCounter === 0) {
         return <div className="p-2 sm:p-4">
-            <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Loading Music...</div>
+            <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">Loading Music...</div>
+                {/* === START: NEW LOADER CODE === */}
+                <div className="flex flex-col items-center justify-center gap-4 py-8">
+                    <VinylLoader className="h-24 w-24" />
+                    <p className="text-lg font-semibold">Loading Music...</p>
+                </div>
+                {/* === END: NEW LOADER CODE === */}
         </div>;
     }
     if (!currentTanda && error) {
         return <div className="p-2 sm:p-4">
-            <div className="p-4 bg-red-800 text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Error: {error} <button onClick={() => setResetCounter(c => c + 1)} className="ml-2 px-2 py-1 bg-blue-600 rounded text-white text-sm">Retry</button></div>
+            <div className="p-4 bg-red-800 text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">Error: {error} <button onClick={() => setResetCounter(c => c + 1)} className="ml-2 px-2 py-1 bg-blue-600 rounded text-white text-sm">Retry</button></div>
         </div>;
     }
 
