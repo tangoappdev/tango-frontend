@@ -741,7 +741,7 @@ export default function TangoPlayer() {
     {/* --- Settings Panel Content --- */}
     <div>
         <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
-            <AdjustmentsVerticalIcon className="h-6 w-6" />
+            <AdjustmentsVerticalIcon className="h-6 w-6 strokeWidth={1}" />
             <span>Settings</span>
         </h3>
         <div className="grid grid-cols-1 gap-y-4">
@@ -757,7 +757,7 @@ export default function TangoPlayer() {
     {/* --- EQ Panel Content --- */}
     <div>
        <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
-            <SparklesIcon className="h-6 w-6" />
+            <SparklesIcon className="h-6 w-6" strokeWidth={1} />
             <span>Equalizer</span>
        </h3>
        <div className="flex flex-col space-y-4">
@@ -807,7 +807,7 @@ export default function TangoPlayer() {
                     {/* ====== COLUMN 3: QUEUE (RIGHT) ====== */}
 <div className="w-[28%] flex flex-col bg-[#30333a] p-3 rounded-xl overflow-hidden">
     <h3 className="text-lg text-center text-gray-300 mb-3 flex-shrink-0 flex items-center justify-center gap-2">
-        <QueueListIcon className="h-6 w-6" />
+        <QueueListIcon className="h-6 w-6 strokeWidth={1}" />
         <span>Queue</span>
     </h3>
     <div className="flex-grow overflow-y-auto rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
