@@ -9,7 +9,7 @@ import ContextMenu from './ContextMenu';
 import {
     PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
     ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, AdjustmentsVerticalIcon,
-    SparklesIcon, QueueListIcon
+    SparklesIcon, QueueListIcon, ArrowsRightLeftIcon, MusicalNoteIcon
 } from '@heroicons/react/24/outline';
 
 
@@ -65,7 +65,7 @@ function Queue({
     const containerClasses = `
         lg:relative lg:transition-all lg:duration-500 lg:ease-in-out
         ${isOpen ? 'lg:w-100 lg:ml-4' : 'lg:w-0 lg:ml-0'}
-       
+        
         fixed inset-0 z-10
         ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
         lg:opacity-100 lg:pointer-events-auto
@@ -383,7 +383,10 @@ export default function TangoPlayer() {
 
     const handleSettingChange = (settingName, value) => {
         setSettings(prev => ({ ...prev, [settingName]: value }));
-        setResetCounter(c => c + 1);
+        // Only reset the playlist if the order or category changes, not for cortinas
+        if (settingName === 'tandaOrder' || settingName === 'categoryFilter' || settingName === 'tandaLength') {
+            setResetCounter(c => c + 1);
+        }
     };
 
 
@@ -555,6 +558,20 @@ export default function TangoPlayer() {
         autoplayIntentRef.current = isPlaying;
     }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying]);
 
+    const handleShuffle = useCallback(() => {
+        setUpcomingPlaylist(prevPlaylist => {
+          // Create a copy to avoid mutating the original state directly
+          const shuffled = [...prevPlaylist];
+          
+          // Fisher-Yates shuffle algorithm
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+          return shuffled;
+        });
+    }, []);
+
     useEffect(() => {
         const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
 
@@ -694,7 +711,7 @@ export default function TangoPlayer() {
                     <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl overflow-hidden">
                         {/* The content area will now scroll if needed */}
                         <div className="flex-grow overflow-y-auto p-5">
-                           
+                            
                             {/* --- Settings Panel Content --- */}
                             <div>
                                 <h3 className="text-lg font-semibold mb-4 text-center text-gray-300">Player Settings</h3>
@@ -756,10 +773,29 @@ export default function TangoPlayer() {
                     </div>
 
                     {/* ====== COLUMN 3: QUEUE (RIGHT) ====== */}
-                    <div className="w-[28%] h-[80%] flex flex-col bg-[#30333a] overflow-hidden">
+                    <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl overflow-hidden">
                         <h3 className="text-lg font-semibold text-center text-gray-300 p-3 flex-shrink-0">Up Next</h3>
                         <div className="flex-grow overflow-y-auto rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
                             <QueueContent {...queueProps} />
+                        </div>
+                         {/* --- New Buttons Footer --- */}
+                        <div className="flex-shrink-0 p-3 border-t border-black/20 flex justify-around items-center">
+                            <button 
+                                onClick={handleShuffle} 
+                                title="Shuffle Playlist" 
+                                className={`${regularButtonStyle} p-3 flex items-center gap-2 text-sm`}
+                            >
+                                <ArrowsRightLeftIcon className="h-5 w-5" />
+                                Shuffle
+                            </button>
+                            <button 
+                                onClick={() => handleSettingChange('cortinas', !settings.cortinas)} 
+                                title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
+                                className={`${settings.cortinas ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300'} ${baseButtonClasses} p-3 flex items-center gap-2 text-sm`}
+                            >
+                                <MusicalNoteIcon className="h-5 w-5" />
+                                Cortinas
+                            </button>
                         </div>
                     </div>
                 </div>
