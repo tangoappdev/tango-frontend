@@ -813,7 +813,7 @@ export default function TangoPlayer() {
 
         {/* The Loading Overlay (only appears when isLoading is true) */}
         {isLoading && (
-            <div className="absolute inset-0 bg-[#30333a] backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
+            <div className="absolute inset-0 bg-[#30333a80] backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
                 <p className="text-white font-semibold">Refreshing...</p>
             </div>
         )}
