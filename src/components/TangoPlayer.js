@@ -6,7 +6,6 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-ki
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import QueueItem from './QueueItem';
 import ContextMenu from './ContextMenu';
-import VinylLoader from './VinylLoader.svg';
 import {
     PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
     ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, AdjustmentsVerticalIcon,
@@ -693,14 +692,15 @@ export default function TangoPlayer() {
     return (
         <div className="p-2 sm:p-4">
             <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">
-                
-                {/* === START: NEW LOADER CODE === */}
                 <div className="flex flex-col items-center justify-center gap-4 py-8">
-                    <VinylLoader className="h-24 w-24" />
+                    {/* Use a standard img tag pointing to the public folder */}
+                    <img 
+                        src="/VinylLoader.svg" 
+                        alt="Loading..." 
+                        className="h-24 w-24" 
+                    />
                     <p className="text-lg font-semibold">Loading Music...</p>
                 </div>
-                {/* === END: NEW LOADER CODE === */}
-
             </div>
         </div>
     );
