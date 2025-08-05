@@ -775,15 +775,15 @@ export default function TangoPlayer() {
                     {/* ====== COLUMN 3: QUEUE (RIGHT) ====== */}
                     <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl overflow-hidden">
                         <h3 className="text-lg font-semibold text-center text-gray-300 p-3 flex-shrink-0">Up Next</h3>
-                        <div className="flex-grow overflow-y-auto rounded-xl shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
+                        <div className="flex-grow overflow-y-auto shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
                             <QueueContent {...queueProps} />
                         </div>
-                         {/* --- New Buttons Footer --- */}
+                        {/* --- New Buttons Footer --- */}
                         <div className="flex-shrink-0 p-3 border-t border-black/20 flex justify-around items-center">
                             <button 
                                 onClick={handleShuffle} 
                                 title="Shuffle Playlist" 
-                                className={`${regularButtonStyle} p-3 flex items-center gap-2 text-sm`}
+                                className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}
                             >
                                 <ArrowsRightLeftIcon className="h-5 w-5" />
                                 Shuffle
@@ -791,7 +791,7 @@ export default function TangoPlayer() {
                             <button 
                                 onClick={() => handleSettingChange('cortinas', !settings.cortinas)} 
                                 title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
-                                className={`${settings.cortinas ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300'} ${baseButtonClasses} p-3 flex items-center gap-2 text-sm`}
+                                className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${settings.cortinas ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}
                             >
                                 <MusicalNoteIcon className="h-5 w-5" />
                                 Cortinas
