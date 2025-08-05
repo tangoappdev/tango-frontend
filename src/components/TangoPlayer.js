@@ -784,7 +784,7 @@ export default function TangoPlayer() {
                     
                     {/* ====== COLUMN 2: PLAYER (CENTER) ====== */}
                     {/* --- CHANGED LINE: Width is now always w-full --- */}
-                    <div className="w-full flex flex-col">
+                    <div className={`flex flex-col transition-all duration-500 ease-in-out ${sidebarsVisible ? 'w-[44%]' : 'w-full'}`}>
                         <div className="relative">
                             <h2 className="text-xl mt-4 text-center text-gray-200">Virtual Tango DJ</h2>
                             <button 
