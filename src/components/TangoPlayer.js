@@ -688,7 +688,7 @@ export default function TangoPlayer() {
         </div>;
     }
 
-    if (!currentTanda && isLoading && tandaHistory.length === 0) {
+    if (!currentTanda && isLoading && tandaHistory.length === 0 && resetCounter === 0) {
         return <div className="p-2 sm:p-4">
             <div className="p-4 bg-[#30333a] text-white rounded-lg shadow-lg w-full max-w-[32rem] mx-auto text-center">Loading Music...</div>
         </div>;
