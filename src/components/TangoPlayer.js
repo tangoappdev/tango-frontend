@@ -742,7 +742,7 @@ export default function TangoPlayer() {
     <div>
         <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
             <AdjustmentsVerticalIcon className="h-6 w-6" />
-            <span>Player Settings</span>
+            <span>Settings</span>
         </h3>
         <div className="grid grid-cols-1 gap-y-4">
             <div><label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrderDesktop" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
@@ -806,24 +806,13 @@ export default function TangoPlayer() {
 
                     {/* ====== COLUMN 3: QUEUE (RIGHT) ====== */}
 <div className="w-[28%] flex flex-col bg-[#30333a] p-3 rounded-xl overflow-hidden">
-    <h3 className="text-lg text-center text-gray-300 mb-3 flex-shrink-0">Up Next</h3>
-    
-    {/* Container for the list and the loading overlay */}
-    <div className="relative flex-grow rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
-        
-        {/* The actual list content */}
-        <div className="w-full h-full overflow-y-auto">
-            <QueueContent {...queueProps} />
-        </div>
-
-        {/* The Loading Overlay (only appears when isRefreshing is true) */}
-{isRefreshing && (
-    <div className="absolute inset-0 bg-[#30333a80] backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
-        <p className="text-white font-semibold">Refreshing...</p>
+    <h3 className="text-lg text-center text-gray-300 mb-3 flex-shrink-0 flex items-center justify-center gap-2">
+        <QueueListIcon className="h-6 w-6" />
+        <span>Queue</span>
+    </h3>
+    <div className="flex-grow overflow-y-auto rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
+        <QueueContent {...queueProps} />
     </div>
-)}
-    </div>
-
     {/* --- New Buttons Footer --- */}
     <div className="flex-shrink-0 mt-4 w-full gap-3 flex justify-around items-center">
         <button 
@@ -854,7 +843,7 @@ export default function TangoPlayer() {
                 <div className="p-1 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto">
                     <h2 className="text-xl mb-4 text-center">Virtual Tango DJ</h2>
                     <div className="flex justify-center mb-4">
-                        {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-64 h-64 object-cover rounded-lg shadow-md" />) : (<div className="w-64 h-64 bg-gray-700 rounded-lg shadow-md flex items-center justify-center text-gray-500">Artwork</div>)}
+                        {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-64 h-64 object-cover rounded-lg shadow-md" />) : (<div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
                     </div>
                     <div className="mb-4 text-center min-h-[4em]">
                         {currentTanda ? (<><p className="text-lg truncate font-medium">{currentTanda.orchestra || 'Unknown'}</p><p className="text-sm text-gray-400">{currentTanda.singer || 'Unknown'} - {currentTanda.type || 'Unknown'}</p><p className="text-xs text-gray-500 truncate" title={currentTrackTitle}>Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p></>) : (!isLoading && !error && <span>No music loaded.</span>)}
