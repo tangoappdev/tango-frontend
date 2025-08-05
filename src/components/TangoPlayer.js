@@ -559,17 +559,7 @@ export default function TangoPlayer() {
     }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying]);
 
     const handleShuffle = useCallback(() => {
-        setUpcomingPlaylist(prevPlaylist => {
-          // Create a copy to avoid mutating the original state directly
-          const shuffled = [...prevPlaylist];
-          
-          // Fisher-Yates shuffle algorithm
-          for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-          }
-          return shuffled;
-        });
+        setUpcomingPlaylist([]);
     }, []);
 
     useEffect(() => {
@@ -739,7 +729,7 @@ export default function TangoPlayer() {
                     
                     {/* ====== COLUMN 2: PLAYER (CENTER) ====== */}
                     <div className="w-[44%] flex flex-col">
-                        <h2 className="text-2xl mb-4 text-center text-gray-200">Virtual Tango DJ</h2>
+                        <h2 className="text-xl mt-4 text-center text-gray-200">Virtual Tango DJ</h2>
                         <div className="flex-grow flex flex-col items-center justify-center gap-6">
                             <div className="flex items-center gap-6">
                                 {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-56 h-56 object-cover rounded-lg shadow-lg" />) : (<div className="w-56 h-56 bg-gray-900/50 rounded-lg shadow-lg flex items-center justify-center text-gray-500">Artwork</div>)}
