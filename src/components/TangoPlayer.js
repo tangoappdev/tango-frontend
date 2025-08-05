@@ -123,7 +123,7 @@ function QueueContent({
             <div
                 ref={queueContainerRef}
                 onScroll={handleQueueScroll}
-                className="flex-grow overflow-y-auto p-3 px-3 h-full"
+                className="flex-grow overflow-y-auto p-3 px-2 h-full"
             >
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
                     <SortableContext
@@ -718,7 +718,7 @@ export default function TangoPlayer() {
                                 <div className="grid grid-cols-1 gap-y-4">
                                     <div><label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrderDesktop" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
                                     <div><label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                                    <div><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
+                                    <div><span className="block text-sm font-medium text-gray-400 mb-1">Tanda Length</span><div className="grid grid-cols-2 gap-3 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
                                 </div>
                             </div>
 
@@ -773,13 +773,13 @@ export default function TangoPlayer() {
                     </div>
 
                     {/* ====== COLUMN 3: QUEUE (RIGHT) ====== */}
-                    <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl overflow-hidden">
-                        <h3 className="text-lg font-semibold text-center text-gray-300 p-3 flex-shrink-0">Up Next</h3>
-                        <div className="flex-grow overflow-y-auto shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
+                    <div className="w-[28%] flex flex-col p-5 bg-[#30333a] rounded-xl overflow-hidden">
+                        <h3 className="text-lg font-semibold text-center text-gray-300 mb-3 flex-shrink-0">Up Next</h3>
+                        <div className="flex-grow overflow-y-auto rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
                             <QueueContent {...queueProps} />
                         </div>
                         {/* --- New Buttons Footer --- */}
-                        <div className="flex-shrink-0 mt-3 mb-2 w-full gap-3 border-t border-black/20 flex justify-around items-center">
+                        <div className="flex-shrink-0 mt-3 w-full gap-3 border-t border-black/20 flex justify-around items-center">
                             <button 
                                 onClick={handleShuffle} 
                                 title="Shuffle Playlist" 
