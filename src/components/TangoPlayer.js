@@ -748,44 +748,45 @@ export default function TangoPlayer() {
             {/* ====== DESKTOP 3-COLUMN LAYOUT (HIDDEN ON MOBILE) ====== */}
             {/* =================================================================== */}
             <div className="hidden lg:flex justify-center items-center w-full h-full p-4">
-                <div className="w-full max-w-7xl h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-6 flex gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out">
+                {/* --- CHANGED LINE: Added transition and conditional max-width --- */}
+                <div className={`w-full h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-6 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-7xl' : 'max-w-xl'}`}>
 
-                    {/* ====== COLUMN 1: SETTINGS & EQ (LEFT) ====== */}
-                    <div className={`flex flex-col bg-[#30333a] rounded-xl overflow-hidden transition-all duration-500 ease-in-out ${sidebarsVisible ? 'w-[28%]' : 'w-0 opacity-0 p-0'}`}>
-                        {/* The content area will now scroll if needed */}
-                        <div className="flex-grow overflow-y-auto p-3">
-                            {/* --- Settings Panel Content --- */}
-                            <div>
-                                <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
-                                    <AdjustmentsVerticalIcon className="h-6 w-6" strokeWidth={1} />
-                                    <span>Settings</span>
-                                </h3>
-                                <div className="grid grid-cols-1 gap-y-4">
-                                    <div><label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrderDesktop" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                                    <div><label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                                    <div><span className="block text-sm font-medium text-gray-400 mb-2">Tanda Length</span><div className="grid grid-cols-2 gap-3 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
+                    {/* --- CHANGED LINE: Wrapped in conditional render --- */}
+                    {sidebarsVisible && (
+                        <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl overflow-hidden">
+                            <div className="flex-grow overflow-y-auto p-3">
+                                <div>
+                                    <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
+                                        <AdjustmentsVerticalIcon className="h-6 w-6" strokeWidth={1} />
+                                        <span>Settings</span>
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-y-4">
+                                        <div><label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrderDesktop" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                                        <div><label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
+                                        <div><span className="block text-sm font-medium text-gray-400 mb-2">Tanda Length</span><div className="grid grid-cols-2 gap-3 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
+                                    </div>
+                                </div>
+                                <hr className="my-6 border-white/10" />
+                                <div>
+                                   <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
+                                        <SparklesIcon className="h-6 w-6" strokeWidth={1} />
+                                        <span>Equalizer</span>
+                                   </h3>
+                                   <div className="flex flex-col space-y-4">
+                                        <div className="flex flex-col"><label htmlFor="low-eq-desktop" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
+                                        <div className="flex flex-col"><label htmlFor="mid-eq-desktop" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
+                                        <div className="flex flex-col"><label htmlFor="high-eq-desktop" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
+                                   </div>
                                 </div>
                             </div>
-                            <hr className="my-6 border-white/10" />
-                            <div>
-                               <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
-                                    <SparklesIcon className="h-6 w-6" strokeWidth={1}/>
-                                    <span>Equalizer</span>
-                               </h3>
-                               <div className="flex flex-col space-y-4">
-                                    <div className="flex flex-col"><label htmlFor="low-eq-desktop" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
-                                    <div className="flex flex-col"><label htmlFor="mid-eq-desktop" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
-                                    <div className="flex flex-col"><label htmlFor="high-eq-desktop" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
-                               </div>
-                            </div>
                         </div>
-                    </div>
+                    )}
                     
                     {/* ====== COLUMN 2: PLAYER (CENTER) ====== */}
-                    <div className={`flex flex-col transition-all duration-500 ease-in-out ${sidebarsVisible ? 'w-[44%]' : 'w-full'}`}>
+                    {/* --- CHANGED LINE: Width is now always w-full --- */}
+                    <div className="w-full flex flex-col">
                         <div className="relative">
                             <h2 className="text-xl mt-4 text-center text-gray-200">Virtual Tango DJ</h2>
-                            {/* --- NEW: Sidebar Toggle Button --- */}
                             <button 
                                 onClick={toggleSidebars} 
                                 title={sidebarsVisible ? "Focus Mode" : "Show Panels"}
@@ -794,7 +795,6 @@ export default function TangoPlayer() {
                                 {sidebarsVisible ? <ArrowsPointingInIcon className="h-5 w-5" /> : <ArrowsPointingOutIcon className="h-5 w-5" />}
                             </button>
                         </div>
-
                         <div className="flex-grow flex flex-col items-center justify-center gap-6">
                             <div className="flex items-center gap-6">
                                 {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-56 h-56 object-cover rounded-lg shadow-lg" />) : (<div className="w-56 h-56 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
@@ -827,22 +827,29 @@ export default function TangoPlayer() {
                         </div>
                     </div>
 
-                    {/* ====== COLUMN 3: QUEUE (RIGHT) ====== */}
-                    <div className={`flex flex-col bg-[#30333a] rounded-xl overflow-hidden transition-all duration-500 ease-in-out ${sidebarsVisible ? 'w-[28%]' : 'w-0 opacity-0 p-0'}`}>
-                        <div className={`transition-opacity duration-300 ${sidebarsVisible ? 'opacity-100' : 'opacity-0'}`}>
-                           <h3 className="text-lg text-center text-gray-300 p-3 flex-shrink-0 flex items-center justify-center gap-2">
-                               <QueueListIcon className="h-6 w-6" strokeWidth={1} />
-                               <span>Queue</span>
-                           </h3>
-                           <div className="flex-grow overflow-y-auto rounded-lg mx-3 shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
-                               <QueueContent {...queueProps} />
-                           </div>
-                           <div className="flex-shrink-0 mt-5 mb-3 w-full gap-3 flex justify-around items-center px-3">
-                               <button onClick={handleShuffle} title="Shuffle Playlist" className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}><ArrowsRightLeftIcon className="h-5 w-5" />Shuffle</button>
-                               <button onClick={() => handleSettingChange('cortinas', !settings.cortinas)} title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"} className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${settings.cortinas ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}><MusicalNoteIcon className="h-5 w-5" />Cortinas</button>
-                           </div>
+                    {/* --- CHANGED LINE: Wrapped in conditional render --- */}
+                    {sidebarsVisible && (
+                        <div className="w-[28%] flex flex-col bg-[#30333a] p-3 rounded-xl overflow-hidden">
+                            <h3 className="text-lg text-center text-gray-300 mb-3 flex-shrink-0 flex items-center justify-center gap-2">
+                                <QueueListIcon className="h-6 w-6" strokeWidth={1} />
+                                <span>Queue</span>
+                            </h3>
+                            <div className="relative flex-grow rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
+                                <div className="w-full h-full overflow-y-auto">
+                                    <QueueContent {...queueProps} />
+                                </div>
+                                {isRefreshing && (
+                                    <div className="absolute inset-0 bg-[#30333a80] backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
+                                        <p className="text-white font-semibold">Refreshing...</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-shrink-0 mt-5 w-full gap-3 flex justify-around items-center">
+                                <button onClick={handleShuffle} title="Shuffle Playlist" className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}><ArrowsRightLeftIcon className="h-5 w-5" />Shuffle</button>
+                                <button onClick={() => handleSettingChange('cortinas', !settings.cortinas)} title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"} className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${settings.cortinas ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}><MusicalNoteIcon className="h-5 w-5" />Cortinas</button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
