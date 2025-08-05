@@ -779,7 +779,7 @@ export default function TangoPlayer() {
                             <QueueContent {...queueProps} />
                         </div>
                         {/* --- New Buttons Footer --- */}
-                        <div className="flex-shrink-0 p-3 border-t border-black/20 flex justify-around items-center">
+                        <div className="flex-shrink-0 mt-3 mb-2 w-full gap-3 border-t border-black/20 flex justify-around items-center">
                             <button 
                                 onClick={handleShuffle} 
                                 title="Shuffle Playlist" 
