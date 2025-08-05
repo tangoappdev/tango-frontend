@@ -790,7 +790,7 @@ export default function TangoPlayer() {
                             <button 
                                 onClick={toggleSidebars} 
                                 title={sidebarsVisible ? "Focus Mode" : "Show Panels"}
-                                className="absolute top-0 right-0 mt-2 p-2 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+                                className="absolute top-0 right-0 mt-2 p-2 rounded-full text-gray-300 transition-all duration-200 ease-in-out shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[inset_5px_5px_10px_#131417,inset_-5px_-5px_10px_#4d525d] hover:text-[#25edda]"
                             >
                                 {sidebarsVisible ? <ArrowsPointingInIcon className="h-5 w-5" /> : <ArrowsPointingOutIcon className="h-5 w-5" />}
                             </button>
