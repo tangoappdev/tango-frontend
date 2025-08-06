@@ -397,35 +397,49 @@ export default function TangoPlayer() {
 
     const handleDragEnd = (event) => {
         const { active, over } = event;
-        if (!over || active.id === over.id) return;
 
+        if (!over || active.id === over.id) {
+            return;
+        }
 
-        const isActiveInManual = manualQueueIds.includes(active.id);
-        const isOverInManual = manualQueueIds.includes(over.id);
         const draggedTanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === active.id);
-
-
         if (!draggedTanda) return;
 
+        const isActiveInManual = manualQueue.some(t => t.id === active.id);
+        const isOverInManual = manualQueue.some(t => t.id === over.id);
+        const isOverInUpcoming = upcomingPlaylist.some(t => t.id === over.id);
 
+        // Case 1: Reordering within the manual queue.
         if (isActiveInManual && isOverInManual) {
-            setManualQueue((items) => {
-                const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over.id);
+            setManualQueue(items => {
+                const oldIndex = items.findIndex(item => item.id === active.id);
+                const newIndex = items.findIndex(item => item.id === over.id);
                 return arrayMove(items, oldIndex, newIndex);
             });
         }
+        // Case 2: Dragging an item from the upcoming playlist INTO the manual queue.
         else if (!isActiveInManual && isOverInManual) {
             setUpcomingPlaylist(prev => prev.filter(t => t.id !== active.id));
             setManualQueue(items => {
-                const newIndex = items.findIndex(item => item.id === over.id);
-                const newItems = [...items];
-                newItems.splice(newIndex, 0, draggedTanda);
-                return newItems;
+                const overIndex = items.findIndex(item => item.id === over.id);
+                // Insert the dragged tanda at the position of the item it was dropped on.
+                return [...items.slice(0, overIndex), draggedTanda, ...items.slice(overIndex)];
             });
         }
-    };
+        // Case 3: Dragging an item from the upcoming playlist to START the manual queue
+        // This happens if we drop it on the very first item of the upcoming list.
+        else if (!isActiveInManual && isOverInUpcoming) {
+            // Find the position of the dragged item and the drop target in the upcoming list.
+            const oldUpcomingIndex = upcomingPlaylist.findIndex(t => t.id === active.id);
+            const newUpcomingIndex = upcomingPlaylist.findIndex(t => t.id === over.id);
 
+            // If we drag an item upwards over the first item, it means we want to make it manual.
+            if (newUpcomingIndex === 0 && oldUpcomingIndex > newUpcomingIndex) {
+                 setUpcomingPlaylist(prev => prev.filter(t => t.id !== active.id));
+                 setManualQueue(items => [draggedTanda, ...items]);
+            }
+        }
+    };
 
     const handlePlayNext = (tandaToPlayNext) => {
         if (!currentTanda || currentTanda.id === tandaToPlayNext.id) {
