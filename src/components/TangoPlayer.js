@@ -10,7 +10,7 @@ import {
     PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
     ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, AdjustmentsVerticalIcon,
     SparklesIcon, QueueListIcon, ArrowsRightLeftIcon, MusicalNoteIcon,
-    ArrowsPointingOutIcon, ArrowsPointingInIcon
+    ArrowsPointingOutIcon, ArrowsPointingInIcon, ArrowUturnLeftIcon
 } from '@heroicons/react/24/outline';
 
 
@@ -47,6 +47,19 @@ function Queue({
             isDraggingPanel.current = false;
         }
     };
+
+    const handleResetEq = useCallback(() => {
+        const newEq = { low: 0, mid: 0, high: 0 };
+        setEq(newEq);
+
+        // Also update the actual audio graph if it's active
+        if (isDesktop && audioContextRef.current) {
+            const audioCtx = audioContextRef.current;
+            if (lowShelfRef.current) lowShelfRef.current.gain.setTargetAtTime(newEq.low, audioCtx.currentTime, 0.01);
+            if (midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(newEq.mid, audioCtx.currentTime, 0.01);
+            if (highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(newEq.high, audioCtx.currentTime, 0.01);
+        }
+    }, [isDesktop]); // Dependency on isDesktop
 
     const handleTouchEnd = () => {
         if (isDesktop) return;
@@ -758,9 +771,12 @@ export default function TangoPlayer() {
     
     {/* --- EQ Panel Content (Now on top) --- */}
 <div>
-   <h3 className="text-lg mb-5 text-center text-gray-300 flex items-center justify-center gap-2">
-        <SparklesIcon className="h-6 w-6" strokeWidth={1}/>
-        <span>Equalizer</span>
+   <h3 className="relative text-lg mb-5 text-center text-gray-300 flex items-center justify-center gap-2">
+    <SparklesIcon className="h-6 w-6" strokeWidth={1}/>
+    <span>Equalizer</span>
+    <button onClick={handleResetEq} title="Reset Equalizer" className="absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
+        <ArrowUturnLeftIcon className="h-5 w-5" />
+    </button>
    </h3>
    <div className="flex flex-col space-y-4">
         <div className="flex flex-col"><label htmlFor="high-eq-desktop" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
@@ -906,7 +922,12 @@ export default function TangoPlayer() {
                         </div>
                         <div className={activePanel === 'eq' ? 'block' : 'hidden'}>
                             <div className="p-6 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
-                                <h3 className="text-lg mb-2 text-center text-gray-300">Equalizer</h3>
+                                <h3 className="relative text-lg mb-2 text-center text-gray-300">
+                                    Equalizer
+                                    <button onClick={handleResetEq} title="Reset Equalizer" className="absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
+                                        <ArrowUturnLeftIcon className="h-5 w-5" />
+                                    </button>
+                                </h3>
                                 <div className="relative">
                                     {eqNotification && (<div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 rounded-lg"><p className="text-white text-center p-4">{eqNotification}</p></div>)}
                                     <div className="flex flex-col space-y-2">
