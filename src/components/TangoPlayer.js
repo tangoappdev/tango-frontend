@@ -794,7 +794,7 @@ export default function TangoPlayer() {
                     {/* ====== COLUMN 2: PLAYER (CENTER) ====== */}
                     <div className={`flex flex-col transition-all duration-500 ease-in-out ${sidebarsVisible ? 'w-[44%]' : 'w-full'}`}>
                         <div className="relative">
-                            <h2 className="text-xl mt-4 text-center text-gray-200">Virtual Tango DJ</h2>
+                            <h2 className="text-xl mt-4 mb-4 text-center text-gray-200">Virtual Tango DJ</h2>
                             <button 
                                 onClick={toggleSidebars} 
                                 title={sidebarsVisible ? "Focus Mode" : "Show Panels"}
