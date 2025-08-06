@@ -865,7 +865,7 @@ export default function TangoPlayer() {
             {/* =================================================================== */}
             <div className="block lg:hidden p-2 sm:p-4">
                 <div className="p-1 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto">
-                    <h2 className="text-xl mb-4 text-center">Virtual Tango DJ</h2>
+                    <h2 className="text-xl mb-8 text-center">Virtual Tango DJ</h2>
                     <div className="flex justify-center mb-4">
                         {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-64 h-64 object-cover rounded-lg shadow-md" />) : (<div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
                     </div>
