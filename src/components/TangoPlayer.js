@@ -758,7 +758,7 @@ export default function TangoPlayer() {
     
     {/* --- EQ Panel Content (Stays at the top) --- */}
     <div>
-       <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
+       <h3 className="text-lg mb-5 text-center text-gray-300 flex items-center justify-center gap-2">
             <SparklesIcon className="h-6 w-6" strokeWidth={1}/>
             <span>Equalizer</span>
        </h3>
