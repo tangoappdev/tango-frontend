@@ -748,13 +748,31 @@ export default function TangoPlayer() {
             {/* ====== DESKTOP 3-COLUMN LAYOUT (HIDDEN ON MOBILE) ====== */}
             {/* =================================================================== */}
             <div className="hidden lg:flex justify-center items-center w-full h-full p-4">
-                {/* --- CHANGED LINE: Added transition and conditional max-width --- */}
-                <div className={`w-full h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-4 flex justify-center gap-4 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-7xl' : 'max-w-lg'}`}>
+                <div className={`w-full h-[600px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-4 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-7xl' : 'max-w-lg'}`}>
 
-                    {/* --- CHANGED LINE: Wrapped in conditional render --- */}
+                    {/* ====== COLUMN 1: SETTINGS & EQ (LEFT) ====== */}
                     {sidebarsVisible && (
                         <div className="w-[28%] flex flex-col bg-[#30333a] rounded-xl overflow-hidden">
+                            {/* The content area will now scroll if needed */}
                             <div className="flex-grow overflow-y-auto p-3">
+                                
+                                {/* --- EQ Panel Content (Now on top) --- */}
+                                <div>
+                                   <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
+                                        <SparklesIcon className="h-6 w-6" strokeWidth={1}/>
+                                        <span>Equalizer</span>
+                                   </h3>
+                                   <div className="flex flex-col space-y-4">
+                                        <div className="flex flex-col"><label htmlFor="low-eq-desktop" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
+                                        <div className="flex flex-col"><label htmlFor="mid-eq-desktop" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
+                                        <div className="flex flex-col"><label htmlFor="high-eq-desktop" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
+                                   </div>
+                                </div>
+
+                                {/* --- Visual Separator --- */}
+                                <hr className="my-6 border-white/10" />
+
+                                {/* --- Settings Panel Content (Now at the bottom) --- */}
                                 <div>
                                     <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
                                         <AdjustmentsVerticalIcon className="h-6 w-6" strokeWidth={1} />
@@ -766,24 +784,11 @@ export default function TangoPlayer() {
                                         <div><span className="block text-sm font-medium text-gray-400 mb-2">Tanda Length</span><div className="grid grid-cols-2 gap-3 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
                                     </div>
                                 </div>
-                                <hr className="my-6 border-white/10" />
-                                <div>
-                                   <h3 className="text-lg mb-3 text-center text-gray-300 flex items-center justify-center gap-2">
-                                        <SparklesIcon className="h-6 w-6" strokeWidth={1} />
-                                        <span>Equalizer</span>
-                                   </h3>
-                                   <div className="flex flex-col space-y-4">
-                                        <div className="flex flex-col"><label htmlFor="low-eq-desktop" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
-                                        <div className="flex flex-col"><label htmlFor="mid-eq-desktop" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
-                                        <div className="flex flex-col"><label htmlFor="high-eq-desktop" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
-                                   </div>
-                                </div>
                             </div>
                         </div>
                     )}
                     
                     {/* ====== COLUMN 2: PLAYER (CENTER) ====== */}
-                    {/* --- CHANGED LINE: Width is now always w-full --- */}
                     <div className={`flex flex-col transition-all duration-500 ease-in-out ${sidebarsVisible ? 'w-[44%]' : 'w-full'}`}>
                         <div className="relative">
                             <h2 className="text-xl mt-4 text-center text-gray-200">Virtual Tango DJ</h2>
@@ -805,7 +810,7 @@ export default function TangoPlayer() {
                                 {currentTanda ? (<><p className="text-xl truncate font-semibold text-gray-100" title={`${currentTanda.orchestra} - ${currentTanda.singer}`}>{currentTanda.orchestra || 'Unknown Orchestra'}</p><p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p><p className="text-xs text-gray-500 truncate" title={currentTrackTitle}>Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p></>) : (!isLoading && !error && <span className="text-lg text-gray-500">No music loaded.</span>)}
                             </div>
                         </div>
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 mb-4">
                             <audio ref={audioRef} crossOrigin="anonymous" onEnded={handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
                             <div className="flex items-center gap-4 mb-3 px-4">
                                 <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
@@ -827,7 +832,6 @@ export default function TangoPlayer() {
                         </div>
                     </div>
 
-                    {/* --- CHANGED LINE: Wrapped in conditional render --- */}
                     {sidebarsVisible && (
                         <div className="w-[28%] flex flex-col bg-[#30333a] p-3 rounded-xl overflow-hidden">
                             <h3 className="text-lg text-center text-gray-300 mb-3 flex-shrink-0 flex items-center justify-center gap-2">
@@ -844,7 +848,7 @@ export default function TangoPlayer() {
                                     </div>
                                 )}
                             </div>
-                            <div className="flex-shrink-0 mt-5 w-full gap-3 flex justify-around items-center">
+                            <div className="flex-shrink-0 mb-4 mt-5 w-full gap-3 flex justify-around items-center">
                                 <button onClick={handleShuffle} title="Shuffle Playlist" className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}><ArrowsRightLeftIcon className="h-5 w-5" />Shuffle</button>
                                 <button onClick={() => handleSettingChange('cortinas', !settings.cortinas)} title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"} className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${settings.cortinas ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}><MusicalNoteIcon className="h-5 w-5" />Cortinas</button>
                             </div>
