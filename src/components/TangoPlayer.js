@@ -48,19 +48,6 @@ function Queue({
         }
     };
 
-    const handleResetEq = useCallback(() => {
-        const newEq = { low: 0, mid: 0, high: 0 };
-        setEq(newEq);
-
-        // Also update the actual audio graph if it's active
-        if (isDesktop && audioContextRef.current) {
-            const audioCtx = audioContextRef.current;
-            if (lowShelfRef.current) lowShelfRef.current.gain.setTargetAtTime(newEq.low, audioCtx.currentTime, 0.01);
-            if (midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(newEq.mid, audioCtx.currentTime, 0.01);
-            if (highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(newEq.high, audioCtx.currentTime, 0.01);
-        }
-    }, [isDesktop]); // Dependency on isDesktop
-
     const handleTouchEnd = () => {
         if (isDesktop) return;
         const deltaY = touchMoveY.current - touchStartY.current;
@@ -612,6 +599,19 @@ export default function TangoPlayer() {
             setIsRefreshing(false); // Hide the overlay
         }
     }, [settings, recentlyPlayedIds, manualQueue]);
+
+    const handleResetEq = useCallback(() => {
+        const newEq = { low: 0, mid: 0, high: 0 };
+        setEq(newEq);
+
+        // Also update the actual audio graph if it's active
+        if (isDesktop && audioContextRef.current) {
+            const audioCtx = audioContextRef.current;
+            if (lowShelfRef.current) lowShelfRef.current.gain.setTargetAtTime(newEq.low, audioCtx.currentTime, 0.01);
+            if (midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(newEq.mid, audioCtx.currentTime, 0.01);
+            if (highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(newEq.high, audioCtx.currentTime, 0.01);
+        }
+    }, [isDesktop]); // Dependency on isDesktop
 
     useEffect(() => {
         const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
