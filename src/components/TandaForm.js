@@ -164,7 +164,6 @@ export default function TandaForm() {
           {/* Image Upload Area */}
           <div className="relative w-48 h-48 flex-shrink-0">
             {imagePreview ? ( <img src={imagePreview} alt="Tanda artwork preview" className="w-full h-full object-cover rounded-[20px]" /> ) : ( <div className="w-full h-full bg-[#30333a] rounded-[20px] flex items-center justify-center text-sm text-gray-400 shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"> Upload cover image </div> )}
-            <label className="absolute inset-0 flex items-center justify-center cursor-pointer group"> <span className="bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"> Click to upload </span> <input type="file" name="image" accept="image/*" onChange={handleImageChange} className="hidden" /> </label>
           </div>
 
           {/* Text Inputs and Type Selector */}
