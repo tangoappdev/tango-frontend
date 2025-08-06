@@ -803,7 +803,7 @@ export default function TangoPlayer() {
                                 {sidebarsVisible ? <ArrowsPointingInIcon className="h-5 w-5" /> : <ArrowsPointingOutIcon className="h-5 w-5" />}
                             </button>
                         </div>
-                        <div className="flex-grow flex flex-col items-center justify-center gap-6">
+                        <div className="flex-grow flex flex-col items-center justify-center gap-8">
                             <div className="flex items-center gap-6">
                                 {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-56 h-56 object-cover rounded-lg shadow-lg" />) : (<div className="w-56 h-56 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
                                 {renderVerticalVolumeSlider(volume, handleVolumeChange)}
@@ -815,7 +815,7 @@ export default function TangoPlayer() {
                         </div>
                         <div className="flex-shrink-0 mb-1">
                             <audio ref={audioRef} crossOrigin="anonymous" onEnded={handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
-                            <div className="flex items-center gap-4 mb-3 px-4">
+                            <div className="flex items-center gap-4 mb-4 px-4">
                                 <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
                                 <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}>
                                     <div className="absolute top-0 left-0 w-full h-full bg-[#222429] rounded-full shadow-[inset_3px_3px_2px_#222429,inset_-3px_-3px_2px_#3e424b]"></div>
@@ -825,7 +825,7 @@ export default function TangoPlayer() {
                                 </div>
                                 <span className="text-xs w-10 text-left tabular-nums">{formatTime(duration)}</span>
                             </div>
-                            <div className="flex justify-center items-center space-x-4 mb-2">
+                            <div className="flex justify-center items-center space-x-4 mb-3">
                                 <button onClick={handleRewind} title="Previous Tanda" disabled={tandaHistory.length === 0} className={`${regularButtonStyle} p-3`}><ChevronDoubleLeftIcon className="h-5 w-5" /></button>
                                 <button onClick={handleSkipBackward} title="Previous Track" disabled={!currentTanda} className={`${regularButtonStyle} p-3`}><ChevronLeftIcon className="h-5 w-5" /></button>
                                 <button onClick={isPlaying ? handlePause : handlePlay} disabled={!currentTanda && isLoading} className={`${playPauseButtonStyle} p-4`} title={isPlaying ? "Pause" : "Play"}>{isPlaying ? <PauseIcon className="h-7 w-7" /> : <PlayIcon className="h-7 w-7" />}</button>
