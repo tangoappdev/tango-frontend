@@ -211,7 +211,7 @@ export default function TandaForm() {
             <input type="text" placeholder={`Track ${index + 1} Title`} value={track.title} onChange={(e) => handleTrackChange(index, 'title', e.target.value)} className="col-span-7 md:col-span-8 p-3 rounded-full bg-[#30333a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]" />
             <label className="col-span-5 md:col-span-4 px-4 py-2 rounded-full text-sm text-[#25edda] text-center cursor-pointer shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] transition-shadow duration-150 ease-in-out">
               {track.file ? track.file.name : 'Upload File'}
-              <input type="file" accept="audio/*" onChange={(e) => handleTrackChange(index, 'file', e.target.files[0])} className="hidden" />
+              <input type="file" accept="audio/mpeg, .mp3" onChange={(e) => handleTrackChange(index, 'file', e.target.files[0])} className="hidden" />
             </label>
           </div>
         ))}
