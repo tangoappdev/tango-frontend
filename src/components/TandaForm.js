@@ -109,9 +109,9 @@ export default function TandaForm() {
       // --- End Logging ---
 
       // Send request
-      const res = await fetch('http://localhost:3100/api/tandas', {
-        method: 'POST',
-        body: formData,
+      const res = await fetch('/api/tandas/upload', {
+      method: 'POST',
+      body: formData,
       });
 
       if (!res.ok) {
@@ -156,23 +156,23 @@ export default function TandaForm() {
   // --- JSX for the Form ---
   return (
     <div className="min-h-screen bg-[#30333a] text-white font-quicksand p-10">
-      <div className="max-w-4xl mx-auto p-6 md:p-10 rounded-[2rem] shadow-[5px_5px_10px_#181a1d,-5px_-5px_10px_#484d57]">
-        <h1 className="text-3xl font-bold text-[#25edda] mb-6 text-center">Create New Tanda</h1>
+      <div className="max-w-2xl mx-auto p-6 md:p-10 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57]">
+        <h1 className="text-2xl text-[#25edda] mb-8 text-center">Create New Tanda</h1>
 
         {/* Image Upload and Main Info Section */}
         <div className="flex flex-col md:flex-row gap-6 mb-6 items-start">
           {/* Image Upload Area */}
           <div className="relative w-48 h-48 flex-shrink-0">
-            {imagePreview ? ( <img src={imagePreview} alt="Tanda artwork preview" className="w-full h-full object-cover rounded-[20px]" /> ) : ( <div className="w-full h-full bg-[#30333a] rounded-[20px] flex items-center justify-center text-sm text-gray-400 shadow-[inset_5px_5px_10px_#1f2126,inset_-5px_-5px_10px_#41454e]"> Upload cover image </div> )}
+            {imagePreview ? ( <img src={imagePreview} alt="Tanda artwork preview" className="w-full h-full object-cover rounded-[20px]" /> ) : ( <div className="w-full h-full bg-[#30333a] rounded-[20px] flex items-center justify-center text-sm text-gray-400 shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"> Upload cover image </div> )}
             <label className="absolute inset-0 flex items-center justify-center cursor-pointer group"> <span className="bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"> Click to upload </span> <input type="file" name="image" accept="image/*" onChange={handleImageChange} className="hidden" /> </label>
           </div>
 
           {/* Text Inputs and Type Selector */}
           <div className="flex-1 flex flex-col gap-4">
-            <input list="orquesta-list" placeholder="Orquesta" value={orquesta} onChange={(e) => setOrquesta(e.target.value)} className="w-full h-12 p-3 rounded-full bg-[#30333a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_5px_5px_10px_#1f2126,inset_-5px_-5px_10px_#41454e]" />
+            <input list="orquesta-list" placeholder="Orquesta" value={orquesta} onChange={(e) => setOrquesta(e.target.value)} className="w-full h-12 p-3 rounded-full bg-[#30333a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]" />
             <datalist id="orquesta-list"> {filteredOrquestas.map((o, i) => <option key={i} value={o} />)} </datalist>
-            <input placeholder="Singer" value={singer} onChange={(e) => setSinger(e.target.value)} className="w-full h-12 p-3 rounded-full bg-[#30333a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_5px_5px_10px_#1f2126,inset_-5px_-5px_10px_#41454e]" />
-            <select value={type} onChange={(e) => setType(e.target.value)} className="w-full h-12 p-3 rounded-full appearance-none bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_5px_5px_10px_#1f2126,inset_-5px_-5px_10px_#41454e]" >
+            <input placeholder="Singer" value={singer} onChange={(e) => setSinger(e.target.value)} className="w-full h-12 p-3 rounded-full bg-[#30333a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]" />
+            <select value={type} onChange={(e) => setType(e.target.value)} className="w-full h-12 p-3 rounded-full appearance-none bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]" >
               <option value="Tango">Tango</option>
               <option value="Milonga">Milonga</option>
               <option value="Vals">Vals</option>
@@ -186,7 +186,7 @@ export default function TandaForm() {
           <select
             value={category} // Controlled component using state
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full h-12 p-3 rounded-full appearance-none bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_5px_5px_10px_#1f2126,inset_-5px_-5px_10px_#41454e]"
+            className="w-full h-12 p-3 rounded-full appearance-none bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
           >
             {/* --- *** FIXED: Ensure option value matches the exact string *** --- */}
             <option value={CATEGORIES.TRADITIONAL_GOLDEN_AGE}>{CATEGORIES.TRADITIONAL_GOLDEN_AGE}</option>
@@ -196,7 +196,7 @@ export default function TandaForm() {
 
           {/* Style Selector (Conditional) */}
           {showStyleSelector && (
-            <select value={style} onChange={(e) => setStyle(e.target.value)} className="w-full h-12 p-3 rounded-full appearance-none bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_5px_5px_10px_#1f2126,inset_-5px_-5px_10px_#41454e]" >
+            <select value={style} onChange={(e) => setStyle(e.target.value)} className="w-full h-12 p-3 rounded-full appearance-none bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]" >
               <option value="Rhythmic">Rhythmic</option>
               <option value="Melodic">Melodic</option>
             </select>
@@ -208,8 +208,8 @@ export default function TandaForm() {
         <p className="mb-4 text-[#25edda]">Upload Tracks ({displayedTracks})</p>
         {tracks.slice(0, displayedTracks).map((track, index) => (
           <div key={index} className="grid grid-cols-12 gap-4 items-center mb-4">
-            <input type="text" placeholder={`Track ${index + 1} Title`} value={track.title} onChange={(e) => handleTrackChange(index, 'title', e.target.value)} className="col-span-7 md:col-span-8 p-3 rounded-full bg-[#30333a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_5px_5px_10px_#1f2126,inset_-5px_-5px_10px_#41454e]" />
-            <label className="col-span-5 md:col-span-4 px-4 py-2 rounded-full text-sm text-[#25edda] text-center cursor-pointer shadow-[5px_5px_10px_#1f2126,-5px_-5px_10px_#41454e] hover:shadow-[inset_2px_2px_5px_#1f2126,inset_-2px_-2px_5px_#41454e] transition-shadow duration-150 ease-in-out">
+            <input type="text" placeholder={`Track ${index + 1} Title`} value={track.title} onChange={(e) => handleTrackChange(index, 'title', e.target.value)} className="col-span-7 md:col-span-8 p-3 rounded-full bg-[#30333a] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]" />
+            <label className="col-span-5 md:col-span-4 px-4 py-2 rounded-full text-sm text-[#25edda] text-center cursor-pointer shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] transition-shadow duration-150 ease-in-out">
               {track.file ? track.file.name : 'Upload File'}
               <input type="file" accept="audio/*" onChange={(e) => handleTrackChange(index, 'file', e.target.files[0])} className="hidden" />
             </label>
