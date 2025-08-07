@@ -12,7 +12,7 @@ if (!admin.apps.length) {
   }
 }
 
-const adminDb = admin.firestore();
-const adminStorage = admin.storage();
-
-export { adminDb, adminStorage };
+// Export functions that return the initialized services
+export const getFirestore = () => admin.firestore();
+export const getStorage = () => admin.storage();
+export const getServerTimestamp = () => admin.firestore.FieldValue.serverTimestamp();
