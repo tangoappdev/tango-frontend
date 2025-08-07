@@ -24,9 +24,16 @@ const db = admin.firestore();
  */
 export async function POST(request) {
   try {
+    // --- NEW LOGGING: Let's see what the server is actually receiving ---
+    console.log('--- UPLOAD API HIT ---');
+    console.log('Request Headers:', JSON.stringify(Object.fromEntries(request.headers), null, 2));
+    
     // 1. Parse the incoming request body as JSON.
     // This is the `finalTandaData` object sent from your TandaForm.js.
     const tandaData = await request.json();
+
+    // --- NEW LOGGING: Log the parsed data ---
+    console.log('Parsed JSON Body:', JSON.stringify(tandaData, null, 2));
 
     // 2. Basic validation to ensure required fields are present.
     if (!tandaData.orchestra || !tandaData.type || !tandaData.tracks || tandaData.tracks.length === 0) {
