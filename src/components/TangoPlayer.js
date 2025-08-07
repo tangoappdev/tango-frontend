@@ -86,13 +86,11 @@ function Queue({
                     bg-[#30333a] shadow-2xl lg:shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] flex flex-col
                     transition-all duration-500 ease-in-out
                     
-                    ${/* Mobile panel styles */''}
                     absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] rounded-t-2xl transform
                     ${isOpen ? 'translate-y-0' : 'translate-y-full'}
 
-                    ${/* Desktop panel styles (These are from the old layout, they won't be used in the new 3-column layout but are harmless to keep) */''}
                     lg:relative lg:h-full lg:w-full lg:rounded-lg lg:transform-none lg:mx-0
-                    lg:transition-opacity ${isOpen ? 'lg:opacity-100' : 'lg:opacity-0' }
+                    lg:transition-opacity ${isOpen ? 'lg:opacity-100' : 'lg:opacity-0'}
                 `}
             >
                 {/* Mobile-only handle */}
@@ -342,7 +340,9 @@ export default function TangoPlayer() {
 
 
     useEffect(() => {
+        // --- FIX: Use tracks_signed and url_signed ---
         const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
+        
         if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
             audioRef.current.src = trackUrl;
             audioRef.current.load();
@@ -498,6 +498,7 @@ export default function TangoPlayer() {
 
 
     const handleTrackEnded = useCallback(() => {
+        // --- FIX: Use tracks_signed ---
         const totalTracks = currentTanda?.tracks_signed?.length || 0;
         const lengthRule = (currentTanda?.type === 'Tango') ? settings.tandaLength : 3;
         if (currentTrackIndex < Math.min(totalTracks, lengthRule) - 1) {
@@ -511,6 +512,7 @@ export default function TangoPlayer() {
 
     const handleSkipForward = useCallback(() => {
         if (!currentTanda) return;
+        // --- FIX: Use tracks_signed ---
         const totalTracks = currentTanda.tracks_signed?.length || 0;
         const effectiveLength = (currentTanda.type === 'Tango') ? settings.tandaLength : 3;
         if (currentTrackIndex < Math.min(totalTracks, effectiveLength) - 1) {
@@ -631,6 +633,7 @@ export default function TangoPlayer() {
     }, [isDesktop]); // Dependency on isDesktop
 
     useEffect(() => {
+        // --- FIX: Use tracks_signed ---
         const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
 
 
@@ -640,6 +643,7 @@ export default function TangoPlayer() {
                 artist: currentTanda.orchestra,
                 album: `${currentTanda.singer || 'Instrumental'} - ${currentTanda.type}`,
                 artwork: [
+                    // --- FIX: Use artwork_signed ---
                     { src: currentTanda.artwork_signed, sizes: '512x512', type: 'image/jpeg' },
                 ]
             });
@@ -747,8 +751,10 @@ export default function TangoPlayer() {
     }
 
 
+    // --- FIX: Use tracks_signed ---
     const currentTrackTitle = currentTanda?.tracks_signed?.[currentTrackIndex]?.title || '...';
     const displayTandaLength = currentTanda ? ((currentTanda.type === 'Tango') ? settings.tandaLength : 3) : '?';
+    // --- FIX: Use tracks_signed ---
     const displayTotalTracks = currentTanda?.tracks_signed?.length || 0;
     
     // --- Restored Original Neumorphic Button Styles ---
@@ -838,6 +844,7 @@ export default function TangoPlayer() {
                         </div>
                         <div className="flex-grow flex flex-col items-center justify-center gap-8">
                             <div className="flex items-center gap-6">
+                                {/* --- FIX: Use artwork_signed --- */}
                                 {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-56 h-56 object-cover rounded-lg shadow-lg" />) : (<div className="w-56 h-56 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
                                 {renderVerticalVolumeSlider(volume, handleVolumeChange)}
                             </div>
@@ -900,6 +907,7 @@ export default function TangoPlayer() {
                 <div className="p-1 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto">
                     <h2 className="text-xl mb-8 text-center">Virtual Tango DJ</h2>
                     <div className="flex justify-center mb-4">
+                        {/* --- FIX: Use artwork_signed --- */}
                         {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-64 h-64 object-cover rounded-lg shadow-md" />) : (<div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
                     </div>
                     <div className="mb-4 text-center min-h-[4em]">
@@ -948,9 +956,9 @@ export default function TangoPlayer() {
                                 <div className="relative">
                                     {eqNotification && (<div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 rounded-lg"><p className="text-white text-center p-4">{eqNotification}</p></div>)}
                                     <div className="flex flex-col space-y-2">
-                                        <div className="flex flex-col"><label htmlFor="high-eq" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>                                
+                                        <div className="flex flex-col"><label htmlFor="high-eq" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>                                        
                                         <div className="flex flex-col"><label htmlFor="mid-eq" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>
-                                        <div className="flex flex-col"><label htmlFor="low-eq" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>                                    </div>
+                                        <div className="flex flex-col"><label htmlFor="low-eq" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>                                        </div>
                                 </div>
                             </div>
                         </div>
