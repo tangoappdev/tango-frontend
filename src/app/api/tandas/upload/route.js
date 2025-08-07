@@ -63,7 +63,7 @@ export async function POST(request) {
       category,
       style,
       // Correctly saves to 'artwork_path' in Firestore
-      artwork_path: artworkPath, 
+      artwork_url: artworkUrl, 
       tracks: titles.map((title, index) => ({
         title,
         filePath: `tracks/${audioFiles[index].name}`,
