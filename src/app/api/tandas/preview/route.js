@@ -113,11 +113,14 @@ export async function GET(request) {
     const tandasWithSignedUrls = await Promise.all(
       upcomingTandas.map(async (tanda) => ({
         ...tanda,
-        artwork_signed: await generateV4ReadSignedUrl(tanda.artwork_path),
+        // Correctly reads 'artwork_path' from Firestore
+        artwork_signed: await generateV4ReadSignedUrl(tanda.artwork_url), 
         tracks_signed: await Promise.all(tanda.tracks.map(async (track) => ({ ...track, url_signed: await generateV4ReadSignedUrl(track.url) }))),
       }))
     );
     
+    console.log("API is generating this data:", JSON.stringify(tandasWithSignedUrls, null, 2));
+
     return NextResponse.json({ upcomingTandas: tandasWithSignedUrls });
 
   } catch (error) {
