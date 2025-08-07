@@ -49,11 +49,12 @@ export async function POST(request) {
     const audioFiles = formData.getAll('files[]');
 
     // --- Step 1: Upload all files to Firebase Storage in parallel ---
-    const [artworkUrl, ...trackUrls] = await Promise.all([
+    const [artworkPath, ...trackUrls] = await Promise.all([
       uploadFile(imageFile, 'artworks'),
       ...audioFiles.map(file => uploadFile(file, 'tracks'))
     ]);
 
+    // --- Step 2: Prepare the final data object for Firestore ---
     // --- Step 2: Prepare the final data object for Firestore ---
     const tandaData = {
       orchestra,
@@ -61,12 +62,12 @@ export async function POST(request) {
       type,
       category,
       style,
-      artwork_url: artworkUrl,
+      // Correctly saves to 'artwork_path' in Firestore
+      artwork_path: artworkPath, 
       tracks: titles.map((title, index) => ({
         title,
-        url: trackUrls[index],
+        filePath: `tracks/${audioFiles[index].name}`,
       })),
-      // This line now works correctly because we imported 'admin'
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
