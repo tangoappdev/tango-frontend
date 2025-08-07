@@ -838,7 +838,7 @@ export default function TangoPlayer() {
                         </div>
                         <div className="flex-grow flex flex-col items-center justify-center gap-8">
                             <div className="flex items-center gap-6">
-                                {currentTanda && currentTanda.artwork_url ? (<img src={currentTanda.artwork_url} alt={`Artwork for ${currentTanda.orchestra}`} className="w-56 h-56 object-cover rounded-lg shadow-lg" />) : (<div className="w-56 h-56 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
+                                {currentTanda && currentTanda.artwork_url? (<img src={currentTanda.artwork_url} alt={`Artwork for ${currentTanda.orchestra}`} className="w-56 h-56 object-cover rounded-lg shadow-lg" />) : (<div className="w-56 h-56 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
                                 {renderVerticalVolumeSlider(volume, handleVolumeChange)}
                             </div>
                             <div className="text-center min-h-[4em] w-full">
