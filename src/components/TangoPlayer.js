@@ -275,7 +275,7 @@ export default function TangoPlayer() {
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, [settings, recentlyPlayedIds, upcomingPlaylist]);
+    }, [settings, recentlyPlayedIds, upcomingPlaylist, TANDA_SEQUENCES]);
 
 
     const playNextTanda = useCallback(() => {
@@ -591,7 +591,7 @@ export default function TangoPlayer() {
             isFetchingRef.current = false;
             setIsRefreshing(false);
         }
-    }, [settings, recentlyPlayedIds, manualQueue]);
+    }, [settings, recentlyPlayedIds, manualQueue, TANDA_SEQUENCES]);
 
     const handleResetEq = useCallback(() => {
         const newEq = { low: 0, mid: 0, high: 0 };
