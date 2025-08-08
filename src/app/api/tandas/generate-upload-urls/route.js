@@ -8,7 +8,6 @@ if (!admin.apps.length) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY_JSON);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      // --- FIX: Point to the correct storage bucket ---
       storageBucket: 'tangoapp-8bd65-storage' 
     });
   } catch (error)
@@ -41,7 +40,8 @@ export async function POST(request) {
     let imageUploadInfo = null;
     if (imageName) {
       const uniqueImageName = `${uuidv4()}-${imageName}`;
-      const imagePath = `artworks/${uniqueImageName}`;
+      // --- FIX: Corrected folder name from "artworks" to "artwork" ---
+      const imagePath = `artwork/${uniqueImageName}`;
       const [url] = await bucket.file(imagePath).getSignedUrl(options);
       imageUploadInfo = { url, path: imagePath };
     }
