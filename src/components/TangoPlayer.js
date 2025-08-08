@@ -110,7 +110,7 @@ function QueueContent({
     queueContainerRef,
     sensors,
     onMenuOpen,
-    onPlayNow // --- NEW: Receive onPlayNow prop ---
+    onPlayNow
 }) {
     return (
         <>
