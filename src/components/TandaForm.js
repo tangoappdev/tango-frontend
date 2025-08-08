@@ -23,20 +23,19 @@ export default function TandaForm() {
   // State hooks for form inputs and component status
   const [imagePreview, setImagePreview] = useState(null); // URL for image preview
   const [imageFile, setImageFile] = useState(null);     // Actual image file object
-  const [type, setType] = useState('Tango');             // Tanda type (Tango, Vals, Milonga)
-  const [orquesta, setOrquesta] = useState('');          // Orchestra name input
-  const [singer, setSinger] = useState('');              // Singer name input
-  // --- *** Use constant for default category *** ---
+  const [type, setType] = useState('Tango');            // Tanda type (Tango, Vals, Milonga)
+  const [orquesta, setOrquesta] = useState('');         // Orchestra name input
+  const [singer, setSinger] = useState('');             // Singer name input
   const [category, setCategory] = useState(CATEGORIES.TRADITIONAL_GOLDEN_AGE); // Tanda category
-  const [style, setStyle] = useState('Rhythmic');        // Tanda style (Tango only)
-  const [tracks, setTracks] = useState([                 // Array to hold track info (title & file)
+  const [style, setStyle] = useState('Rhythmic');       // Tanda style (Tango only)
+  const [tracks, setTracks] = useState([                // Array to hold track info (title & file)
     { title: '', file: null },
     { title: '', file: null },
     { title: '', file: null },
     { title: '', file: null } // Initialize with 4 potential slots
   ]);
-  const [saving, setSaving] = useState(false);           // Loading state for submission
-  const [success, setSuccess] = useState(false);         // Success message state
+  const [saving, setSaving] = useState(false);          // Loading state for submission
+  const [success, setSuccess] = useState(false);        // Success message state
 
   // Handler for image file input change
   const handleImageChange = (e) => {
@@ -58,92 +57,113 @@ export default function TandaForm() {
   };
 
   // Handler for form submission
-  const handleSubmit = async () => {
-    try {
-      setSaving(true);
-      setSuccess(false);
+  const handleSubmit = async (event) => {
+        event.preventDefault();
+        setSaving(true);
+        setSuccess(false);
 
-      const formData = new FormData();
-      formData.append('orchestra', orquesta.trim());
-      formData.append('singer', singer.trim());
-      formData.append('type', type);
-      // --- *** Ensure correct category value is appended *** ---
-      formData.append('category', category); // Append the state value directly
-      if (type === 'Tango') {
-        formData.append('style', style);
-      }
-      if (imageFile) {
-        formData.append('image', imageFile, imageFile.name);
-      }
+        // --- NEW LOGGING: Let's see what the form is doing ---
+        console.log('--- FORM SUBMISSION STARTED ---');
+        console.log('This log confirms the NEW version of TandaForm.js is running.');
 
-      const displayedTracks = type === 'Tango' ? 4 : 3;
-      const selectedTracks = tracks.slice(0, displayedTracks);
+        try {
+            const displayedTracks = type === 'Tango' ? 4 : 3;
+            const selectedTracks = tracks.slice(0, displayedTracks);
+            const audioFiles = selectedTracks.map(t => t.file);
+            
+            // --- Part 1: Get Secure Upload URLs ---
+            const fileInfo = {
+                imageName: imageFile?.name,
+                trackNames: audioFiles.map(f => f?.name).filter(Boolean), // Filter out null/undefined names
+            };
 
-      const titles = selectedTracks.map(t => t.title ? t.title.trim() : '');
-      const files = selectedTracks.map(t => t.file);
+            console.log('Step 1: Requesting upload URLs with this info:', fileInfo);
 
-      // Frontend Validation
-      if (
-        titles.length !== displayedTracks ||
-        files.length !== displayedTracks ||
-        titles.some(t => !t) ||
-        files.some(f => !f)
-      ) {
-        console.error('Frontend Validation Failed:', { /* ... */ });
-        throw new Error('Please ensure all required track titles and files are provided.');
-      }
+            const urlRes = await fetch('/api/tandas/generate-upload-urls', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(fileInfo),
+            });
 
-      titles.forEach(title => formData.append('titles[]', title));
-      files.forEach(file => formData.append('files[]', file, file.name));
+            if (!urlRes.ok) {
+                const errorText = await urlRes.text();
+                console.error('Failed to get upload URLs. Server response:', errorText);
+                throw new Error('Could not get upload URLs from server.');
+            }
+            
+            const { imageUploadInfo, trackUploadInfos } = await urlRes.json();
+            console.log('Step 1 Success: Received upload URLs:', { imageUploadInfo, trackUploadInfos });
 
-      // --- Logging FormData ---
-      console.log("--- Frontend: FormData Content ---");
-      for (let [key, value] of formData.entries()) {
-          if (value instanceof File) {
-              console.log(`${key}:`, value.name, value.type, value.size);
-          } else {
-              console.log(`${key}:`, value);
-          }
-      }
-      console.log("----------------------------------");
-      // --- End Logging ---
+            // --- Part 2: Upload files directly to Firebase Storage ---
+            console.log('Step 2: Starting direct file uploads to Firebase Storage...');
+            const uploadPromises = [];
+            
+            if (imageFile && imageUploadInfo?.url) {
+                uploadPromises.push(fetch(imageUploadInfo.url, {
+                    method: 'PUT',
+                    body: imageFile,
+                    headers: { 'Content-Type': imageFile.type },
+                }));
+            }
 
-      // Send request
-      const res = await fetch('/api/tandas/upload', {
-      method: 'POST',
-      body: formData,
-      });
+            trackUploadInfos.forEach((info, index) => {
+                const audioFile = audioFiles.find(f => f.name === info.originalName);
+                if(audioFile) {
+                    uploadPromises.push(fetch(info.url, {
+                        method: 'PUT',
+                        body: audioFile,
+                        headers: { 'Content-Type': audioFile.type },
+                    }));
+                }
+            });
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`Server Error ${res.status}: ${errorText}`);
-        throw new Error(`Server responded with ${res.status}. See console for details.`);
-      }
+            await Promise.all(uploadPromises);
+            console.log('Step 2 Success: All files uploaded directly to storage.');
 
-      const result = await res.json();
-      console.log('✅ Tanda saved!', result);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+            // --- Part 3: Save the final metadata ---
+            const finalTandaData = {
+                orchestra: orquesta.trim(),
+                singer: singer.trim(),
+                type,
+                category,
+                style: type === 'Tango' ? style : null,
+                artworkPath: imageUploadInfo?.path || null,
+                tracks: selectedTracks.map((track) => {
+                    const correspondingInfo = trackUploadInfos.find(info => info.originalName === track.file?.name);
+                    return {
+                        title: track.title.trim(),
+                        filePath: correspondingInfo?.path || null,
+                    };
+                }).filter(t => t.filePath), // Ensure we only save tracks that were uploaded
+            };
 
-      // --- Reset Form Fields ---
-      setTracks([ { title: '', file: null }, { title: '', file: null }, { title: '', file: null }, { title: '', file: null }, ]);
-      if (imagePreview) { URL.revokeObjectURL(imagePreview); }
-      setImagePreview(null);
-      setImageFile(null);
-      setOrquesta('');
-      setSinger('');
-      setType('Tango');
-      // --- *** Reset category to default constant *** ---
-      setCategory(CATEGORIES.TRADITIONAL_GOLDEN_AGE);
-      setStyle('Rhythmic');
+            console.log('Step 3: Sending this final JSON to /api/tandas/upload:', finalTandaData);
 
-    } catch (error) {
-      console.error('❌ Error saving tanda:', error);
-      alert('Error saving tanda: ' + error.message);
-    } finally {
-      setSaving(false);
-    }
-  };
+            const saveRes = await fetch('/api/tandas/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(finalTandaData),
+            });
+
+            if (!saveRes.ok) {
+                const errorText = await saveRes.text();
+                console.error('Failed to save metadata. Server response:', errorText);
+                throw new Error(`Failed to save tanda metadata. Server responded with ${saveRes.status}`);
+            }
+
+            console.log('✅ Tanda saved successfully!');
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 3000);
+            
+            // Reset form fields logic here...
+
+        } catch (error) {
+            console.error('❌ Error saving tanda:', error);
+            alert('Error saving tanda: ' + error.message);
+        } finally {
+            setSaving(false);
+        }
+    };
 
   // Calculate displayed tracks and style selector visibility
   const displayedTracks = type === 'Tango' ? 4 : 3;
@@ -188,7 +208,6 @@ export default function TandaForm() {
             onChange={(e) => setCategory(e.target.value)}
             className="w-full h-12 p-3 rounded-full appearance-none bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
           >
-            {/* --- *** FIXED: Ensure option value matches the exact string *** --- */}
             <option value={CATEGORIES.TRADITIONAL_GOLDEN_AGE}>{CATEGORIES.TRADITIONAL_GOLDEN_AGE}</option>
             <option value={CATEGORIES.CONTEMPORARY_TRADITIONAL}>{CATEGORIES.CONTEMPORARY_TRADITIONAL}</option>
             <option value={CATEGORIES.ALTERNATIVE}>{CATEGORIES.ALTERNATIVE}</option>
