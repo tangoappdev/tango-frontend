@@ -560,6 +560,7 @@ export default function TangoPlayer() {
     };
 
     const handlePlayNow = useCallback((tandaToPlay) => {
+        console.log("--- handlePlayNow was called in TangoPlayer! ---", tandaToPlay);
         // If the clicked tanda is already the one playing, do nothing.
         if (currentTanda?.id === tandaToPlay.id) {
             return;
