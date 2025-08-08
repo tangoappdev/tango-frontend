@@ -16,7 +16,6 @@ if (!admin.apps.length) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY_JSON);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      // --- FIX: Point to the correct storage bucket ---
       storageBucket: 'tangoapp-8bd65-storage'
     });
   } catch (error) {
@@ -30,13 +29,20 @@ const SIGNED_URL_EXPIRATION_MINUTES = 15;
 
 // --- Helper Functions ---
 async function generateV4ReadSignedUrl(filePath) {
-  if (!filePath) return null;
+  if (!filePath) {
+    console.log("Skipping signed URL generation for empty file path.");
+    return null;
+  }
   try {
     const options = { version: 'v4', action: 'read', expires: Date.now() + SIGNED_URL_EXPIRATION_MINUTES * 60 * 1000 };
+    // --- NEW LOGGING: Log the path we are trying to sign ---
+    console.log(`Attempting to sign URL for: ${filePath}`);
     const [url] = await bucket.file(filePath).getSignedUrl(options);
+    console.log(`Successfully signed URL for: ${filePath}`);
     return url;
   } catch (error) {
-    console.error(`Failed to generate signed URL for ${filePath}:`, error);
+    // --- NEW LOGGING: Log the specific error if signing fails ---
+    console.error(`!!! FAILED to generate signed URL for ${filePath}. Error: ${error.message}`);
     return null;
   }
 }
@@ -115,6 +121,6 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('API Route Error:', error);
-    return NextResponse.json({ message: 'Error generating tanda preview.', error: error.message }, { status: 500 });
+    return NextResponse.json({ message: 'Error generating tanda preview.', error: a.message }, { status: 500 });
   }
 }
