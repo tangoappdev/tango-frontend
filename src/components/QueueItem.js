@@ -30,6 +30,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow }) {
 
     // --- FIX: Added the click handler back ---
     const handlePlayClick = (e) => {
+        console.log("Play icon clicked in QueueItem!"); 
         e.stopPropagation(); // Prevent other click events
         if (onPlayNow) {
             onPlayNow(tanda);
@@ -65,7 +66,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow }) {
                 />
                 {/* This is the Play Icon Overlay that appears on hover */}
                 <div
-                    onClick={handlePlayClick}
+                    onMouseDown={handlePlayClick}
                     className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                 >
                     <PlayCircleIcon className="h-8 w-8 text-white" />
