@@ -144,45 +144,42 @@ function QueueContent({
     );
 }
 
-
-// --- Constants ---
-const API_BASE_URL = '/api';
-const CATEGORIES = {
-    TRADITIONAL_GOLDEN_AGE: "Traditional (Golden Age)",
-    CONTEMPORARY_TRADITIONAL: "Contemporary Traditional",
-    ALTERNATIVE: "Alternative / Alternativo"
-};
-const TANDA_SEQUENCES = {
-    '2TV2TM': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
-    '3TV3TM': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
-    'Just Tango': ['Tango'],
-    'Just Vals': ['Vals'],
-    'Just Milonga': ['Milonga'],
-};
-const TANDA_ORDER_OPTIONS = Object.keys(TANDA_SEQUENCES).map(key => ({ value: key, label: key }));
-const ORCHESTRA_TYPE_OPTIONS = Object.values(CATEGORIES).map(cat => ({ value: cat, label: cat }));
-const TANDA_LENGTH_OPTIONS = [3, 4];
-const FREESTYLE_FETCH_BATCH_SIZE = 6;
-const PLAYLIST_REFILL_THRESHOLD = 5;
-
-
-const initialSettings = {
-    categoryFilter: CATEGORIES.TRADITIONAL_GOLDEN_AGE,
-    tandaLength: 4,
-    tandaOrder: '2TV2TM',
-    cortinas: true,
-};
-
-
-function formatTime(seconds) {
-    if (isNaN(seconds) || seconds < 0) return '00:00';
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-}
-
-
 export default function TangoPlayer() {
+    // --- FIX: All constants and helpers are now moved inside the component ---
+    const API_BASE_URL = '/api';
+    const CATEGORIES = {
+        TRADITIONAL_GOLDEN_AGE: "Traditional (Golden Age)",
+        CONTEMPORARY_TRADITIONAL: "Contemporary Traditional",
+        ALTERNATIVE: "Alternative / Alternativo"
+    };
+    const TANDA_SEQUENCES = {
+        '2TV2TM': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
+        '3TV3TM': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
+        'Just Tango': ['Tango'],
+        'Just Vals': ['Vals'],
+        'Just Milonga': ['Milonga'],
+    };
+    const TANDA_ORDER_OPTIONS = Object.keys(TANDA_SEQUENCES).map(key => ({ value: key, label: key }));
+    const ORCHESTRA_TYPE_OPTIONS = Object.values(CATEGORIES).map(cat => ({ value: cat, label: cat }));
+    const TANDA_LENGTH_OPTIONS = [3, 4];
+    const FREESTYLE_FETCH_BATCH_SIZE = 6;
+    const PLAYLIST_REFILL_THRESHOLD = 5;
+
+    const initialSettings = {
+        categoryFilter: CATEGORIES.TRADITIONAL_GOLDEN_AGE,
+        tandaLength: 4,
+        tandaOrder: '2TV2TM',
+        cortinas: true,
+    };
+
+    function formatTime(seconds) {
+        if (isNaN(seconds) || seconds < 0) return '00:00';
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+    // --- END FIX ---
+
     const [settings, setSettings] = useState(initialSettings);
     const [upcomingPlaylist, setUpcomingPlaylist] = useState([]);
     const [manualQueue, setManualQueue] = useState([]);
@@ -315,7 +312,6 @@ export default function TangoPlayer() {
         }
     }, [currentTanda, isLoading, fetchAndFillPlaylist, isDesktop, initAudioGraph]);
 
-    // --- NEW: Function to play a specific tanda from the queue ---
     const handlePlayNow = useCallback((tandaToPlay) => {
         if (!tandaToPlay || tandaToPlay.id === currentTanda?.id) {
             if (audioRef.current) {
