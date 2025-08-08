@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 
-// --- Constants (from your constants.js file, now moved directly here) ---
+// --- Constants ---
 const TANDA_SEQUENCES = {
   '2TV2TM': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
   '3TV3TM': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
@@ -11,12 +11,12 @@ const TANDA_SEQUENCES = {
 };
 
 // --- Firebase Initialization ---
-// This safely initializes Firebase, once per instance, using Vercel's Environment Variables.
 if (!admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY_JSON);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
+      // --- FIX: Point to the correct storage bucket ---
       storageBucket: 'tangoapp-8bd65-storage'
     });
   } catch (error) {
@@ -28,19 +28,12 @@ const db = admin.firestore();
 const bucket = admin.storage().bucket();
 const SIGNED_URL_EXPIRATION_MINUTES = 15;
 
-// --- Helper Functions (Your original code) ---
+// --- Helper Functions ---
 async function generateV4ReadSignedUrl(filePath) {
   if (!filePath) return null;
   try {
-    let objectName = filePath;
-    const bucketName = 'tangoapp-8bd65-storage';
-    if (filePath.startsWith(`https://storage.googleapis.com/${bucketName}/`)) {
-        objectName = filePath.substring(`https://storage.googleapis.com/${bucketName}/`.length);
-    }
-    if (!objectName) { return null; }
-
     const options = { version: 'v4', action: 'read', expires: Date.now() + SIGNED_URL_EXPIRATION_MINUTES * 60 * 1000 };
-    const [url] = await bucket.file(objectName).getSignedUrl(options);
+    const [url] = await bucket.file(filePath).getSignedUrl(options);
     return url;
   } catch (error) {
     console.error(`Failed to generate signed URL for ${filePath}:`, error);
@@ -68,7 +61,7 @@ const findTandaForPreview = async (criteria) => {
 };
 
 
-// --- The Main API Route Handler for Vercel ---
+// --- The Main API Route Handler ---
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -113,14 +106,11 @@ export async function GET(request) {
     const tandasWithSignedUrls = await Promise.all(
       upcomingTandas.map(async (tanda) => ({
         ...tanda,
-        // Correctly reads 'artwork_path' from Firestore
         artwork_signed: await generateV4ReadSignedUrl(tanda.artwork_url), 
         tracks_signed: await Promise.all(tanda.tracks.map(async (track) => ({ ...track, url_signed: await generateV4ReadSignedUrl(track.url) }))),
       }))
     );
     
-    console.log("API is generating this data:", JSON.stringify(tandasWithSignedUrls, null, 2));
-
     return NextResponse.json({ upcomingTandas: tandasWithSignedUrls });
 
   } catch (error) {
