@@ -34,17 +34,14 @@ async function generateV4ReadSignedUrl(filePath) {
     return null;
   }
   try {
-    // --- FIX: Decode the file path to handle special characters correctly ---
-    // This converts garbled characters like 'GarÃºa' back to 'García'
-    const decodedFilePath = decodeURIComponent(escape(filePath));
-
+    // --- REVERTED: Removed the incorrect decoding line ---
     const options = { version: 'v4', action: 'read', expires: Date.now() + SIGNED_URL_EXPIRATION_MINUTES * 60 * 1000 };
-    console.log(`Attempting to sign URL for: ${decodedFilePath}`);
-    const [url] = await bucket.file(decodedFilePath).getSignedUrl(options);
-    console.log(`Successfully signed URL for: ${decodedFilePath}`);
+    console.log(`Attempting to sign URL for: ${filePath}`);
+    const [url] = await bucket.file(filePath).getSignedUrl(options);
+    console.log(`Successfully signed URL for: ${filePath}`);
     return url;
   } catch (error) {
-    console.error(`!!! FAILED to generate signed URL for ${filePath} (decoded as ${decodeURIComponent(escape(filePath))}). Error: ${error.message}`);
+    console.error(`!!! FAILED to generate signed URL for ${filePath}. Error: ${error.message}`);
     return null;
   }
 }
