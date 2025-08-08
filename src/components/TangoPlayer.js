@@ -125,7 +125,8 @@ function QueueContent({
     handleQueueScroll,
     queueContainerRef,
     sensors,
-    onMenuOpen
+    onMenuOpen,
+    onPlayNow
 }) {
     return (
         <>
@@ -140,7 +141,7 @@ function QueueContent({
                         strategy={verticalListSortingStrategy}
                     >
                         {manualQueue.map((tanda) => (
-                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} />
+                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} />
                         ))}
 
 
@@ -152,7 +153,7 @@ function QueueContent({
 
 
                         {upcomingPlaylist.map((tanda) => (
-                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} />
+                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} />
                         ))}
                     </SortableContext>
                 </DndContext>
