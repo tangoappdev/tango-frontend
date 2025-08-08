@@ -560,34 +560,37 @@ export default function TangoPlayer() {
     };
 
     const handlePlayNow = useCallback((tandaToPlay) => {
- // If the clicked tanda is already the one playing, do nothing.
- if (currentTanda?.id === tandaToPlay.id) {
- return;
- }
+        // If the clicked tanda is already the one playing, do nothing.
+        if (currentTanda?.id === tandaToPlay.id) {
+            return;
+        }
 
- // Move the original "currentTanda" to the history log.
- if (currentTanda) {
- setTandaHistory(prev => [currentTanda, ...prev].slice(0, 50));
- setRecentlyPlayedIds(prev => new Set(prev).add(currentTanda.id));
- }
+        // Add the original "currentTanda" to the history log.
+        if (currentTanda) {
+            setTandaHistory(prev => [currentTanda, ...prev].slice(0, 50));
+            setRecentlyPlayedIds(prev => new Set(prev).add(currentTanda.id));
+        }
 
- // Get all other tandas from both queues, excluding the one we're about to play.
- const otherTandas = [
- ...manualQueue,
- ...upcomingPlaylist
- ].filter(t => t.id !== tandaToPlay.id && t.id !== currentTanda?.id);
+        // Combine the current playing tanda and all queue items into one list.
+        const allOtherTandas = [
+            ...(currentTanda ? [currentTanda] : []),
+            ...manualQueue,
+            ...upcomingPlaylist,
+        ].filter(t => t.id !== tandaToPlay.id); // Filter out the one we are about to play.
 
- // Set the clicked tanda as the ONLY one in the manual queue.
- setManualQueue([tandaToPlay]);
- // The rest of the tandas become the new upcoming playlist.
- setUpcomingPlaylist(otherTandas);
- 
- // Set the track index to the beginning of the new tanda.
- setCurrentTrackIndex(0);
- // Signal to the audio player that it should start playing automatically.
- autoplayIntentRef.current = true;
+        // Set the clicked tanda as the ONLY one in the manual queue.
+        setManualQueue([tandaToPlay]);
 
- }, [currentTanda, manualQueue, upcomingPlaylist]);
+        // The rest of the tandas become the new upcoming playlist.
+        setUpcomingPlaylist(allOtherTandas);
+        
+        // Reset the track index to the beginning of the new tanda.
+        setCurrentTrackIndex(0);
+        
+        // Signal to the audio player that it should start playing automatically.
+        autoplayIntentRef.current = true;
+
+    }, [currentTanda, manualQueue, upcomingPlaylist, setTandaHistory, setRecentlyPlayedIds, setManualQueue, setUpcomingPlaylist, setCurrentTrackIndex]); // <-- The corrected and complete dependency array
 
     const handleTrackEnded = useCallback(() => {
         // --- FIX: Use tracks_signed ---
