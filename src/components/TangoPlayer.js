@@ -559,8 +559,35 @@ export default function TangoPlayer() {
         setUpcomingPlaylist(newUpcomingPlaylist);
     };
 
+    const handlePlayNow = useCallback((tandaToPlay) => {
+        // If the clicked tanda is already the one playing, do nothing.
+        if (currentTanda?.id === tandaToPlay.id) {
+            return;
+        }
 
+        // Move the original "currentTanda" to the history log.
+        if (currentTanda) {
+            setTandaHistory(prev => [currentTanda, ...prev].slice(0, 50));
+            setRecentlyPlayedIds(prev => new Set(prev).add(currentTanda.id));
+        }
 
+        // Get all other tandas from both queues, excluding the one we're about to play.
+        const otherTandas = [
+            ...manualQueue,
+            ...upcomingPlaylist
+        ].filter(t => t.id !== tandaToPlay.id && t.id !== currentTanda?.id);
+
+        // Set the clicked tanda as the ONLY one in the manual queue.
+        setManualQueue([tandaToPlay]);
+        // The rest of the tandas become the new upcoming playlist.
+        setUpcomingPlaylist(otherTandas);
+        
+        // Set the track index to the beginning of the new tanda.
+        setCurrentTrackIndex(0);
+        // Signal to the audio player that it should start playing automatically.
+        autoplayIntentRef.current = true;
+
+    }, [currentTanda, manualQueue, upcomingPlaylist]);
 
     const handleTrackEnded = useCallback(() => {
         // --- FIX: Use tracks_signed ---
@@ -876,6 +903,7 @@ export default function TangoPlayer() {
         queueContainerRef,
         sensors,
         onMenuOpen: handleMenuOpen,
+        onPlayNow: handlePlayNow,
         isDesktop,
     };
 
@@ -1087,6 +1115,3 @@ export default function TangoPlayer() {
         </div>
     );
 }
-
-
-
