@@ -561,7 +561,6 @@ export default function TangoPlayer() {
     };
 
     const handlePlayNow = useCallback((tandaToPlay) => {
-        console.log("--- handlePlayNow was called in TangoPlayer! ---", tandaToPlay);
         // If the clicked tanda is already the one playing, do nothing.
         if (currentTanda?.id === tandaToPlay.id) {
             return;
@@ -573,11 +572,12 @@ export default function TangoPlayer() {
             setRecentlyPlayedIds(prev => new Set(prev).add(currentTanda.id));
         }
 
-        // Combine the current playing tanda and all queue items into one list.
+        // --- THIS IS THE FIX ---
+        // Correctly assemble all other tandas by starting with the existing queues.
+        // We no longer add `currentTanda` separately, which was the source of the bug.
         const allOtherTandas = [
-            ...(currentTanda ? [currentTanda] : []),
             ...manualQueue,
-            ...upcomingPlaylist,
+            ...upcomingPlaylist
         ].filter(t => t.id !== tandaToPlay.id); // Filter out the one we are about to play.
 
         // Set the clicked tanda as the ONLY one in the manual queue.
@@ -592,7 +592,7 @@ export default function TangoPlayer() {
         // Signal to the audio player that it should start playing automatically.
         autoplayIntentRef.current = true;
 
-    }, [currentTanda, manualQueue, upcomingPlaylist, setTandaHistory, setRecentlyPlayedIds, setManualQueue, setUpcomingPlaylist, setCurrentTrackIndex]); // <-- The corrected and complete dependency array
+    }, [currentTanda, manualQueue, upcomingPlaylist, setTandaHistory, setRecentlyPlayedIds, setManualQueue, setUpcomingPlaylist, setCurrentTrackIndex]);
 
     const handleTrackEnded = useCallback(() => {
         // --- FIX: Use tracks_signed ---
