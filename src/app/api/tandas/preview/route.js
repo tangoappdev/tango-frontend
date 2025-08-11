@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getFirestore, getStorage } from '@/lib/firebaseAdmin.server.js';
 
+const TANDA_SEQUENCES = {
+  '2TV2TM': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
+  '3TV3TM': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
+  'Just Tango': ['Tango'],
+  'Just Vals': ['Vals'],
+  'Just Milonga': ['Milonga'],
+};
+
 const db = getFirestore();
 const bucket = getStorage().bucket();
 const SIGNED_URL_EXPIRATION_MINUTES = 15;
