@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../../lib/firebaseClient';
+import { auth } from '../../../lib/firebaseClient';
 
 export default function AdminLayout({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
