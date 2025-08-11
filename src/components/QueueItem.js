@@ -7,7 +7,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { EllipsisVerticalIcon, PlayCircleIcon } from '@heroicons/react/24/solid';
 
 // --- FIX: Added the onPlayNow prop back ---
-export default function QueueItem({ tanda, onMenuOpen, onPlayNow }) {
+export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
     if (!tanda) {
         return null;
     }
@@ -54,7 +54,12 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow }) {
             ref={setNodeRef} 
             style={style} 
             {...attributes}
-            onClick={() => onPlayNow && onPlayNow(tanda)}
+            onClick={() => {
+                // Only trigger "Play Now" if it's NOT the desktop view
+                if (!isDesktop && onPlayNow) {
+                    onPlayNow(tanda);
+                }
+            }}
             className="group flex items-center p-2 rounded-md hover:bg-white/10"
         >
             {/* --- FIX: Restored the entire artwork container with the overlay --- */}
