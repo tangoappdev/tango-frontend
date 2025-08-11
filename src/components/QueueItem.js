@@ -54,7 +54,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow }) {
             ref={setNodeRef} 
             style={style} 
             {...attributes}
-            onClick={() => onPlayNow && onPlayNow(tanda)}
+            // --- FIX: Added 'group' class to enable hover effects ---
             className="group flex items-center p-2 rounded-md hover:bg-white/10"
         >
             {/* --- FIX: Restored the entire artwork container with the overlay --- */}
