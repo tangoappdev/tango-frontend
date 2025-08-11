@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getFirestore } from '@/lib/firebaseAdmin.server.js';
+import { getFirestore, getStorage } from '@/lib/firebaseAdmin.server.js';
 
-// This API route fetches all tandas from the database for management purposes.
+const db = getFirestore();
+const storage = getStorage();
+
+// This function fetches all tandas for the management page.
 export async function GET() {
   try {
-    const db = getFirestore();
     const tandasRef = db.collection('tandas');
-    
-    // We order by 'createdAt' in descending order to show the newest tandas first.
     const snapshot = await tandasRef.orderBy('createdAt', 'desc').get();
 
     if (snapshot.empty) {
@@ -15,7 +15,7 @@ export async function GET() {
     }
 
     const tandas = snapshot.docs.map(doc => ({
-      id: doc.id, // Include the unique document ID
+      id: doc.id,
       ...doc.data(),
     }));
 
@@ -24,5 +24,64 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching tandas for management:', error);
     return NextResponse.json({ message: 'Failed to fetch tandas.', error: error.message }, { status: 500 });
+  }
+}
+
+// --- NEW FUNCTION ---
+// This function handles deleting a tanda and its associated files.
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const tandaId = searchParams.get('id');
+
+    if (!tandaId) {
+      return NextResponse.json({ message: 'Tanda ID is required.' }, { status: 400 });
+    }
+
+    const tandaRef = db.collection('tandas').doc(tandaId);
+    const tandaDoc = await tandaRef.get();
+
+    if (!tandaDoc.exists) {
+      return NextResponse.json({ message: 'Tanda not found.' }, { status: 404 });
+    }
+
+    const tandaData = tandaDoc.data();
+    const filePathsToDelete = [];
+
+    // Collect the artwork file path if it exists
+    if (tandaData.artwork_url) {
+      filePathsToDelete.push(tandaData.artwork_url);
+    }
+
+    // Collect all track file paths
+    if (tandaData.tracks && Array.isArray(tandaData.tracks)) {
+      tandaData.tracks.forEach(track => {
+        if (track.url) {
+          filePathsToDelete.push(track.url);
+        }
+      });
+    }
+
+    // Delete all collected files from Firebase Storage
+    if (filePathsToDelete.length > 0) {
+      await Promise.all(
+        filePathsToDelete.map(filePath => {
+          console.log(`Attempting to delete file: ${filePath}`);
+          return storage.bucket().file(filePath).delete().catch(err => {
+            // Log errors but don't stop the process if a file is already gone
+            console.error(`Failed to delete file ${filePath}, it may not exist.`, err.message);
+          });
+        })
+      );
+    }
+
+    // Finally, delete the tanda document from Firestore
+    await tandaRef.delete();
+
+    return NextResponse.json({ message: `Tanda ${tandaId} deleted successfully.` }, { status: 200 });
+
+  } catch (error) {
+    console.error('Error deleting tanda:', error);
+    return NextResponse.json({ message: 'Failed to delete tanda.', error: error.message }, { status: 500 });
   }
 }
