@@ -1,30 +1,8 @@
 import { NextResponse } from 'next/server';
-import admin from 'firebase-admin';
+import { getFirestore, getStorage } from '@/lib/firebaseAdmin.server.js';
 
-// --- Constants ---
-const TANDA_SEQUENCES = {
-  '2TV2TM': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
-  '3TV3TM': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
-  'Just Tango': ['Tango'],
-  'Just Vals': ['Vals'],
-  'Just Milonga': ['Milonga'],
-};
-
-// --- Firebase Initialization ---
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY_JSON);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      storageBucket: 'tangoapp-8bd65-storage'
-    });
-  } catch (error) {
-    console.error('Firebase initialization error:', error.message);
-  }
-}
-
-const db = admin.firestore();
-const bucket = admin.storage().bucket();
+const db = getFirestore();
+const bucket = getStorage().bucket();
 const SIGNED_URL_EXPIRATION_MINUTES = 15;
 
 // --- Helper Functions ---

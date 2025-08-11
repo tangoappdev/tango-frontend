@@ -1,22 +1,12 @@
 import { NextResponse } from 'next/server';
-import admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
+// ADD this new import from your server file
+import { getStorage } from '@/lib/firebaseAdmin.server.js';
 
-// --- Firebase Initialization ---
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY_JSON);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      storageBucket: 'tangoapp-8bd65-storage' 
-    });
-  } catch (error)
-{
-    console.error('Firebase initialization error:', error.message);
-  }
-}
+// --- The initialization block is now completely gone ---
 
-const bucket = admin.storage().bucket();
+// Use the new function to get your storage instance
+const bucket = getStorage().bucket();
 
 /**
  * API Route to generate secure, temporary URLs for direct file uploads.
@@ -40,7 +30,6 @@ export async function POST(request) {
     let imageUploadInfo = null;
     if (imageName) {
       const uniqueImageName = `${uuidv4()}-${imageName}`;
-      // --- FIX: Corrected folder name from "artworks" to "artwork" ---
       const imagePath = `artwork/${uniqueImageName}`;
       const [url] = await bucket.file(imagePath).getSignedUrl(options);
       imageUploadInfo = { url, path: imagePath };
