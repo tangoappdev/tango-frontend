@@ -56,6 +56,29 @@ export default function TandaForm() {
     setTracks(newTracks);
   };
 
+  // Add this entire new function
+    const resetForm = () => {
+        // Clear the artwork preview and file
+        setImagePreview(null);
+        setImageFile(null);
+        
+        // Clear the main text fields
+        setOrquesta('');
+        setSinger('');
+        
+        // Reset the tracks array to four empty slots
+        setTracks([
+            { title: '', file: null },
+            { title: '', file: null },
+            { title: '', file: null },
+            { title: '', file: null }
+        ]);
+
+        // Note: We intentionally do NOT reset the 'type' or 'category'
+        // fields, as it's common to upload multiple tandas of the
+        // same kind in a row. This improves the workflow.
+    };
+
   // Handler for form submission
   const handleSubmit = async (event) => {
         event.preventDefault();
@@ -151,11 +174,13 @@ export default function TandaForm() {
                 throw new Error(`Failed to save tanda metadata. Server responded with ${saveRes.status}`);
             }
 
+            // ... inside handleSubmit
             console.log('✅ Tanda saved successfully!');
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
             
-            // Reset form fields logic here...
+            // Call the new function to clear the form
+            resetForm();
 
         } catch (error) {
             console.error('❌ Error saving tanda:', error);
