@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#222429] text-white p-4 sm:p-8">
+    <div className="min-h-screen bg-[#30333a] text-white p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
         <header className="flex justify-between items-center mb-10">
           <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
