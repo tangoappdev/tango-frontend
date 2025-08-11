@@ -126,7 +126,8 @@ function QueueContent({
     queueContainerRef,
     sensors,
     onMenuOpen,
-    onPlayNow
+    onPlayNow,
+    isDesktop
 }) {
     return (
         <>
@@ -141,7 +142,7 @@ function QueueContent({
                         strategy={verticalListSortingStrategy}
                     >
                         {manualQueue.map((tanda) => (
-                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} />
+                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
                         ))}
 
 
@@ -153,7 +154,7 @@ function QueueContent({
 
 
                         {upcomingPlaylist.map((tanda) => (
-                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} />
+                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
                         ))}
                     </SortableContext>
                 </DndContext>
@@ -1025,7 +1026,7 @@ export default function TangoPlayer() {
                             </h3>
                             <div className="relative flex-grow rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
                                 <div className="w-full h-full overflow-y-auto">
-                                    <QueueContent {...queueProps} />
+                                    <QueueContent {...queueProps} isDesktop={isDesktop} />
                                 </div>
                                 {isRefreshing && (
                                     <div className="absolute inset-0 bg-[#30333a80] backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
