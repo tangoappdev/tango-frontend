@@ -17,7 +17,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // On success, redirect to the admin dashboard
-      router.push('/admin/upload'); 
+      router.push('/admin/dashboard'); 
     } catch (err) {
       setError('Failed to log in. Please check your email and password.');
       console.error(err);
