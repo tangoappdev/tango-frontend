@@ -27,7 +27,6 @@ export async function GET() {
   }
 }
 
-// --- NEW FUNCTION ---
 // This function handles deleting a tanda and its associated files.
 export async function DELETE(request) {
   try {
@@ -56,8 +55,11 @@ export async function DELETE(request) {
     // Collect all track file paths
     if (tandaData.tracks && Array.isArray(tandaData.tracks)) {
       tandaData.tracks.forEach(track => {
-        if (track.url) {
-          filePathsToDelete.push(track.url);
+        // --- THIS IS THE FIX ---
+        // Check for either 'url' or 'filePath' to be safe.
+        const path = track.url || track.filePath; 
+        if (path) {
+          filePathsToDelete.push(path);
         }
       });
     }
