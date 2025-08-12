@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebaseClient';
-import { ArrowRightIcon, PlusCircleIcon, CogIcon, ArrowLeftStartOnRectangleIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, PlusCircleIcon, CogIcon, ArrowLeftStartOnRectangleIcon, MusicalNoteIcon } from '@heroicons/react/24/outline';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -60,10 +60,16 @@ export default function AdminDashboard() {
           <NavCard
             title="Manage Tandas"
             description="Edit, view, or delete existing Tandas in the database."
-            href="/admin/manage-tandas" // This page doesn't exist yet
+            href="/admin/manage-tandas"
             icon={CogIcon}
           />
-          {/* We can add a card for Cortinas here later */}
+          {/* --- ADD THIS NEW CARD --- */}
+          <NavCard
+            title="Track Library"
+            description="View all individual songs to find duplicates and manage files."
+            href="/admin/track-library"
+            icon={MusicalNoteIcon}
+          />
         </main>
       </div>
     </div>
