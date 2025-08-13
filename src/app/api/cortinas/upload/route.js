@@ -21,30 +21,27 @@ async function generateV4WriteSignedUrl(filePath) {
 // This API handles creating a new cortina record and providing an upload URL.
 export async function POST(request) {
     try {
-        // --- UPDATED: Added 'genre' to the expected data ---
-        const { title, fileName, genre } = await request.json();
+        // --- THIS IS THE FIX: Correctly receive 'artist' from the body ---
+        const { title, fileName, genre, artist } = await request.json();
 
-        // --- UPDATED: Added validation for 'genre' ---
         if (!title || !fileName || !genre) {
-            return NextResponse.json({ message: 'Missing required fields.' }, { status: 400 });
+            return NextResponse.json({ message: 'Title, file name, and genre are required.' }, { status: 400 });
         }
 
         const db = getFirestore();
         
-        // 1. Prepare the new file path and the document for Firestore.
         const newFilePath = `cortinas/${uuidv4()}-${fileName}`;
         const newCortinaDocument = {
             title: title,
             url: newFilePath,
-            // --- UPDATED: Added genre to the document ---
             genre: genre,
+            // --- THIS IS THE FIX: Add the artist to the document ---
+            artist: artist || '', // Save artist, or an empty string if not provided
             createdAt: new Date().toISOString(),
         };
 
-        // 2. Save the new cortina's data to the 'cortinas' collection.
         const docRef = await db.collection('cortinas').add(newCortinaDocument);
 
-        // 3. Generate a secure URL for the client to upload the audio file.
         const uploadUrl = await generateV4WriteSignedUrl(newFilePath);
 
         if (!uploadUrl) {
