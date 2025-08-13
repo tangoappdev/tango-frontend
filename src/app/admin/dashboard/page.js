@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebaseClient';
-import { ArrowRightIcon, PlusCircleIcon, CogIcon, ArrowLeftStartOnRectangleIcon, MusicalNoteIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, PlusCircleIcon, CogIcon, ArrowLeftStartOnRectangleIcon, MusicalNoteIcon, ChevronDownIcon, ChevronRightIcon, SpeakerWaveIcon } from '@heroicons/react/24/outline';
 
 // --- Statistics Components ---
 
@@ -157,7 +157,6 @@ export default function AdminDashboard() {
         </header>
 
         <section className="mb-10">
-            {/* --- THIS IS THE FIX: Added md:items-stretch to the flex container --- */}
             <div className="flex flex-col h-[434px] md:flex-row gap-6 md:items-stretch">
                 {/* Left Column */}
                 <div className="md:w-1/2" >
@@ -199,6 +198,13 @@ export default function AdminDashboard() {
             description="View all individual songs to find duplicates and manage files."
             href="/admin/track-library"
             icon={MusicalNoteIcon}
+          />
+          {/* --- UPDATED: Changed the Cortina card --- */}
+          <NavCard
+            title="Manage Cortinas"
+            description="View, create, or delete musical interludes."
+            href="/admin/manage-cortinas"
+            icon={SpeakerWaveIcon}
           />
         </main>
       </div>
