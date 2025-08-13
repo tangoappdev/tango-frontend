@@ -236,6 +236,9 @@ export default function TangoPlayer() {
     const [eqNotification, setEqNotification] = useState('');
     const [isDesktop, setIsDesktop] = useState(false);
     const [hasMounted, setHasMounted] = useState(false);
+    const [cortinas, setCortinas] = useState([]);
+    const [isCortinaPlaying, setIsCortinaPlaying] = useState(false);
+    const [currentCortina, setCurrentCortina] = useState(null);
 
 
     const audioRef = useRef(null);
@@ -373,6 +376,20 @@ export default function TangoPlayer() {
     }, [resetCounter]);
 
 
+    useEffect(() => {
+        const fetchCortinas = async () => {
+            try {
+                const response = await fetch('/api/cortinas/player');
+                if (response.ok) {
+                    const data = await response.json();
+                    setCortinas(data.cortinas);
+                }
+            } catch (error) {
+                console.error("Failed to fetch cortinas:", error);
+            }
+        };
+        fetchCortinas();
+    }, []);
 
 
     useEffect(() => {
@@ -595,33 +612,63 @@ export default function TangoPlayer() {
 
     }, [currentTanda, manualQueue, upcomingPlaylist, setTandaHistory, setRecentlyPlayedIds, setManualQueue, setUpcomingPlaylist, setCurrentTrackIndex]);
 
+
     const handleTrackEnded = useCallback(() => {
-        // --- FIX: Use tracks_signed ---
         const totalTracks = currentTanda?.tracks_signed?.length || 0;
         const lengthRule = (currentTanda?.type === 'Tango') ? settings.tandaLength : 3;
-        if (currentTrackIndex < Math.min(totalTracks, lengthRule) - 1) {
+        const isLastTrackOfTanda = currentTrackIndex >= Math.min(totalTracks, lengthRule) - 1;
+
+        if (isLastTrackOfTanda) {
+            // It's the end of the tanda. Check if we should play a cortina.
+            if (settings.cortinas && cortinas.length > 0) {
+                const randomCortina = cortinas[Math.floor(Math.random() * cortinas.length)];
+                setCurrentCortina(randomCortina);
+                setIsCortinaPlaying(true);
+                if (audioRef.current) {
+                    audioRef.current.src = randomCortina.playableUrl;
+                    audioRef.current.play();
+                }
+            } else {
+                // No cortinas to play, just go to the next tanda.
+                playNextTanda();
+            }
+        } else {
+            // It's not the last track, just play the next song.
             autoplayIntentRef.current = true;
             setCurrentTrackIndex(prev => prev + 1);
-        } else {
-            playNextTanda();
         }
-    }, [currentTanda, currentTrackIndex, settings.tandaLength, playNextTanda]);
+    }, [currentTanda, currentTrackIndex, settings.tandaLength, settings.cortinas, cortinas, playNextTanda]);
 
+
+    const handleCortinaEnded = useCallback(() => {
+        setIsCortinaPlaying(false);
+        setCurrentCortina(null);
+        playNextTanda();
+    }, [playNextTanda]);
 
 
 
     const handleSkipForward = useCallback(() => {
+        // --- THIS IS THE FIX ---
+        // If a cortina is playing, skipping forward should end the cortina
+        // and immediately start the next tanda.
+        if (isCortinaPlaying) {
+            handleCortinaEnded();
+            return;
+        }
+
         if (!currentTanda) return;
-        // --- FIX: Use tracks_signed ---
+        
         const totalTracks = currentTanda.tracks_signed?.length || 0;
         const effectiveLength = (currentTanda.type === 'Tango') ? settings.tandaLength : 3;
+        
         if (currentTrackIndex < Math.min(totalTracks, effectiveLength) - 1) {
             setCurrentTrackIndex(prev => prev + 1);
             autoplayIntentRef.current = isPlaying;
         } else {
             playNextTanda();
         }
-    }, [currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda]);
+    }, [currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda, isCortinaPlaying, handleCortinaEnded]);
 
 
 
@@ -987,16 +1034,30 @@ export default function TangoPlayer() {
                         <div className="flex-grow flex flex-col items-center justify-center gap-8">
                             <div className="flex items-center gap-6">
                                 {/* --- FIX: Use artwork_signed --- */}
-                                {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-56 h-56 object-cover rounded-lg shadow-lg" />) : (<div className="w-56 h-56 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
+                                {currentTanda && currentTanda.artwork_signed ? (<img src={isCortinaPlaying && currentCortina ? currentCortina.artwork_url_signed : currentTanda?.artwork_signed} 
+    alt={`Artwork for ${isCortinaPlaying ? currentCortina.title : currentTanda?.orchestra}`} className="w-56 h-56 object-cover rounded-lg" />) : (!currentTanda && !currentCortina) && (<div className="w-56 h-56 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
                                 {renderVerticalVolumeSlider(volume, handleVolumeChange)}
                             </div>
                             <div className="text-center min-h-[4em] w-full">
                                 {isLoading && !currentTanda && <span className="text-sm text-gray-400 block">Loading Music...</span>}{error && !isLoading && <span className="text-sm text-red-400 block">Error: {error}</span>}
-                                {currentTanda ? (<><p className="text-xl truncate font-semibold text-gray-100" title={`${currentTanda.orchestra} - ${currentTanda.singer}`}>{currentTanda.orchestra || 'Unknown Orchestra'}</p><p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p><p className="text-xs text-gray-500 truncate" title={currentTrackTitle}>Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p></>) : (!isLoading && !error && <span className="text-lg text-gray-500">No music loaded.</span>)}
+                                {isCortinaPlaying && currentCortina ? (
+    <>
+        <p className="text-xl truncate font-semibold text-gray-100">{currentCortina.title || 'Cortina'}</p>
+        <p className="text-base text-gray-400">{currentCortina.artist || 'Musical Interlude'}</p>
+    </>
+) : currentTanda ? (
+    <>
+        <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
+        <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
+        <p className="text-xs text-gray-500 truncate">Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p>
+    </>
+) : (
+    !isLoading && !error && <span className="text-lg text-gray-500">No music loaded.</span>
+)}
                             </div>
                         </div>
                         <div className="flex-shrink-0 mb-1">
-                            <audio ref={audioRef} crossOrigin="anonymous" onEnded={handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
+                            <audio ref={audioRef} crossOrigin="anonymous" onEnded={isCortinaPlaying ? handleCortinaEnded : handleTrackEnded} preload="auto" className="hidden" onTimeUpdate={handleAudioTimeUpdate} onLoadedMetadata={handleAudioLoadedMetadata} onPlay={handleAudioPlay} onPause={handleAudioPause} onError={(e) => { setError("An audio playback error occurred."); }} />
                             <div className="flex items-center gap-4 mb-4 px-4">
                                 <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
                                 <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}>
@@ -1052,11 +1113,40 @@ export default function TangoPlayer() {
                     <h2 className="text-xl mb-8 text-center">Virtual Tango DJ</h2>
                     <div className="flex justify-center mb-4">
                         {/* --- FIX: Use artwork_signed --- */}
-                        {currentTanda && currentTanda.artwork_signed ? (<img src={currentTanda.artwork_signed} alt={`Artwork for ${currentTanda.orchestra}`} className="w-64 h-64 object-cover rounded-lg shadow-md" />) : (<div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
+                        {currentTanda && currentTanda.artwork_signed ? (<img src={isCortinaPlaying && currentCortina ? currentCortina.artwork_url_signed : currentTanda?.artwork_signed} 
+    alt={`Artwork for ${isCortinaPlaying ? currentCortina.title : currentTanda?.orchestra}`} className="w-64 h-64 object-cover rounded-lg shadow-md" />) : (!currentTanda && !currentCortina) && (<div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
                     </div>
                     <div className="mb-4 text-center min-h-[4em]">
-                        {currentTanda ? (<><p className="text-lg truncate font-medium">{currentTanda.orchestra || 'Unknown'}</p><p className="text-sm text-gray-400">{currentTanda.singer || 'Unknown'} - {currentTanda.type || 'Unknown'}</p><p className="text-xs text-gray-500 truncate" title={currentTrackTitle}>Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p></>) : (!isLoading && !error && <span>No music loaded.</span>)}
+                        {isCortinaPlaying && currentCortina ? (
+    <>
+        <p className="text-xl truncate font-semibold text-gray-100">{currentCortina.title || 'Cortina'}</p>
+        <p className="text-base text-gray-400">{currentCortina.artist || 'Musical Interlude'}</p>
+    </>
+) : currentTanda ? (
+    <>
+        <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
+        <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
+        <p className="text-xs text-gray-500 truncate">Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p>
+    </>
+) : (
+    !isLoading && !error && <span className="text-lg text-gray-500">No music loaded.</span>
+)}
                     </div>
+
+                    {/* --- ADD THIS ENTIRE AUDIO TAG --- */}
+                <audio 
+                    ref={audioRef} 
+                    crossOrigin="anonymous" 
+                    onEnded={isCortinaPlaying ? handleCortinaEnded : handleTrackEnded} 
+                    preload="auto" 
+                    className="hidden" 
+                    onTimeUpdate={handleAudioTimeUpdate} 
+                    onLoadedMetadata={handleAudioLoadedMetadata} 
+                    onPlay={handleAudioPlay} 
+                    onPause={handleAudioPause} 
+                    onError={(e) => { setError("An audio playback error occurred."); }} 
+                />
+
                     <div className="flex items-center gap-3 mb-3 px-1">
                         <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
                         <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}>
