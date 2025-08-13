@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeftIcon, ArrowUpOnSquareIcon, TrashIcon, Bars3Icon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ArrowUpOnSquareIcon, TrashIcon, Bars3Icon, PlusIcon } from '@heroicons/react/24/outline';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -89,6 +89,15 @@ const EditTandaForm = ({ initialTanda }) => {
     setFormData(prev => ({...prev, tracks: newTracks}));
   };
 
+  // --- NEW FUNCTION to add a track ---
+  const handleAddNewTrack = () => {
+    const maxTracks = formData.type === 'Tango' ? 4 : 3;
+    if (formData.tracks.length < maxTracks) {
+      const newTrack = { title: '', url: null, newFile: null };
+      setFormData(prev => ({ ...prev, tracks: [...prev.tracks, newTrack] }));
+    }
+  };
+
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (active.id !== over.id) {
@@ -108,7 +117,6 @@ const EditTandaForm = ({ initialTanda }) => {
         const filesToDelete = [];
         const newTrackData = [];
         
-        // 1. Prepare Artwork
         let newArtworkPath = formData.artwork_url;
         if (imageFile) {
             if (formData.artwork_url) {
@@ -118,7 +126,6 @@ const EditTandaForm = ({ initialTanda }) => {
             filesToUpload['artwork'] = newArtworkPath;
         }
 
-        // 2. Prepare Tracks
         for (const track of formData.tracks) {
             let trackPath = track.url || track.filePath;
             if (track.newFile) {
@@ -131,7 +138,6 @@ const EditTandaForm = ({ initialTanda }) => {
             newTrackData.push({ title: track.title, url: trackPath });
         }
         
-        // 3. Prepare data for API
         const payload = {
             filesToUpload,
             filesToDelete,
@@ -140,12 +146,10 @@ const EditTandaForm = ({ initialTanda }) => {
                 singer: formData.singer,
                 artwork_url: newArtworkPath,
                 tracks: newTrackData,
-                // --- ADDED: Include style in the update ---
                 style: formData.style
             }
         };
 
-        // 4. Call the backend to update Firestore and get upload URLs
         const response = await fetch(`/api/tandas/manage/${formData.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -156,7 +160,6 @@ const EditTandaForm = ({ initialTanda }) => {
         
         const { uploadUrls } = await response.json();
 
-        // 5. Upload new files to Cloud Storage
         const uploadPromises = [];
         if (imageFile && uploadUrls.artwork) {
             uploadPromises.push(fetch(uploadUrls.artwork, { method: 'PUT', body: imageFile }));
@@ -179,6 +182,8 @@ const EditTandaForm = ({ initialTanda }) => {
         setIsSaving(false);
     }
   };
+  
+  const maxTracks = formData.type === 'Tango' ? 4 : 3;
 
   return (
     <div className="space-y-8">
@@ -195,8 +200,7 @@ const EditTandaForm = ({ initialTanda }) => {
         <div className="flex-1 flex flex-col gap-4">
           <input name="orchestra" value={formData.orchestra} onChange={handleInputChange} className="w-full h-12 p-3 rounded-full bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]" />
           <input name="singer" value={formData.singer} onChange={handleInputChange} className="w-full h-12 p-3 rounded-full bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]" />
-          
-          {/* --- ADDED: Style dropdown, only shown for Tango type --- */}
+         
           {formData.type === 'Tango' && (
             <select 
               name="style" 
@@ -213,7 +217,18 @@ const EditTandaForm = ({ initialTanda }) => {
 
       {/* Track List */}
       <div>
-        <h2 className="text-xl font-bold mb-4">Tracks</h2>
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Tracks</h2>
+            {/* --- NEW: Add Track Button --- */}
+            <button 
+                onClick={handleAddNewTrack}
+                disabled={formData.tracks.length >= maxTracks}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white bg-[#3e424b] hover:bg-[#4a4e58] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+                <PlusIcon className="h-5 w-5" />
+                Add Track
+            </button>
+        </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={formData.tracks.map((t, i) => t.id || i)} strategy={verticalListSortingStrategy}>
             {formData.tracks.map((track, index) => (
