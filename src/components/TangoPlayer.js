@@ -130,16 +130,24 @@ function QueueContent({
     isDesktop,
     handleShuffle,
     handleSettingChange,
-    settings
-})
+    settings,
+    // --- ADD THIS NEW PROP ---
+    availableCortinas 
+}) {
+    // Helper function to get a random cortina title
+    const getRandomCortinaTitle = () => {
+        if (!availableCortinas || availableCortinas.length === 0) {
+            return "Cortina";
+        }
+        const randomCortina = availableCortinas[Math.floor(Math.random() * availableCortinas.length)];
+        return randomCortina.title;
+    };
 
-{
     return (
         <>
             <div
                 ref={queueContainerRef}
                 onScroll={handleQueueScroll}
-                // --- UPDATED: Added padding-bottom to make space for the fixed bar ---
                 className="flex-grow overflow-y-auto p-3 px-2 h-full pb-20" 
             >
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
@@ -147,25 +155,53 @@ function QueueContent({
                         items={[...manualQueueIds, ...upcomingPlaylistIds]}
                         strategy={verticalListSortingStrategy}
                     >
-                        {manualQueue.map((tanda) => (
-                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                        {manualQueue.map((tanda, index) => (
+                           <React.Fragment key={tanda.id}>
+                                {settings.cortinas && index > 0 && (
+                                     <div className="flex items-center gap-2 my-2 px-2 text-center">
+                                        <div className="flex-grow h-px bg-white/10"></div>
+                                        <div className="flex-shrink-0 text-xs text-gray-500 italic">
+                                            <MusicalNoteIcon className="h-4 w-4 inline-block mr-1" />
+                                            {getRandomCortinaTitle()}
+                                        </div>
+                                        <div className="flex-grow h-px bg-white/10"></div>
+                                    </div>
+                                )}
+                                <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                            </React.Fragment>
                         ))}
 
                         {manualQueue.length > 0 && upcomingPlaylist.length > 0 && (
-                            <div className="p-2 my-2 border-b border-t border-white/10">
-                                <p className="text-xs text-center text-gray-400 font-semibold uppercase">Up Next from Playlist</p>
+                             <div className="flex items-center gap-2 my-2 px-2 text-center">
+                                <div className="flex-grow h-px bg-white/10"></div>
+                                <div className="flex-shrink-0 text-xs text-gray-500 italic">
+                                    <MusicalNoteIcon className="h-4 w-4 inline-block mr-1" />
+                                    {settings.cortinas ? getRandomCortinaTitle() : "Up Next"}
+                                </div>
+                                <div className="flex-grow h-px bg-white/10"></div>
                             </div>
                         )}
 
-                        {upcomingPlaylist.map((tanda) => (
-                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                        {upcomingPlaylist.map((tanda, index) => (
+                            <React.Fragment key={tanda.id}>
+                                {settings.cortinas && (manualQueue.length > 0 || index > 0) && (
+                                    <div className="flex items-center gap-2 my-2 px-2 text-center">
+                                        <div className="flex-grow h-px bg-white/10"></div>
+                                        <div className="flex-shrink-0 text-xs text-gray-500 italic">
+                                            <MusicalNoteIcon className="h-4 w-4 inline-block mr-1" />
+                                            {getRandomCortinaTitle()}
+                                        </div>
+                                        <div className="flex-grow h-px bg-white/10"></div>
+                                    </div>
+                                )}
+                                <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                            </React.Fragment>
                         ))}
                     </SortableContext>
                 </DndContext>
             </div>
             
-            {/* --- ADD THIS ENTIRE NEW BUTTON BAR --- */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-[#30333a] flex-shrink-0 lg:hidden">
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-transparent flex-shrink-0 lg:hidden">
                 <div className="w-full gap-3 flex justify-around items-center">
                     <button onClick={handleShuffle} title="Shuffle Playlist" className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}>
                         <ArrowsRightLeftIcon className="h-5 w-5" />
@@ -354,6 +390,7 @@ export default function TangoPlayer() {
     const [cortinas, setCortinas] = useState([]);
     const [isCortinaPlaying, setIsCortinaPlaying] = useState(false);
     const [currentCortina, setCurrentCortina] = useState(null);
+    const [availableCortinas, setAvailableCortinas] = useState([]);
 
 
     const audioRef = useRef(null);
@@ -424,6 +461,7 @@ export default function TangoPlayer() {
             if (!response.ok) throw new Error('Failed to fetch playlist from server.');
             const data = await response.json();
 
+            if (data.availableCortinas) setAvailableCortinas(data.availableCortinas);
             if (data.upcomingTandas && data.upcomingTandas.length > 0) {
                 setUpcomingPlaylist(prev => {
                     const combined = [...prev, ...data.upcomingTandas];
@@ -1110,6 +1148,7 @@ export default function TangoPlayer() {
         handleShuffle: handleShuffle,
         handleSettingChange: handleSettingChange,
          settings: settings,
+         availableCortinas: availableCortinas,
     };
 
 
