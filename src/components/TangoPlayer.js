@@ -131,16 +131,31 @@ function QueueContent({
     handleShuffle,
     handleSettingChange,
     settings,
-    // --- ADD THIS NEW PROP ---
-    availableCortinas 
+    availableCortinas,
+    shuffledCortinas
 }) {
-    // Helper function to get a random cortina title
-    const getRandomCortinaTitle = () => {
-        if (!availableCortinas || availableCortinas.length === 0) {
-            return "Cortina";
+    const getCortinaForSeparator = (index) => {
+        if (!shuffledCortinas || shuffledCortinas.length === 0) {
+            return { title: "Cortina", artist: "" };
         }
-        const randomCortina = availableCortinas[Math.floor(Math.random() * availableCortinas.length)];
-        return randomCortina.title;
+        return shuffledCortinas[index % shuffledCortinas.length];
+    };
+
+    const renderSeparator = (index) => {
+        const cortina = getCortinaForSeparator(index);
+        return (
+            <div className="flex items-center gap-2 my-0 px-2 text-center">
+                <div className="flex-grow h-px bg-white/10"></div>
+                {/* --- THIS IS THE FIX: Added classes to handle overflow --- */}
+                <div className="flex-shrink-0 text-xs text-gray-500 italic flex items-center min-w-0 max-w-[70%]">
+                    <MusicalNoteIcon className="h-4 w-4 inline-block mr-1 flex-shrink-0" />
+                    <span className="truncate">
+                        {cortina.title}{cortina.artist && ` - ${cortina.artist}`}
+                    </span>
+                </div>
+                <div className="flex-grow h-px bg-white/10"></div>
+            </div>
+        );
     };
 
     return (
@@ -157,16 +172,7 @@ function QueueContent({
                     >
                         {manualQueue.map((tanda, index) => (
                            <React.Fragment key={tanda.id}>
-                                {settings.cortinas && index > 0 && (
-                                     <div className="flex items-center gap-2 my-2 px-2 text-center">
-                                        <div className="flex-grow h-px bg-white/10"></div>
-                                        <div className="flex-shrink-0 text-xs text-gray-500 italic">
-                                            <MusicalNoteIcon className="h-4 w-4 inline-block mr-1" />
-                                            {getRandomCortinaTitle()}
-                                        </div>
-                                        <div className="flex-grow h-px bg-white/10"></div>
-                                    </div>
-                                )}
+                                {settings.cortinas && index > 0 && renderSeparator(index - 1)}
                                 <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
                             </React.Fragment>
                         ))}
@@ -175,28 +181,21 @@ function QueueContent({
                              <div className="flex items-center gap-2 my-2 px-2 text-center">
                                 <div className="flex-grow h-px bg-white/10"></div>
                                 <div className="flex-shrink-0 text-xs text-gray-500 italic">
-                                    <MusicalNoteIcon className="h-4 w-4 inline-block mr-1" />
-                                    {settings.cortinas ? getRandomCortinaTitle() : "Up Next"}
+                                    {settings.cortinas ? `Up Next:` : "Up Next"}
                                 </div>
                                 <div className="flex-grow h-px bg-white/10"></div>
                             </div>
                         )}
 
-                        {upcomingPlaylist.map((tanda, index) => (
-                            <React.Fragment key={tanda.id}>
-                                {settings.cortinas && (manualQueue.length > 0 || index > 0) && (
-                                    <div className="flex items-center gap-2 my-2 px-2 text-center">
-                                        <div className="flex-grow h-px bg-white/10"></div>
-                                        <div className="flex-shrink-0 text-xs text-gray-500 italic">
-                                            <MusicalNoteIcon className="h-4 w-4 inline-block mr-1" />
-                                            {getRandomCortinaTitle()}
-                                        </div>
-                                        <div className="flex-grow h-px bg-white/10"></div>
-                                    </div>
-                                )}
-                                <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
-                            </React.Fragment>
-                        ))}
+                        {upcomingPlaylist.map((tanda, index) => {
+                            const cortinaIndex = manualQueue.length + index;
+                             return (
+                                <React.Fragment key={tanda.id}>
+                                    {settings.cortinas && (manualQueue.length > 0 || index > 0) && renderSeparator(cortinaIndex -1)}
+                                    <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                                </React.Fragment>
+                            );
+                        })}
                     </SortableContext>
                 </DndContext>
             </div>
@@ -391,6 +390,8 @@ export default function TangoPlayer() {
     const [isCortinaPlaying, setIsCortinaPlaying] = useState(false);
     const [currentCortina, setCurrentCortina] = useState(null);
     const [availableCortinas, setAvailableCortinas] = useState([]);
+    const [isChangingSettings, setIsChangingSettings] = useState(false);
+    const [shuffledCortinas, setShuffledCortinas] = useState([]);
 
 
     const audioRef = useRef(null);
@@ -429,6 +430,7 @@ export default function TangoPlayer() {
 
 
     const fetchAndFillPlaylist = useCallback(async () => {
+
         if (isFetchingRef.current) return;
         isFetchingRef.current = true;
         setIsLoading(true);
@@ -461,7 +463,16 @@ export default function TangoPlayer() {
             if (!response.ok) throw new Error('Failed to fetch playlist from server.');
             const data = await response.json();
 
-            if (data.availableCortinas) setAvailableCortinas(data.availableCortinas);
+            if (data.availableCortinas) {
+                setAvailableCortinas(data.availableCortinas);
+                // --- THIS IS THE FIX ---
+                // Only create a new shuffled list if one doesn't already exist.
+                // This handles the initial load but prevents re-shuffling on scroll.
+                if (shuffledCortinas.length === 0) {
+                    setShuffledCortinas([...data.availableCortinas].sort(() => 0.5 - Math.random()));
+                }
+            }
+
             if (data.upcomingTandas && data.upcomingTandas.length > 0) {
                 setUpcomingPlaylist(prev => {
                     const combined = [...prev, ...data.upcomingTandas];
@@ -544,10 +555,10 @@ export default function TangoPlayer() {
 
     useEffect(() => {
         const needsFetching = upcomingPlaylist.length === 0 || upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
-        if (needsFetching && !isFetchingRef.current) {
+        if (needsFetching && !isFetchingRef.current && !isChangingSettings) {
             fetchAndFillPlaylist();
         }
-    }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist]);
+    }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist, isChangingSettings]); // <-- ADD isChangingSettings HERE
 
 
 
@@ -604,24 +615,20 @@ export default function TangoPlayer() {
 
 
     const handleSettingChange = useCallback(async (settingName, value) => {
+        // Prevent other fetches from starting.
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
+        setIsRefreshing(true);
+
         const newSettings = { ...settings, [settingName]: value };
         setSettings(newSettings);
 
-        // --- THIS IS THE FIX ---
-        // If a setting that affects the playlist is changed, we now
-        // manually clear the queue and fetch a brand new one.
+        // If a setting that affects the playlist is changed...
         if (settingName === 'tandaOrder' || settingName === 'categoryFilter' || settingName === 'tandaLength') {
-            setIsRefreshing(true);
-            setManualQueue([]); // Clear manual queue
-            setUpcomingPlaylist([]); // Clear upcoming playlist
-            setRecentlyPlayedIds(new Set()); // Reset recently played
-
-            // Now, fetch a completely new playlist with the new settings
             try {
-                isFetchingRef.current = true;
                 const params = new URLSearchParams({
                     categoryFilter: newSettings.categoryFilter,
-                    excludeIds: '', // Start with no exclusions for a fresh list
+                    excludeIds: '',
                 });
 
                 if (newSettings.tandaOrder.startsWith('Just')) {
@@ -630,24 +637,34 @@ export default function TangoPlayer() {
                 } else {
                     params.append('tandaOrder', newSettings.tandaOrder);
                 }
-                
+
                 const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}`;
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error('Failed to fetch new playlist.');
-                
+
                 const data = await response.json();
-                if (data.upcomingTandas) {
-                    setUpcomingPlaylist(data.upcomingTandas);
-                }
+                
+                // This part is now safe because the other fetch is blocked.
+                setManualQueue([]);
+                setRecentlyPlayedIds(new Set());
+                setAvailableCortinas(data.availableCortinas || []);
+                setUpcomingPlaylist(data.upcomingTandas || []);
+
             } catch (err) {
+                // This block now correctly handles the error without causing a crash.
                 console.error("SETTING CHANGE FETCH ERROR:", err);
                 setError(err.message);
             } finally {
                 isFetchingRef.current = false;
                 setIsRefreshing(false);
             }
+        } else {
+            // If the setting change doesn't require a fetch (like toggling cortinas),
+            // we must still release the lock.
+            isFetchingRef.current = false;
+            setIsRefreshing(false);
         }
-    }, [settings]); // Dependency array is simplified
+    }, [settings]);
 
 
 
@@ -952,11 +969,13 @@ export default function TangoPlayer() {
             const response = await fetch(apiUrl);
             if (!response.ok) throw new Error('Failed to fetch new playlist.');
             const data = await response.json();
-            if (data.upcomingTandas && data.upcomingTandas.length > 0) {
-                setUpcomingPlaylist(data.upcomingTandas);
-            } else {
-                setUpcomingPlaylist([]);
-            }
+                // --- ADD THIS LINE ---
+                if (data.availableCortinas) setAvailableCortinas(data.availableCortinas);
+                    setShuffledCortinas([...data.availableCortinas].sort(() => 0.5 - Math.random()));
+                
+                if (data.upcomingTandas) {
+                    setUpcomingPlaylist(data.upcomingTandas);
+                }
         } catch (err) {
             console.error("SHUFFLE FETCH ERROR:", err);
             setError(err.message);
@@ -1149,6 +1168,8 @@ export default function TangoPlayer() {
         handleSettingChange: handleSettingChange,
          settings: settings,
          availableCortinas: availableCortinas,
+         shuffledCortinas: shuffledCortinas
+         
     };
 
 

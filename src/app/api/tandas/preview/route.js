@@ -81,8 +81,6 @@ export async function GET(request) {
     const upcomingTandas = [];
     let sequenceArray = [];
 
-    // --- THIS IS THE FIX ---
-    // Prioritize 'requiredType' (for "Just..." options) over 'tandaOrder'.
     if (requiredType) {
         sequenceArray = Array(parseInt(limit, 10)).fill(requiredType);
     } else {
@@ -91,7 +89,6 @@ export async function GET(request) {
             sequenceArray = TANDA_SEQUENCES[tandaOrder];
         }
     }
-    // --- END OF FIX ---
 
     if (sequenceArray.length === 0) {
       throw new Error("No valid sequence or requiredType provided.");
@@ -110,6 +107,18 @@ export async function GET(request) {
       }
     }
     
+    // --- THIS IS THE FIX ---
+    // Fetch ALL available cortinas, without the restrictive genre filter.
+    const cortinasRef = db.collection('cortinas');
+    const cortinasSnapshot = await cortinasRef.get();
+    const availableCortinas = [];
+    if (!cortinasSnapshot.empty) {
+        cortinasSnapshot.forEach(doc => {
+            availableCortinas.push({ id: doc.id, ...doc.data() });
+        });
+    }
+    // --- END OF FIX ---
+
     const tandasWithSignedUrls = await Promise.all(
       upcomingTandas.map(async (tanda) => ({
         ...tanda,
@@ -118,7 +127,10 @@ export async function GET(request) {
       }))
     );
     
-    return NextResponse.json({ upcomingTandas: tandasWithSignedUrls });
+    return NextResponse.json({ 
+        upcomingTandas: tandasWithSignedUrls,
+        availableCortinas: availableCortinas 
+    });
 
   } catch (error) {
     console.error('API Route Error:', error);
