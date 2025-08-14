@@ -231,6 +231,55 @@ function EqPanel({ isOpen, onClose, eq, handleEqChange, handleResetEq, eqNotific
   );
 }
 
+// --- NEW Settings Panel Component (for Mobile Bottom Sheet) ---
+function SettingsPanel({ isOpen, onClose, settings, handleSettingChange }) {
+  const panelRef = useRef(null);
+
+  return (
+    <div className={`fixed inset-0 z-10 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
+      
+      <div
+        ref={panelRef}
+        className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+      >
+        {/* Handle */}
+        <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
+        
+        <div className="p-4">
+          <h3 className="text-lg mb-4 text-center text-gray-300">Settings</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-4">
+            <div className="flex flex-col">
+              <label htmlFor="tandaOrderMobile" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label>
+              <div className="relative">
+                <select id="tandaOrderMobile" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
+                  {TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                </select>
+                <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="categoryFilterMobile" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label>
+              <div className="relative">
+                <select id="categoryFilterMobile" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
+                  {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                </select>
+                <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+            <div className="flex flex-col items-start">
+              <span className="block text-sm font-medium text-gray-400 mb-2">Tanda Length</span>
+              <div className="grid grid-cols-2 gap-2 mt-1 w-full">
+                {TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // --- Constants ---
 const API_BASE_URL = '/api';
@@ -1238,36 +1287,7 @@ export default function TangoPlayer() {
                         <button onClick={() => handlePanelToggle('eq')} title="Equalizer" className={`p-2 rounded-full transition-colors ${activePanel === 'eq' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><SparklesIcon className="h-6 w-6" /></button>
                         <button onClick={() => handlePanelToggle('queue')} title="Queue" className={`p-2 rounded-full transition-colors ${activePanel === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}><QueueListIcon className="h-6 w-6" /></button>
                     </div>
-                    <div className={`transition-all duration-500 ease-in-out overflow-hidden ${activePanel && activePanel !== 'queue' ? 'max-h-[500px] mt-4' : 'max-h-0'}`}>
-                        <div className={activePanel === 'settings' ? 'block' : 'hidden'}>
-                            <div className="p-4 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><h3 className="text-lg mb-4 text-center text-gray-300">Settings</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-4">
-                                    <div className="flex flex-col"><label htmlFor="tandaOrder" className="block text-sm font-medium text-gray-400 mb-1">Tanda Order</label><div className="relative"><select id="tandaOrder" name="tandaOrder" value={settings.tandaOrder} onChange={(e) => handleSettingChange('tandaOrder', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                                    <div className="flex flex-col"><label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label><div className="relative"><select id="categoryFilter" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">{ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}</select><ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" /></div></div>
-                                    <div className="flex flex-col items-start"><span className="block text-sm font-medium text-gray-400 mb-2">Tanda Length</span><div className="grid grid-cols-2 gap-2 mt-1 w-full">{TANDA_LENGTH_OPTIONS.map(len => (<button key={len} onClick={() => handleSettingChange('tandaLength', len)} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>{len} Tangos</button>))}</div></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className={activePanel === 'eq' ? 'block' : 'hidden'}>
-                            <div className="p-6 rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
-                                <h3 className="relative text-lg mb-2 text-center text-gray-300">
-                                    Equalizer
-                                    <button onClick={handleResetEq} title="Reset Equalizer" className="absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
-                                        <ArrowUturnLeftIcon className="h-5 w-5" />
-                                    </button>
-                                </h3>
-                                <div className="relative">
-                                    {eqNotification && (<div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 rounded-lg"><p className="text-white text-center p-4">{eqNotification}</p></div>)}
-                                    <div className="flex flex-col space-y-2">
-                                        <div className="flex flex-col"><label htmlFor="high-eq" className="text-sm font-medium text-gray-400">HIGH</label><input id="high-eq" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>                                        
-                                        <div className="flex flex-col"><label htmlFor="mid-eq" className="text-sm font-medium text-gray-400">MID</label><input id="mid-eq" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>
-                                        <div className="flex flex-col"><label htmlFor="low-eq" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" /></div>                                        </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-
+                    
                 </div>
             </div>
            
@@ -1286,6 +1306,16 @@ export default function TangoPlayer() {
                     handleEqChange={handleEqChange}
                     handleResetEq={handleResetEq}
                     eqNotification={eqNotification} // <-- Add this line
+                />
+            )}
+            
+            {/* --- ADD THIS NEW COMPONENT --- */}
+            {hasMounted && !isDesktop && (
+                <SettingsPanel 
+                    isOpen={activePanel === 'settings'} 
+                    onClose={() => handlePanelToggle('settings')} 
+                    settings={settings}
+                    handleSettingChange={handleSettingChange}
                 />
             )}
         </div>
