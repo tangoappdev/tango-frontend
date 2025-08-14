@@ -1232,7 +1232,7 @@ export default function TangoPlayer() {
                     <div className="flex justify-center mb-4">
                         {/* --- FIX: Use artwork_signed --- */}
                         {currentTanda && currentTanda.artwork_signed ? (<img src={isCortinaPlaying && currentCortina ? currentCortina.artwork_url_signed : currentTanda?.artwork_signed} 
-    alt={`Artwork for ${isCortinaPlaying ? currentCortina.title : currentTanda?.orchestra}`} className="w-64 h-64 object-cover shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] rounded-lg shadow-md" />) : (!currentTanda && !currentCortina) && (<div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
+    alt={`Artwork for ${isCortinaPlaying ? currentCortina.title : currentTanda?.orchestra}`} className="w-64 h-64 object-cover shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] rounded-lg" />) : (!currentTanda && !currentCortina) && (<div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>)}
                     </div>
                     <div className="mb-4 text-center min-h-[4em]">
                         {isCortinaPlaying && currentCortina ? (
