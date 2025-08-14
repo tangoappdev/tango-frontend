@@ -200,7 +200,7 @@ function QueueContent({
                 </DndContext>
             </div>
             
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-transparent flex-shrink-0 lg:hidden">
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-[#30333a] flex-shrink-0 lg:hidden">
                 <div className="w-full gap-3 flex justify-around items-center">
                     <button onClick={handleShuffle} title="Shuffle Playlist" className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}>
                         <ArrowsRightLeftIcon className="h-5 w-5" />
