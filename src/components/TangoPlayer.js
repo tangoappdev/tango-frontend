@@ -396,36 +396,33 @@ export default function TangoPlayer() {
         isFetchingRef.current = true;
         setIsLoading(true);
 
-
-
-
         const allExcludeIds = new Set([...recentlyPlayedIds, ...upcomingPlaylist.map(t => t.id)]);
+        
+        // --- THIS IS THE FIX ---
+        // We now build the URL parameters more carefully.
         const params = new URLSearchParams({
             categoryFilter: settings.categoryFilter,
             excludeIds: Array.from(allExcludeIds).join(','),
         });
 
-
-
-
+        // If the user wants a specific type (e.g., "Just Tango"),
+        // we ONLY add the 'requiredType' parameter.
         if (settings.tandaOrder.startsWith('Just')) {
             params.append('requiredType', TANDA_SEQUENCES[settings.tandaOrder][0]);
             params.append('limit', FREESTYLE_FETCH_BATCH_SIZE);
-        } else {
+        } 
+        // Otherwise, we send the full tanda order sequence.
+        else {
             params.append('tandaOrder', settings.tandaOrder);
         }
-
+        // --- END OF FIX ---
 
         const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}`;
-
-
-
 
         try {
             const response = await fetch(apiUrl);
             if (!response.ok) throw new Error('Failed to fetch playlist from server.');
             const data = await response.json();
-
 
             if (data.upcomingTandas && data.upcomingTandas.length > 0) {
                 setUpcomingPlaylist(prev => {
@@ -441,7 +438,7 @@ export default function TangoPlayer() {
         } finally {
             isFetchingRef.current = false;
             setIsLoading(false);
-            setIsRefreshing(false); // Also hide the refresh overlay here
+            setIsRefreshing(false);
         }
     }, [settings, recentlyPlayedIds, upcomingPlaylist]);
 
@@ -568,14 +565,51 @@ export default function TangoPlayer() {
 
 
 
-    const handleSettingChange = (settingName, value) => {
-        setSettings(prev => ({ ...prev, [settingName]: value }));
-        // Only reset the playlist if the order or category changes, not for cortinas
+    const handleSettingChange = useCallback(async (settingName, value) => {
+        const newSettings = { ...settings, [settingName]: value };
+        setSettings(newSettings);
+
+        // --- THIS IS THE FIX ---
+        // If a setting that affects the playlist is changed, we now
+        // manually clear the queue and fetch a brand new one.
         if (settingName === 'tandaOrder' || settingName === 'categoryFilter' || settingName === 'tandaLength') {
-            setIsRefreshing(true); // Show the overlay
-            setResetCounter(c => c + 1);
+            setIsRefreshing(true);
+            setManualQueue([]); // Clear manual queue
+            setUpcomingPlaylist([]); // Clear upcoming playlist
+            setRecentlyPlayedIds(new Set()); // Reset recently played
+
+            // Now, fetch a completely new playlist with the new settings
+            try {
+                isFetchingRef.current = true;
+                const params = new URLSearchParams({
+                    categoryFilter: newSettings.categoryFilter,
+                    excludeIds: '', // Start with no exclusions for a fresh list
+                });
+
+                if (newSettings.tandaOrder.startsWith('Just')) {
+                    params.append('requiredType', TANDA_SEQUENCES[newSettings.tandaOrder][0]);
+                    params.append('limit', FREESTYLE_FETCH_BATCH_SIZE);
+                } else {
+                    params.append('tandaOrder', newSettings.tandaOrder);
+                }
+                
+                const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}`;
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error('Failed to fetch new playlist.');
+                
+                const data = await response.json();
+                if (data.upcomingTandas) {
+                    setUpcomingPlaylist(data.upcomingTandas);
+                }
+            } catch (err) {
+                console.error("SETTING CHANGE FETCH ERROR:", err);
+                setError(err.message);
+            } finally {
+                isFetchingRef.current = false;
+                setIsRefreshing(false);
+            }
         }
-    };
+    }, [settings]); // Dependency array is simplified
 
 
 

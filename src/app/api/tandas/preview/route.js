@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getFirestore, getStorage } from '@/lib/firebaseAdmin.server.js';
+import admin from 'firebase-admin';
 
+// --- Constants ---
 const TANDA_SEQUENCES = {
   '2TV2TM': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
   '3TV3TM': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
@@ -9,8 +10,21 @@ const TANDA_SEQUENCES = {
   'Just Milonga': ['Milonga'],
 };
 
-const db = getFirestore();
-const bucket = getStorage().bucket();
+// --- Firebase Initialization ---
+if (!admin.apps.length) {
+  try {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY_JSON);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: 'tangoapp-8bd65-storage'
+    });
+  } catch (error) {
+    console.error('Firebase initialization error:', error.message);
+  }
+}
+
+const db = admin.firestore();
+const bucket = admin.storage().bucket();
 const SIGNED_URL_EXPIRATION_MINUTES = 15;
 
 // --- Helper Functions ---
@@ -20,11 +34,8 @@ async function generateV4ReadSignedUrl(filePath) {
     return null;
   }
   try {
-    // --- REVERTED: Removed the incorrect decoding line ---
     const options = { version: 'v4', action: 'read', expires: Date.now() + SIGNED_URL_EXPIRATION_MINUTES * 60 * 1000 };
-    console.log(`Attempting to sign URL for: ${filePath}`);
     const [url] = await bucket.file(filePath).getSignedUrl(options);
-    console.log(`Successfully signed URL for: ${filePath}`);
     return url;
   } catch (error) {
     console.error(`!!! FAILED to generate signed URL for ${filePath}. Error: ${error.message}`);
@@ -58,7 +69,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const categoryFilter = searchParams.get('categoryFilter');
     const excludeIds = searchParams.get('excludeIds');
-    const tandaOrder = searchParams.get('tandaOrder') || '2TV2TM';
     const requiredType = searchParams.get('requiredType');
     const limit = searchParams.get('limit') || 6;
 
@@ -71,11 +81,17 @@ export async function GET(request) {
     const upcomingTandas = [];
     let sequenceArray = [];
 
-    if (tandaOrder && TANDA_SEQUENCES[tandaOrder]) {
-      sequenceArray = TANDA_SEQUENCES[tandaOrder];
-    } else if (requiredType) {
-      sequenceArray = Array(parseInt(limit, 10)).fill(requiredType);
+    // --- THIS IS THE FIX ---
+    // Prioritize 'requiredType' (for "Just..." options) over 'tandaOrder'.
+    if (requiredType) {
+        sequenceArray = Array(parseInt(limit, 10)).fill(requiredType);
+    } else {
+        const tandaOrder = searchParams.get('tandaOrder') || '2TV2TM';
+        if (TANDA_SEQUENCES[tandaOrder]) {
+            sequenceArray = TANDA_SEQUENCES[tandaOrder];
+        }
     }
+    // --- END OF FIX ---
 
     if (sequenceArray.length === 0) {
       throw new Error("No valid sequence or requiredType provided.");
