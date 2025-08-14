@@ -131,7 +131,9 @@ function QueueContent({
     handleShuffle,
     handleSettingChange,
     settings
-}) {
+})
+
+{
     return (
         <>
             <div
@@ -179,7 +181,55 @@ function QueueContent({
     );
 }
 
+// --- NEW EQ Panel Component (for Mobile Bottom Sheet) ---
+function EqPanel({ isOpen, onClose, eq, handleEqChange, handleResetEq, eqNotification }) {
+  const panelRef = useRef(null);
 
+  return (
+    <div className={`fixed inset-0 z-10 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
+      
+      <div
+        ref={panelRef}
+        className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+      >
+        {/* Handle */}
+        <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
+        
+        <div className="p-6 relative"> {/* Added relative positioning here */}
+          {/* --- THIS IS THE FIX: Display the notification message --- */}
+          {eqNotification && (
+            <div className="absolute inset-0 backdrop-blur-xs rounded-lg flex items-center justify-center z-10">
+              <p className="text-white text-center text-sm p-4">{eqNotification}</p>
+            </div>
+          )}
+
+          <h3 className="relative text-lg mb-4 text-center text-gray-300">
+            Equalizer
+            <button onClick={handleResetEq} title="Reset Equalizer" className="absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
+              <ArrowUturnLeftIcon className="h-5 w-5" />
+            </button>
+          </h3>
+          <div className="flex flex-col space-y-2">
+            <div className="flex flex-col">
+              <label htmlFor="high-eq-mobile" className="text-sm font-medium text-gray-400">HIGH</label>
+              <input id="high-eq-mobile" type="range" min="-12" max="12" step="0.1" value={eq.high} onChange={(e) => handleEqChange('high', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="mid-eq-mobile" className="text-sm font-medium text-gray-400">MID</label>
+              <input id="mid-eq-mobile" type="range" min="-12" max="12" step="0.1" value={eq.mid} onChange={(e) => handleEqChange('mid', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="low-eq-mobile" className="text-sm font-medium text-gray-400">LOW</label>
+              <input id="low-eq-mobile" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 
 // --- Constants ---
@@ -864,7 +914,7 @@ export default function TangoPlayer() {
         if (band === 'low' && lowShelfRef.current) lowShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
         if (band === 'mid' && midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
         if (band === 'high' && highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
-    }, [isDesktop]);
+    }, [isDesktop]); // <-- Make sure isDesktop is in the dependency array
 
 
 
@@ -1226,6 +1276,17 @@ export default function TangoPlayer() {
            
             {hasMounted && !isDesktop && (
                 <Queue isOpen={activePanel === 'queue'} onClose={() => handlePanelToggle('queue')} isDesktop={isDesktop} {...queueProps} />
+            )}
+            {/* --- ADD THIS NEW COMPONENT --- */}
+            {hasMounted && !isDesktop && (
+                <EqPanel 
+                    isOpen={activePanel === 'eq'} 
+                    onClose={() => handlePanelToggle('eq')} 
+                    eq={eq}
+                    handleEqChange={handleEqChange}
+                    handleResetEq={handleResetEq}
+                    eqNotification={eqNotification} // <-- Add this line
+                />
             )}
         </div>
     );
