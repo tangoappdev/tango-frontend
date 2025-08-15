@@ -1,33 +1,22 @@
-import { Quicksand } from 'next/font/google';
-import "./globals.css";
+import { Quicksand } from 'next/font/google'
+import './globals.css'
 
-const quicksand = Quicksand({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-quicksand',
-});
+const quicksand = Quicksand({ subsets: ['latin'] })
 
-// --- This part remains the same ---
+// --- THIS IS THE NEW PART ---
+// This object provides the title and description for search engines and browser tabs.
 export const metadata = {
-  title: "TangoDJ",
-  description: "Your curated Tango music experience",
-};
-
-// --- CHANGE #1: Added this viewport export to disable zooming ---
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-};
+  title: 'Virtual Tango DJ | The Authentic Milonga Experience',
+  description: 'Enjoy a unique, tailored, and auto-generated tanda list every time. Easily get and enjoy dancing an endless stream of carefully curated and perfectly sequenced tandas (Tango, Vals, Milonga) and cortinas for social dancing, practice, and teaching.',
+}
+// --- END OF NEW PART ---
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${quicksand.variable} antialiased bg-[#30333a] text-white`}>
-        {/* --- CHANGE #2: Removed the <main> tag from here for a cleaner structure --- */}
+      <body className={`${quicksand.className} bg-[#30333a]`}>
         {children}
       </body>
     </html>
-  );
+  )
 }
