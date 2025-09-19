@@ -9,10 +9,9 @@ import ContextMenu from './ContextMenu';
 import {
   PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
   ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, AdjustmentsVerticalIcon,
-  SparklesIcon, QueueListIcon, ArrowsRightLeftIcon, MusicalNoteIcon,
-  ArrowsPointingOutIcon, ArrowsPointingInIcon, ArrowUturnLeftIcon, ArrowPathIcon
+  SparklesIcon, QueueListIcon, MusicalNoteIcon,
+  ArrowsPointingOutIcon, ArrowsPointingInIcon, ArrowUturnLeftIcon, ArrowPathIcon, PlusCircleIcon, CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebaseClient';
 
@@ -69,7 +68,6 @@ function Queue({ isOpen, onClose, isDesktop, ...props }) {
   return (
     <div className={containerClasses}>
       <div className="absolute inset-0 bg-black/60 lg:hidden" onClick={onClose}></div>
-
       <div
         ref={panelRef}
         onTouchStart={handleTouchStart}
@@ -107,12 +105,10 @@ function QueueContent({
   onMenuOpen,
   onPlayNow,
   isDesktop,
-  handleShuffle,
   handleSettingChange,
   settings,
-  shuffledCortinas,
-  handleRefreshPlaylist,
   isRefreshing,
+  handleRefreshPlaylist,
   isPro
 }) {
   const fallbackCortina = { title: "Cortina", artist: "" };
@@ -168,18 +164,16 @@ function QueueContent({
           </SortableContext>
         </DndContext>
       </div>
-
-      {/* Mobile footer controls inside Queue sheet */}
       <div className="absolute bottom-0 left-0 right-0 p-3 bg-[#30333a] flex-shrink-0 lg:hidden">
         <div className="w-full gap-3 flex justify-around items-center">
-         <button
-          onClick={handleRefreshPlaylist}
-          title={'Refresh Playlist'}
-          disabled={isRefreshing}
-          className="w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e] disabled:opacity-50"
-        >
-          <ArrowPathIcon className="h-5 w-5" />
-           Refresh
+          <button
+            onClick={handleRefreshPlaylist}
+            title={'Refresh Playlist'}
+            disabled={isRefreshing}
+            className="w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e] disabled:opacity-50"
+          >
+            <ArrowPathIcon className="h-5 w-5" />
+            Refresh
           </button>
           <button
             onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
@@ -199,7 +193,7 @@ function QueueContent({
   );
 }
 
-// --- NEW EQ Panel Component (for Mobile Bottom Sheet) ---
+// --- EQ Panel Component ---
 function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqNotification, isPro }) {
   const panelRef = useRef(null);
   const disabled = user && !isPro;
@@ -211,13 +205,13 @@ function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqN
         className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
-        <div className="p-6 mb-7 relative">
+        <div className="p-6 relative">
           {eqNotification && (
             <div className="absolute inset-0 backdrop-blur-xs rounded-lg flex items-center justify-center z-10">
               <p className="text-white text-center text-sm p-4">{eqNotification}</p>
             </div>
           )}
-          <h3 className="relative text-lg mb-3 text-center text-gray-300">
+          <h3 className="relative text-lg mb-4 text-center text-gray-300">
             Equalizer
             <button onClick={handleResetEq} title="Reset Equalizer" disabled={user && !isPro} className="absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50">
               <ArrowUturnLeftIcon className="h-5 w-5" />
@@ -243,7 +237,7 @@ function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqN
   );
 }
 
-// --- NEW Settings Panel Component (for Mobile Bottom Sheet) ---
+// --- Settings Panel Component ---
 function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, isPro }) {
   const panelRef = useRef(null);
   return (
@@ -258,128 +252,65 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
           <h3 className="text-lg mb-3 text-center text-gray-300">Settings</h3>
           <div className="flex flex-col gap-4">
             {/* 1. Orchestra Type */}
-            <div>
-              <label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-3">Orchestra Type</label>
+            <div className="flex flex-col">
+              <label htmlFor="categoryFilterMobile" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label>
               <div className="relative">
-                <select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
+                <select id="categoryFilterMobile" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
                   {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
                 </select>
                 <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
             {/* 2. Tanda Length */}
-            <div>
-              <span className="block text-sm font-medium text-gray-400 mb-3">
+            <div className="flex flex-col items-start">
+              <span className="block text-sm font-medium text-gray-400 mb-2">
                 Tanda Length
               </span>
               <div className={`grid grid-cols-2 gap-2 mt-1 w-full ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
                 {TANDA_LENGTH_OPTIONS.map(len => (
-                  <button key={len} onClick={() => handleSettingChange('tandaLength', len)} disabled={user && !isPro} className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}>
+                  <button
+                    key={len}
+                    onClick={() => handleSettingChange('tandaLength', len)}
+                    disabled={user && !isPro}
+                    className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.tandaLength === len ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}
+                  >
                     {len} Tangos
                   </button>
                 ))}
               </div>
             </div>
             {/* 3. Tanda Sequence */}
-            <div className="flex flex-col gap-5 mb-4">
-              <div>
-                <label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-3">Tanda Sequence</label>
-                <div className="relative">
-                  <select id="tandaOrderDesktop" name="activeMode" value={settings.activeMode} onChange={(e) => handleSettingChange('activeMode', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
-                    {TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                  </select>
-                  <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {JUST_MODE_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleSettingChange('activeMode', opt.value)}
-                    className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.activeMode === opt.value ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+            <div>
+              <label htmlFor="tandaOrderMobile" className="block text-sm font-medium text-gray-400 mb-1">Tanda Sequence</label>
+              <div className="relative">
+                <select 
+                  id="tandaOrderMobile" 
+                  name="activeMode" 
+                  value={settings.activeMode} 
+                  onChange={(e) => handleSettingChange('activeMode', e.target.value)} 
+                  className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
+                >
+                  {TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                </select>
+                <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
-          </div>
+            <div className="grid grid-cols-3 gap-2">
+              {JUST_MODE_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleSettingChange('activeMode', opt.value)}
+                  className={`py-2 px-1 rounded-lg text-xs sm:text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.activeMode === opt.value ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
+    </div>
   );
-}
-
-function formatTime(seconds) {
-  if (isNaN(seconds) || seconds < 0) return '00:00';
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-}
-function formatHHMMLocal(iso) {
-  try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-  catch { return iso; }
-}
-    function buildApiParams(settings, excludeIds = []) {
-  const params = new URLSearchParams({
-    categoryFilter: settings.categoryFilter,
-    excludeIds: Array.from(excludeIds).join(','),
-  });
-
-  // Check if the activeMode is one of the 'Just...' options
-  const isJustMode = JUST_MODE_OPTIONS.some(opt => opt.value === settings.activeMode);
-
-  if (isJustMode) {
-    const requiredType = settings.activeMode.charAt(0).toUpperCase() + settings.activeMode.slice(1);
-    params.append('requiredType', requiredType);
-    params.append('limit', FREESTYLE_FETCH_BATCH_SIZE);
-  } else {
-    // Otherwise, it's a sequence
-    params.append('tandaOrder', settings.activeMode);
-  }
-  return params;
-}
-
-// ensure spacing between same tanda ids against the recent tail
-function reorderWithMinGap(existingList, incomingList, minGap) {
-  const recentWindowSize = Math.max(0, minGap);
-  const recent = existingList.slice(-recentWindowSize).map(x => x.id);
-  const pool = [...incomingList];
-  const result = [];
-
-  while (pool.length) {
-    const goodIdx = pool.findIndex(item => {
-      const id = item.id;
-      if (recent.includes(id)) return false;
-      const lastInResult = result.slice(-recentWindowSize).map(x => x.id);
-      return !lastInResult.includes(id);
-    });
-
-    let idx = goodIdx;
-    if (idx === -1) {
-      idx = pool.findIndex(item => (result.length === 0 ? true : item.id !== result[result.length - 1].id));
-      if (idx === -1) idx = 0;
-    }
-
-    const [picked] = pool.splice(idx, 1);
-    result.push(picked);
-    recent.push(picked.id);
-    if (recent.length > recentWindowSize) recent.shift();
-  }
-
-  return result;
-}
-
-// pair a cortina element with each tanda so separators render consistently
-function attachCortinas(existingBefore, batch, cortinaPool) {
-  if (!cortinaPool || cortinaPool.length === 0) {
-    return batch.map(t => ({ ...t, cortinaMeta: null }));
-  }
-  const base = existingBefore.length % cortinaPool.length;
-  return batch.map((t, i) => ({
-    ...t,
-    cortinaMeta: cortinaPool[(base + i) % cortinaPool.length] || null
-  }));
 }
 
 // --- Constants ---
@@ -393,34 +324,101 @@ const TANDA_SEQUENCES = {
   '2 Tangos, 1 Vals, 2 Tangos, 1 Milonga': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
   '3 Tangos, 1 Vals, 3 Tangos, 1 Milonga': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
 };
-
 const JUST_MODE_OPTIONS = [
   { value: 'tango', label: 'Just Tango' },
   { value: 'vals', label: 'Just Vals' },
   { value: 'milonga', label: 'Just Milonga' },
 ];
-
 const TANDA_ORDER_OPTIONS = Object.keys(TANDA_SEQUENCES).map(key => ({ value: key, label: key }));
 const ORCHESTRA_TYPE_OPTIONS = Object.values(CATEGORIES).map(cat => ({ value: cat, label: cat }));
 const TANDA_LENGTH_OPTIONS = [3, 4];
 const FREESTYLE_FETCH_BATCH_SIZE = 6;
 const PLAYLIST_REFILL_THRESHOLD = 5;
 const MIN_SAME_TANDA_GAP = 15;
-
 const initialSettings = {
-  activeMode: '2 Tangos, 1 Vals, 2 Tangos, 1 Milonga', // This is our new primary setting
+  activeMode: '2 Tangos, 1 Vals, 2 Tangos, 1 Milonga',
   categoryFilter: CATEGORIES.TRADITIONAL_GOLDEN_AGE,
   tandaLength: 4,
   cortinas: true,
 };
 
+// --- Helper Functions ---
+function formatTime(seconds) {
+  if (isNaN(seconds) || seconds < 0) return '00:00';
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+function formatHHMMLocal(iso) {
+  try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+  catch { return iso; }
+}
+function buildApiParams(settings, excludeIds = []) {
+  const params = new URLSearchParams({
+    categoryFilter: settings.categoryFilter,
+    excludeIds: Array.from(excludeIds).join(','),
+  });
+  const isJustMode = JUST_MODE_OPTIONS.some(opt => opt.value === settings.activeMode);
+  if (isJustMode) {
+    const requiredType = settings.activeMode.charAt(0).toUpperCase() + settings.activeMode.slice(1);
+    params.append('requiredType', requiredType);
+    params.append('limit', FREESTYLE_FETCH_BATCH_SIZE);
+  } else {
+    params.append('tandaOrder', settings.activeMode);
+  }
+  return params;
+}
+function reorderWithMinGap(existingList, incomingList, minGap) {
+  const recentWindowSize = Math.max(0, minGap);
+  const recent = existingList.slice(-recentWindowSize).map(x => x.id);
+  const pool = [...incomingList];
+  const result = [];
+  while (pool.length) {
+    const goodIdx = pool.findIndex(item => {
+      const id = item.id;
+      if (recent.includes(id)) return false;
+      const lastInResult = result.slice(-recentWindowSize).map(x => x.id);
+      return !lastInResult.includes(id);
+    });
+    let idx = goodIdx;
+    if (idx === -1) {
+      idx = pool.findIndex(item => (result.length === 0 ? true : item.id !== result[result.length - 1].id));
+      if (idx === -1) idx = 0;
+    }
+    const [picked] = pool.splice(idx, 1);
+    result.push(picked);
+    recent.push(picked.id);
+    if (recent.length > recentWindowSize) recent.shift();
+  }
+  return result;
+}
+function attachCortinas(existingBefore, batch, cortinaPool) {
+  if (!cortinaPool || cortinaPool.length === 0) {
+    return batch.map(t => ({ ...t, cortinaMeta: null }));
+  }
+  const base = existingBefore.length % cortinaPool.length;
+  return batch.map((t, i) => ({
+    ...t,
+    cortinaMeta: cortinaPool[(base + i) % cortinaPool.length] || null
+  }));
+}
+
 export default function TangoPlayer() {
-  // entitlements
+  // 1. Refs
+  const audioRef = useRef(null);
+  const queueContainerRef = useRef(null);
+  const autoplayIntentRef = useRef(false);
+  const isFetchingRef = useRef(false);
+  const isSeekingRef = useRef(false);
+  const audioContextRef = useRef(null);
+  const sourceNodeRef = useRef(null);
+  const lowShelfRef = useRef(null);
+  const midPeakingRef = useRef(null);
+  const highShelfRef = useRef(null);
+
+  // 2. State
   const [tier, setTier] = useState('free');
   const [skipMsg, setSkipMsg] = useState('');
-  const { isPro, requireAuth } = useAuth();
-
-  const [user, setUser] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [settings, setSettings] = useState(initialSettings);
   const [upcomingPlaylist, setUpcomingPlaylist] = useState([]);
@@ -443,73 +441,99 @@ export default function TangoPlayer() {
   const [eqNotification, setEqNotification] = useState('');
   const [isDesktop, setIsDesktop] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-
-  // playback cortinas
   const [cortinas, setCortinas] = useState([]);
   const [isCortinaPlaying, setIsCortinaPlaying] = useState(false);
   const [currentCortina, setCurrentCortina] = useState(null);
-
-  // queue-display cortinas (stable pool)
   const [shuffledCortinas, setShuffledCortinas] = useState([]);
-
   const [isChangingSettings] = useState(false);
-
-  const audioRef = useRef(null);
-  const queueContainerRef = useRef(null);
-  const autoplayIntentRef = useRef(false);
-  const isFetchingRef = useRef(false);
-  const isSeekingRef = useRef(false);
-  const audioContextRef = useRef(null);
-  const sourceNodeRef = useRef(null);
-  const lowShelfRef = useRef(null);
-  const midPeakingRef = useRef(null);
-  const highShelfRef = useRef(null);
-
+  const [rightPanelTab, setRightPanelTab] = useState('queue');
+  const [likedTandas, setLikedTandas] = useState([]);
+  
+  // 3. Custom Hooks
+  const { user, isPro, requireAuth, likedTandaIds, updateLikedIds } = useAuth();
+  const [localLikedIds, setLocalLikedIds] = useState(new Set());
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: { delay: 250, tolerance: 5 },
   }));
-  
-  useEffect(() => {
-  const unsub = onAuthStateChanged(auth, (u) => setUser(u));
-  return () => unsub();
-}, []);
 
-
-  useEffect(() => {
-    setHasMounted(true);
-    const mediaQuery = window.matchMedia('(min-width: 1024px)');
-    const handleChange = () => setIsDesktop(mediaQuery.matches);
-    handleChange();
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
+  // 4. Memos
   const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
   const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
   const upcomingPlaylistIds = useMemo(() => upcomingPlaylist.map(t => t.id), [upcomingPlaylist]);
+
+  // 5. Callbacks
+  const handlePause = useCallback(() => { if (audioRef.current) audioRef.current.pause(); }, []);
+  const fetchLikedTandas = useCallback(async () => {
+    if (likedTandaIds.length === 0) {
+      setLikedTandas([]);
+      return;
+    }
+    setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/tandas/by-ids', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tandaIds: likedTandaIds }),
+      });
+      if (!res.ok) throw new Error('Failed to fetch liked tandas');
+      const data = await res.json();
+      setLikedTandas(data.tandas || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [likedTandaIds]);
+  const handleLikeToggle = useCallback(async (tandaId) => {
+    if (!user || !tandaId) return;
+
+    // Optimistic UI update for instant feedback
+    const newLikedIds = new Set(localLikedIds);
+    if (newLikedIds.has(tandaId)) {
+      newLikedIds.delete(tandaId);
+    } else {
+      newLikedIds.add(tandaId);
+    }
+    setLocalLikedIds(newLikedIds);
+
+    // Call the API and then update the master list with the response
+    try {
+      const res = await fetch('/api/users/like-tanda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tandaId }),
+      });
+      if (!res.ok) throw new Error('API call failed');
+
+      const data = await res.json();
+      if (data.likedTandaIds) {
+        updateLikedIds(data.likedTandaIds); // Update the master list
+      }
+
+    } catch (error) {
+      console.error("Failed to sync like status:", error);
+      // Revert UI if API call fails
+      setLocalLikedIds(new Set(likedTandaIds));
+    }
+  }, [user, localLikedIds, likedTandaIds, updateLikedIds]);
 
   const fetchAndFillPlaylist = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     setIsLoading(true);
-
     const allExcludeIds = new Set([...recentlyPlayedIds, ...upcomingPlaylist.map(t => t.id)]);
     const params = buildApiParams(settings, allExcludeIds);
     const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}`;
     try {
       const response = await fetch(apiUrl, { cache: 'no-store' });
-
       if (!response.ok) throw new Error('Failed to fetch playlist from server.');
       const data = await response.json();
-
-      // build cortina pool first (important for first load)
       let pool = shuffledCortinas;
       if (!pool || pool.length === 0) {
         const raw = Array.isArray(data.availableCortinas) ? data.availableCortinas.slice() : [];
         pool = raw.sort(() => 0.5 - Math.random());
         setShuffledCortinas(pool);
       }
-
       if (data.upcomingTandas && data.upcomingTandas.length > 0) {
         setUpcomingPlaylist(prev => {
           const existing = [...manualQueue, ...prev];
@@ -529,20 +553,39 @@ export default function TangoPlayer() {
     }
   }, [settings, recentlyPlayedIds, upcomingPlaylist, shuffledCortinas, manualQueue]);
 
+  const initAudioGraph = useCallback(() => {
+    if (!isDesktop || audioContextRef.current) return;
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioRef.current) return;
+    const source = context.createMediaElementSource(audioRef.current);
+    const lowShelf = context.createBiquadFilter(); lowShelf.type = 'lowshelf'; lowShelf.frequency.value = 320; lowShelf.gain.value = eq.low;
+    const midPeaking = context.createBiquadFilter(); midPeaking.type = 'peaking'; midPeaking.frequency.value = 1000; midPeaking.Q.value = 1; midPeaking.gain.value = eq.mid;
+    const highShelf = context.createBiquadFilter(); highShelf.type = 'highshelf'; highShelf.frequency.value = 3200; highShelf.gain.value = eq.high;
+    source.connect(lowShelf); lowShelf.connect(midPeaking); midPeaking.connect(highShelf); highShelf.connect(context.destination);
+    audioContextRef.current = context; sourceNodeRef.current = source; lowShelfRef.current = lowShelf; midPeakingRef.current = midPeaking; highShelfRef.current = highShelf;
+  }, [eq.low, eq.mid, eq.high, isDesktop]);
+
+  const handlePlay = useCallback(async () => {
+    if (!audioContextRef.current && isDesktop) initAudioGraph();
+    const audioCtx = audioContextRef.current;
+    if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+    if (audioRef.current?.src && audioRef.current.paused) {
+      try { await audioRef.current.play(); } catch { setIsPlaying(false); }
+    } else if (!currentTanda && !isLoading) {
+      fetchAndFillPlaylist();
+    }
+  }, [currentTanda, isLoading, fetchAndFillPlaylist, isDesktop, initAudioGraph]);
+
   const playNextTanda = useCallback(() => {
     const sourceTanda = manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0];
     if (!sourceTanda) { fetchAndFillPlaylist(); return; }
-
     setTandaHistory(prev => [sourceTanda, ...prev].slice(0, 50));
     setRecentlyPlayedIds(prev => new Set(prev).add(sourceTanda.id));
     setCurrentTrackIndex(0);
     autoplayIntentRef.current = true;
-
     if (manualQueue.length > 0) setManualQueue(prev => prev.slice(1));
     else setUpcomingPlaylist(prev => prev.slice(1));
   }, [manualQueue, upcomingPlaylist, fetchAndFillPlaylist]);
-
-  // NEW: Next Tanda handler (respects free limit)
   const handleNextTandaClick = useCallback(async () => {
     setSkipMsg('');
     if (isPro) { playNextTanda(); return; }
@@ -561,7 +604,6 @@ export default function TangoPlayer() {
       setSkipMsg('Network error while skipping tanda.');
     }
   }, [isPro, playNextTanda]);
-
   const handleQueueScroll = useCallback(() => {
     if (queueContainerRef.current && !isFetchingRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = queueContainerRef.current;
@@ -569,91 +611,27 @@ export default function TangoPlayer() {
       if (isNearBottom) fetchAndFillPlaylist();
     }
   }, [fetchAndFillPlaylist]);
-
-  useEffect(() => {
-    if (resetCounter > 0) {
-      setUpcomingPlaylist([]);
-      setManualQueue([]);
-      setRecentlyPlayedIds(new Set());
-    }
-  }, [resetCounter]);
-
-  // playback cortinas
-  useEffect(() => {
-    const fetchCortinas = async () => {
-      try {
-        const response = await fetch('/api/cortinas/player');
-        if (response.ok) {
-          const data = await response.json();
-          setCortinas(data.cortinas);
-        }
-      } catch (error) {
-        console.error("Failed to fetch cortinas:", error);
-      }
-    };
-    fetchCortinas();
-  }, []);
-
-  useEffect(() => {
-    const needsFetching = upcomingPlaylist.length === 0 || upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
-    if (needsFetching && !isFetchingRef.current && !isChangingSettings) {
-      fetchAndFillPlaylist();
-    }
-  }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist, isChangingSettings]);
-
-  useEffect(() => {
-    const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
-    if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
-      audioRef.current.src = trackUrl;
-      audioRef.current.load();
-      if (autoplayIntentRef.current) {
-        autoplayIntentRef.current = false;
-        audioRef.current.play().catch(() => setIsPlaying(false));
-      }
-    }
-  }, [currentTanda, currentTrackIndex]);
-
-  const initAudioGraph = useCallback(() => {
-    if (!isDesktop || audioContextRef.current) return;
-    const context = new (window.AudioContext || window.webkitAudioContext)();
-    if (!audioRef.current) return;
-    const source = context.createMediaElementSource(audioRef.current);
-    const lowShelf = context.createBiquadFilter(); lowShelf.type = 'lowshelf'; lowShelf.frequency.value = 320; lowShelf.gain.value = eq.low;
-    const midPeaking = context.createBiquadFilter(); midPeaking.type = 'peaking'; midPeaking.frequency.value = 1000; midPeaking.Q.value = 1; midPeaking.gain.value = eq.mid;
-    const highShelf = context.createBiquadFilter(); highShelf.type = 'highshelf'; highShelf.frequency.value = 3200; highShelf.gain.value = eq.high;
-    source.connect(lowShelf); lowShelf.connect(midPeaking); midPeaking.connect(highShelf); highShelf.connect(context.destination);
-    audioContextRef.current = context; sourceNodeRef.current = source; lowShelfRef.current = lowShelf; midPeakingRef.current = midPeaking; highShelfRef.current = highShelf;
-  }, [eq.low, eq.mid, eq.high, isDesktop]);
-
   const handleSettingChange = useCallback(async (settingName, value) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     setIsRefreshing(true);
-
     const newSettings = { ...settings, [settingName]: value };
     setSettings(newSettings);
-
     if (settingName === 'activeMode' || settingName === 'categoryFilter') {
       try {
         const params = buildApiParams(newSettings);
-
         const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}&cb=${Date.now()}`;
-
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error('Failed to fetch new playlist.');
         const data = await response.json();
-
-        // build/keep cortina pool
         let pool = shuffledCortinas;
         if (!pool || pool.length === 0) {
           const raw = Array.isArray(data.availableCortinas) ? data.availableCortinas.slice() : [];
           pool = raw.sort(() => 0.5 - Math.random());
           setShuffledCortinas(pool);
         }
-
         setManualQueue([]);
         setRecentlyPlayedIds(new Set());
-
         const ordered = reorderWithMinGap([], data.upcomingTandas || [], MIN_SAME_TANDA_GAP);
         const wrapped = attachCortinas([], ordered, pool);
         setUpcomingPlaylist(wrapped);
@@ -669,18 +647,14 @@ export default function TangoPlayer() {
       setIsRefreshing(false);
     }
   }, [settings, shuffledCortinas]);
-
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
     const draggedTanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === active.id);
     if (!draggedTanda) return;
-
     const isActiveInManual = manualQueue.some(t => t.id === active.id);
     const isOverInManual = manualQueue.some(t => t.id === over.id);
     const isOverInUpcoming = upcomingPlaylist.some(t => t.id === over.id);
-
     if (isActiveInManual && isOverInManual) {
       setManualQueue(items => {
         const oldIndex = items.findIndex(item => item.id === active.id);
@@ -704,7 +678,16 @@ export default function TangoPlayer() {
       }
     }
   };
-
+  const handleLikedDragEnd = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLikedTandas((items) => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
   const handlePlayNext = (tandaToPlayNext) => {
     if (!currentTanda || currentTanda.id === tandaToPlayNext.id) {
       if (!currentTanda) handleAddToQueue(tandaToPlayNext);
@@ -715,7 +698,6 @@ export default function TangoPlayer() {
     newManualQueue = newManualQueue.filter(t => t.id !== tandaToPlayNext.id);
     newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToPlayNext.id);
     const currentTandaIndexInManual = newManualQueue.findIndex(t => t.id === currentTanda.id);
-
     if (currentTandaIndexInManual !== -1) {
       newManualQueue.splice(currentTandaIndexInManual + 1, 0, tandaToPlayNext);
     } else {
@@ -725,13 +707,11 @@ export default function TangoPlayer() {
     setManualQueue(newManualQueue);
     setUpcomingPlaylist(newUpcomingPlaylist);
   };
-
   const handleAddToQueue = (tandaToAdd) => {
     if (manualQueue.some(t => t.id === tandaToAdd.id)) return;
     let newManualQueue = [...manualQueue];
     let newUpcomingPlaylist = [...upcomingPlaylist];
     newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToAdd.id);
-
     if (newManualQueue.length > 0) {
       newManualQueue.push(tandaToAdd);
     } else {
@@ -746,7 +726,6 @@ export default function TangoPlayer() {
     setManualQueue(newManualQueue);
     setUpcomingPlaylist(newUpcomingPlaylist);
   };
-
   const handlePlayNow = useCallback((tandaToPlay) => {
     if (currentTanda?.id === tandaToPlay.id) return;
     if (currentTanda) {
@@ -759,12 +738,10 @@ export default function TangoPlayer() {
     setCurrentTrackIndex(0);
     autoplayIntentRef.current = true;
   }, [currentTanda, manualQueue, upcomingPlaylist]);
-
   const handleTrackEnded = useCallback(() => {
     const totalTracks = currentTanda?.tracks_signed?.length || 0;
     const lengthRule = (currentTanda?.type === 'Tango') ? settings.tandaLength : 3;
     const isLastTrackOfTanda = currentTrackIndex >= Math.min(totalTracks, lengthRule) - 1;
-
     if (isLastTrackOfTanda) {
       if (settings.cortinas && cortinas.length > 0) {
         const randomCortina = cortinas[Math.floor(Math.random() * cortinas.length)];
@@ -782,20 +759,17 @@ export default function TangoPlayer() {
       setCurrentTrackIndex(prev => prev + 1);
     }
   }, [currentTanda, currentTrackIndex, settings.tandaLength, settings.cortinas, cortinas, playNextTanda]);
-
   const handleCortinaEnded = useCallback(() => {
     setIsCortinaPlaying(false);
     setCurrentCortina(null);
     playNextTanda();
   }, [playNextTanda]);
-
   const handleRefreshPlaylist = useCallback(() => {
     if (isFetchingRef.current) return;
     setResetCounter(c => c + 1);
   }, []);
-
   const handleSkipForward = useCallback(() => {
-    if (!isPro) return; // Pro-only
+    if (user && !isPro) return;
     if (isCortinaPlaying) {
       handleCortinaEnded();
       return;
@@ -809,23 +783,9 @@ export default function TangoPlayer() {
     } else {
       playNextTanda();
     }
-  }, [isPro, currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda, isCortinaPlaying, handleCortinaEnded]);
-
-  const handlePlay = useCallback(async () => {
-    if (!audioContextRef.current && isDesktop) initAudioGraph();
-    const audioCtx = audioContextRef.current;
-    if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
-    if (audioRef.current?.src && audioRef.current.paused) {
-      try { await audioRef.current.play(); } catch { setIsPlaying(false); }
-    } else if (!currentTanda && !isLoading) {
-      fetchAndFillPlaylist();
-    }
-  }, [currentTanda, isLoading, fetchAndFillPlaylist, isDesktop, initAudioGraph]);
-
-  const handlePause = useCallback(() => { if (audioRef.current) audioRef.current.pause(); }, []);
-
+  }, [isPro, currentTanda, currentTrackIndex, settings.tandaLength, isPlaying, playNextTanda, isCortinaPlaying, handleCortinaEnded, user]);
   const handleSkipBackward = useCallback(() => {
-    if (!isPro) return; // Pro-only
+    if (user && !isPro) return;
     if (!currentTanda || !audioRef.current) return;
     const RESTART_THRESHOLD_SECONDS = 3;
     if (audioRef.current.currentTime > RESTART_THRESHOLD_SECONDS || currentTrackIndex === 0) {
@@ -835,8 +795,7 @@ export default function TangoPlayer() {
       setCurrentTrackIndex(prevIndex => prevIndex - 1);
       autoplayIntentRef.current = isPlaying;
     }
-  }, [isPro, currentTanda, currentTrackIndex, isPlaying]);
-
+  }, [isPro, currentTanda, currentTrackIndex, isPlaying, user]);
   const handleRewind = useCallback(() => {
     if (tandaHistory.length === 0) return;
     const previousTanda = tandaHistory[0];
@@ -852,56 +811,8 @@ export default function TangoPlayer() {
     setCurrentTrackIndex(0);
     autoplayIntentRef.current = isPlaying;
   }, [tandaHistory, currentTanda, manualQueue, upcomingPlaylist, isPlaying]);
-
-  const handleShuffle = async () => {
-    if (user && !isPro) return;
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    setIsRefreshing(true);
-
-    const allExcludeIds = new Set([...recentlyPlayedIds, ...manualQueue.map(t => t.id)]);
-    const params = new URLSearchParams({
-      categoryFilter: settings.categoryFilter,
-      excludeIds: Array.from(allExcludeIds).join(','),
-    });
-
-    if (settings.tandaOrder.startsWith('Just')) {
-      params.append('requiredType', TANDA_SEQUENCES[settings.tandaOrder][0]);
-      params.append('limit', FREESTYLE_FETCH_BATCH_SIZE);
-    } else {
-      params.append('tandaOrder', settings.tandaOrder);
-    }
-    const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}`;
-
-    try {
-      const response = await fetch(apiUrl);
-      if (!response.ok) throw new Error('Failed to fetch new playlist.');
-      const data = await response.json();
-      console.log('Shuffle API response:', data);
-
-      // ensure cortina pool
-      let pool = shuffledCortinas;
-      if (!pool || pool.length === 0) {
-        const raw = Array.isArray(data.availableCortinas) ? data.availableCortinas.slice() : [];
-        pool = raw.sort(() => 0.5 - Math.random());
-        setShuffledCortinas(pool);
-      }
-
-      // --- TEMPORARY TEST ---
-      console.log('Setting new playlist directly with API data:', data.upcomingTandas);
-      setUpcomingPlaylist(data.upcomingTandas || []);
-
-    } catch (err) {
-      console.error("SHUFFLE FETCH ERROR:", err);
-      setError(err.message);
-    } finally {
-      isFetchingRef.current = false;
-      setIsRefreshing(false);
-    }
-  };
-
   const handleResetEq = useCallback(() => {
-    if (user && !isPro) return; // Pro-only
+    if (user && !isPro) return;
     const newEq = { low: 0, mid: 0, high: 0 };
     setEq(newEq);
     if (isDesktop && audioContextRef.current) {
@@ -910,8 +821,79 @@ export default function TangoPlayer() {
       if (midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(newEq.mid, audioCtx.currentTime, 0.01);
       if (highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(newEq.high, audioCtx.currentTime, 0.01);
     }
-  }, [isPro, isDesktop]);
+  }, [isPro, isDesktop, user]);
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      await fetch('/api/auth/signout', { method: 'POST' }).catch(() => {});
+      setUserMenuOpen(false);
+    } catch (e) {
+      console.error('Sign out failed', e);
+    }
+  };
+  const handlePanelToggle = (panelName) => {
+    const isOpening = activePanel !== panelName;
+    if (panelName === 'queue' && isOpening) fetchAndFillPlaylist();
+    setActivePanel(prev => prev === panelName ? null : panelName);
+  };
+  const handleEqChange = useCallback((band, value) => {
+    if (user && !isPro) return;
+    if (!isDesktop) {
+      setEqNotification('Equalizer is available on desktop only.');
+      setTimeout(() => setEqNotification(''), 3000);
+      return;
+    }
+    const gainValue = parseFloat(value);
+    setEq(prevEq => ({ ...prevEq, [band]: gainValue }));
+    const audioCtx = audioContextRef.current;
+    if (!audioCtx) return;
+    if (band === 'low' && lowShelfRef.current) lowShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
+    if (band === 'mid' && midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
+    if (band === 'high' && highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
+  }, [isDesktop, isPro, user]);
+  const handleMenuOpen = useCallback((event, tanda) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setMenuState({ visible: true, x: event.pageX, y: event.pageY, tandaId: tanda.id });
+  }, []);
+  const handleMenuClose = useCallback(() => {
+    setMenuState(prev => ({ ...prev, visible: false }));
+  }, []);
+  const handleMenuAction = useCallback((action) => {
+    const tanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === menuState.tandaId);
+    if (tanda) action(tanda);
+    handleMenuClose();
+  }, [manualQueue, upcomingPlaylist, menuState.tandaId, handleMenuClose]);
+  const handleSeek = (event) => { if (audioRef.current?.duration) { const seekTime = Number(event.target.value); audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); } };
+  const handleProgressClick = useCallback((event) => { if (!audioRef.current || !duration) return; const barElement = event.currentTarget; const rect = barElement.getBoundingClientRect(); const clickX = event.clientX - rect.left; const seekTime = (clickX / rect.width) * duration; audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); }, [duration]);
+  const handleSeekingStart = () => { isSeekingRef.current = true; };
+  const handleSeekingEnd = () => { isSeekingRef.current = false; };
+  const handleVolumeChange = (event) => { if (event.target) { const newVolume = Number(event.target.value); setVolume(newVolume); if (audioRef.current) audioRef.current.volume = newVolume; } };
+  const renderVerticalVolumeSlider = (currentVolume, setVolumeFunctionCallback) => { const volumePercentage = currentVolume * 100; const KNOB_DISPLAY_HEIGHT_PX = 12; const thumbOffsetPx = KNOB_DISPLAY_HEIGHT_PX / 2; const thumbTopPosition = `calc(${(1 - currentVolume) * 100}% - ${thumbOffsetPx}px)`; return (<div className="flex flex-col items-center justify-center h-56 w-16 bg-[url('/images/volumeback.png')] bg-contain bg-no-repeat bg-center p-1 rounded-md shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><div className="relative w-1 h-[80%] bg-[#222429] rounded-full shadow-inner cursor-pointer" onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); const clickY = e.clientY - rect.top; let newVolume = Math.max(0, Math.min(1, 1 - (clickY / rect.height))); setVolumeFunctionCallback({ target: { value: newVolume.toString() } }); }}><div className="absolute bottom-0 left-0 w-full bg-[#25edda] rounded-b-full pointer-events-none" style={{ height: `${volumePercentage}%` }} /><div className="absolute left-1/2 -translate-x-1/2 w-8 h-3 rounded-md bg-[#30333a] shadow-[3px_3px_3px_#222429,-3px_-3px_3px_#3e424b] pointer-events-none" style={{ top: thumbTopPosition }} /><input type="range" min="0" max="1" step="0.01" value={currentVolume} onChange={setVolumeFunctionCallback} className="absolute top-0 left-0 opacity-0 w-full h-full cursor-pointer" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }} aria-label="Volume" /></div></div>); };
+  const handleAudioTimeUpdate = useCallback(() => { if (audioRef.current && !isSeekingRef.current) setCurrentTime(audioRef.current.currentTime); }, []);
+  const handleAudioLoadedMetadata = useCallback(() => { if (audioRef.current) setDuration(audioRef.current.duration); }, []);
+  const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
+  const handleAudioPause = useCallback(() => setIsPlaying(false), []);
+  const toggleSidebars = useCallback(() => { setSidebarsVisible(prev => !prev); }, []);
 
+  // 6. Effects
+  useEffect(() => {
+  setHasMounted(true);
+  const mediaQuery = window.matchMedia('(min-width: 1024px)');
+  const handleChange = () => setIsDesktop(mediaQuery.matches);
+  handleChange();
+  mediaQuery.addEventListener('change', handleChange);
+  return () => mediaQuery.removeEventListener('change', handleChange);
+}, []);
+
+  useEffect(() => {
+    setLocalLikedIds(new Set(likedTandaIds));
+  }, [likedTandaIds]);
+  useEffect(() => {
+    if (rightPanelTab === 'liked' && likedTandas.length === 0 && likedTandaIds.length > 0) {
+      fetchLikedTandas();
+    }
+  }, [rightPanelTab, likedTandas.length, likedTandaIds.length, fetchLikedTandas]);
   useEffect(() => {
     const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
     if ('mediaSession' in navigator && currentTanda && currentTrack) {
@@ -927,89 +909,60 @@ export default function TangoPlayer() {
       navigator.mediaSession.setActionHandler('nexttrack', isPro ? handleSkipForward : null);
     }
   }, [currentTanda, currentTrackIndex, handlePlay, handlePause, handleSkipBackward, handleSkipForward, isPro]);
-
-  const handleSignOut = async () => {
-  try {
-    await signOut(auth);
-    // Clear server session cookie too (safe to ignore if not present)
-    await fetch('/api/auth/signout', { method: 'POST' }).catch(() => {});
-    setUserMenuOpen(false);
-  } catch (e) {
-    console.error('Sign out failed', e);
-  }
-};
-
-  
-  const handlePanelToggle = (panelName) => {
-    const isOpening = activePanel !== panelName;
-    if (panelName === 'queue' && isOpening) fetchAndFillPlaylist();
-    setActivePanel(prev => prev === panelName ? null : panelName);
-  };
-
-  const handleEqChange = useCallback((band, value) => {
-    if (user && !isPro) return; // Pro-only
-    if (!isDesktop) {
-      setEqNotification('Equalizer is available on desktop only.');
-      setTimeout(() => setEqNotification(''), 3000);
+  useEffect(() => {
+    if (resetCounter > 0) {
+      setUpcomingPlaylist([]);
+      setManualQueue([]);
+      setRecentlyPlayedIds(new Set());
+    }
+  }, [resetCounter]);
+  useEffect(() => {
+    const fetchCortinas = async () => {
+      try {
+        const response = await fetch('/api/cortinas/player');
+        if (response.ok) {
+          const data = await response.json();
+          setCortinas(data.cortinas);
+        }
+      } catch (error) {
+        console.error("Failed to fetch cortinas:", error);
+      }
+    };
+    fetchCortinas();
+  }, []);
+  useEffect(() => {
+    const needsFetching = upcomingPlaylist.length === 0 || upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
+    if (needsFetching && !isFetchingRef.current && !isChangingSettings) {
+      fetchAndFillPlaylist();
+    }
+  }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist, isChangingSettings]);
+  useEffect(() => {
+    const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
+    if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
+      audioRef.current.src = trackUrl;
+      audioRef.current.load();
+      if (autoplayIntentRef.current) {
+        autoplayIntentRef.current = false;
+        audioRef.current.play().catch(() => setIsPlaying(false));
+      }
+    }
+  }, [currentTanda, currentTrackIndex]);
+  useEffect(() => {
+    // If the user is logged in, or if music isn't playing, we don't need a timer.
+    if (user || !isPlaying) {
       return;
     }
-    const gainValue = parseFloat(value);
-    setEq(prevEq => ({ ...prevEq, [band]: gainValue }));
-    const audioCtx = audioContextRef.current;
-    if (!audioCtx) return;
-    if (band === 'low' && lowShelfRef.current) lowShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
-    if (band === 'mid' && midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
-    if (band === 'high' && highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
-  }, [isDesktop, isPro]);
-
-  const handleMenuOpen = useCallback((event, tanda) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setMenuState({ visible: true, x: event.pageX, y: event.pageY, tandaId: tanda.id });
-  }, []);
-
-  const handleMenuClose = useCallback(() => {
-    setMenuState(prev => ({ ...prev, visible: false }));
-  }, []);
-
-  const handleMenuAction = useCallback((action) => {
-    const tanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === menuState.tandaId);
-    if (tanda) action(tanda);
-    handleMenuClose();
-  }, [manualQueue, upcomingPlaylist, menuState.tandaId, handleMenuClose]);
-
-  const handleSeek = (event) => { if (audioRef.current?.duration) { const seekTime = Number(event.target.value); audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); } };
-  const handleProgressClick = useCallback((event) => { if (!audioRef.current || !duration) return; const barElement = event.currentTarget; const rect = barElement.getBoundingClientRect(); const clickX = event.clientX - rect.left; const seekTime = (clickX / rect.width) * duration; audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); }, [duration]);
-  const handleSeekingStart = () => { isSeekingRef.current = true; };
-  const handleSeekingEnd = () => { isSeekingRef.current = false; };
-  const handleVolumeChange = (event) => { if (event.target) { const newVolume = Number(event.target.value); setVolume(newVolume); if (audioRef.current) audioRef.current.volume = newVolume; } };
-  const renderVerticalVolumeSlider = (currentVolume, setVolumeFunctionCallback) => { const volumePercentage = currentVolume * 100; const KNOB_DISPLAY_HEIGHT_PX = 12; const thumbOffsetPx = KNOB_DISPLAY_HEIGHT_PX / 2; const thumbTopPosition = `calc(${(1 - currentVolume) * 100}% - ${thumbOffsetPx}px)`; return (<div className="flex flex-col items-center justify-center h-56 w-16 bg-[url('/images/volumeback.png')] bg-contain bg-no-repeat bg-center p-1 rounded-md shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><div className="relative w-1 h-[80%] bg-[#222429] rounded-full shadow-inner cursor-pointer" onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); const clickY = e.clientY - rect.top; let newVolume = Math.max(0, Math.min(1, 1 - (clickY / rect.height))); setVolumeFunctionCallback({ target: { value: newVolume.toString() } }); }}><div className="absolute bottom-0 left-0 w-full bg-[#25edda] rounded-b-full pointer-events-none" style={{ height: `${volumePercentage}%` }} /><div className="absolute left-1/2 -translate-x-1/2 w-8 h-3 rounded-md bg-[#30333a] shadow-[3px_3px_3px_#222429,-3px_-3px_3px_#3e424b] pointer-events-none" style={{ top: thumbTopPosition }} /><input type="range" min="0" max="1" step="0.01" value={currentVolume} onChange={setVolumeFunctionCallback} className="absolute top-0 left-0 opacity-0 w-full h-full cursor-pointer" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }} aria-label="Volume" /></div></div>); };
-  const handleAudioTimeUpdate = useCallback(() => { if (audioRef.current && !isSeekingRef.current) setCurrentTime(audioRef.current.currentTime); }, []);
-  const handleAudioLoadedMetadata = useCallback(() => { if (audioRef.current) setDuration(audioRef.current.duration); }, []);
-  const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
-  const handleAudioPause = useCallback(() => setIsPlaying(false), []);
-  const toggleSidebars = useCallback(() => { setSidebarsVisible(prev => !prev); }, []);
-
-  // This is the new effect for the demo mode timer
-useEffect(() => {
-  // If the user is logged in, or if music isn't playing, we don't need a timer.
-  if (user || !isPlaying) {
-    return;
-  }
-
-  // When a logged-out user starts playback, set a timer.
-  const demoTimer = setTimeout(() => {
-    handlePause(); // Pause the music as requested
-    requireAuth(() => {
-      // After successful login, resume playback
-      handlePlay();
-    });
-  }, 5000); // 5 seconds in milliseconds
-
-  // This is a cleanup function to cancel the timer if the user pauses or the component changes
-  return () => clearTimeout(demoTimer);
-
-}, [user, isPlaying, requireAuth, handlePause, handlePlay]); // Dependencies for the effect
+    // When a logged-out user starts playback, set a timer.
+    const demoTimer = setTimeout(() => {
+      handlePause(); // Pause the music as requested
+      requireAuth(() => {
+        // After successful login, resume playback
+        handlePlay();
+      });
+    }, 5000); // 5 seconds in milliseconds
+    // This is a cleanup function to cancel the timer if the user pauses or the component changes
+    return () => clearTimeout(demoTimer);
+  }, [user, isPlaying, requireAuth, handlePause, handlePlay]); // Dependencies for the effect
 
   if (!hasMounted) {
   return (
@@ -1072,7 +1025,6 @@ useEffect(() => {
     onMenuOpen: handleMenuOpen,
     onPlayNow: handlePlayNow,
     isDesktop,
-    handleShuffle: handleShuffle,
     handleSettingChange: handleSettingChange,
     settings: settings,
     shuffledCortinas: shuffledCortinas,
@@ -1254,11 +1206,27 @@ useEffect(() => {
                     <p className="text-base text-gray-400">{currentCortina.artist || 'Musical Interlude'}</p>
                   </>
                 ) : currentTanda ? (
-                  <>
-                    <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
-                    <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
-                    <p className="text-xs text-gray-500 truncate">Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p>
-                  </>
+                  (() => {
+                    const isLiked = localLikedIds.has(currentTanda.id);
+                    return (
+                      <>
+                        <div className="flex items-center justify-center gap-2">
+                          <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
+                          {user && (
+                            <button onClick={() => handleLikeToggle(currentTanda.id)} title={isLiked ? 'Remove from your liked tandas' : 'Add to liked tandas'}>
+                              {isLiked ? (
+                                <CheckCircleIcon className="h-6 w-6 text-[#25edda]" />
+                              ) : (
+                                <PlusCircleIcon className="h-6 w-6 text-gray-400 hover:text-white" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
+                        <p className="text-xs text-gray-500 truncate">Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p>
+                      </>
+                    );
+                  })()
                 ) : (
                   !isLoading && !error && <span className="text-lg text-gray-500">No music loaded.</span>
                 )}
@@ -1304,13 +1272,40 @@ useEffect(() => {
           {/* RIGHT: Queue */}
           {sidebarsVisible && (
             <div className="w-[30%] flex flex-col bg-[#30333a] p-3 rounded-xl overflow-hidden">
-              <h3 className="text-lg text-center text-gray-300 mb-3 flex-shrink-0 flex items-center justify-center gap-2">
-                <QueueListIcon className="h-6 w-6" strokeWidth={1} />
-                <span>Queue</span>
-              </h3>
+              <div className="flex-shrink-0 p-2 border-b border-white/10">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setRightPanelTab('queue')}
+                    className={`py-2 text-sm font-medium rounded-lg transition-colors ${rightPanelTab === 'queue' ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                  >
+                    Queue
+                  </button>
+                  <button
+                    onClick={() => setRightPanelTab('liked')}
+                    className={`py-2 text-sm font-medium rounded-lg transition-colors ${rightPanelTab === 'liked' ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                  >
+                    Liked
+                  </button>
+                </div>
+              </div>
               <div className="relative flex-grow rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
                 <div className="w-full h-full overflow-y-auto">
-                  <QueueContent {...queueProps} isDesktop={isDesktop} />
+                  {rightPanelTab === 'queue' && (
+                    <QueueContent {...queueProps} isDesktop={isDesktop} />
+                  )}
+                  {rightPanelTab === 'liked' && (
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
+                      <SortableContext items={likedTandas.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                        {likedTandas.length > 0 ? (
+                          likedTandas.map(tanda => (
+                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={handleMenuOpen} onPlayNow={handlePlayNow} isDesktop={isDesktop} />
+                          ))
+                        ) : (
+                          <p className="p-4 text-center text-gray-500">Your liked tandas will appear here.</p>
+                        )}
+                      </SortableContext>
+                    </DndContext>
+                  )}
                 </div>
                 {isRefreshing && (
                   <div className="absolute inset-0 bg-[#30333a80] backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
@@ -1369,11 +1364,27 @@ useEffect(() => {
                 <p className="text-base text-gray-400">{currentCortina.artist || 'Musical Interlude'}</p>
               </>
             ) : currentTanda ? (
-              <>
-                <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
-                <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
-                <p className="text-xs text-gray-500 truncate">Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p>
-              </>
+              (() => {
+                const isLiked = localLikedIds.has(currentTanda.id);
+                return (
+                  <>
+                    <div className="flex items-center justify-center gap-2">
+                      <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
+                      {user && (
+                        <button onClick={() => handleLikeToggle(currentTanda.id)} title={isLiked ? 'Remove from your liked tandas' : 'Add to liked tandas'}>
+                          {isLiked ? (
+                            <CheckCircleIcon className="h-6 w-6 text-[#25edda]" />
+                          ) : (
+                            <PlusCircleIcon className="h-6 w-6 text-gray-400 hover:text-white" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
+                    <p className="text-xs text-gray-500 truncate">Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p>
+                  </>
+                );
+              })()
             ) : (
               !isLoading && !error && <span className="text-lg text-gray-500">No music loaded.</span>
             )}
@@ -1485,8 +1496,15 @@ useEffect(() => {
           position={{ x: menuState.x, y: menuState.y }}
           onClose={handleMenuClose}
           options={[
-            { label: 'Play Next', action: () => handleMenuAction(handlePlayNext) },
-            !manualQueueIds.includes(menuState.tandaId) && { label: 'Add to Queue', action: () => handleMenuAction(handleAddToQueue) }
+              { label: 'Play Next', action: () => handleMenuAction(handlePlayNext) },
+              !manualQueueIds.includes(menuState.tandaId) && { label: 'Add to Queue', action: () => handleMenuAction(handleAddToQueue) },
+              user && { // Only show for logged-in users
+                  label: localLikedIds.has(menuState.tandaId) ? 'Remove from Liked' : 'Add to Liked',
+                  action: () => {
+                      handleLikeToggle(menuState.tandaId);
+                      handleMenuClose();
+                  }
+              }
           ].filter(Boolean)}
         />
       )}
