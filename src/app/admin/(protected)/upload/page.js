@@ -1,4 +1,4 @@
-import TandaForm from '../../../components/TandaForm';
+import TandaForm from '@/components/TandaForm';
 
 export default function UploadPage() {
   return (
