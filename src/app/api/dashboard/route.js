@@ -1,8 +1,31 @@
+// src/app/api/dashboard/route.js
 import { NextResponse } from 'next/server';
 import { getFirestore } from '@/lib/firebaseAdmin.server.js';
+import { getUserFromRequest } from '@/lib/getUserFromRequest';
 
-// This API route fetches and calculates all the statistics for the admin dashboard.
-export async function GET() {
+// ---------- Admin guard ----------
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAdmin(decodedUser) {
+  const email = (decodedUser?.email || '').toLowerCase();
+  return decodedUser?.admin === true || ADMIN_EMAILS.includes(email);
+}
+
+async function requireAdmin(request) {
+  const user = await getUserFromRequest(request);
+  if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  if (!isAdmin(user)) return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  return { user };
+}
+
+// Fetch and calculate statistics for the admin dashboard (ADMIN ONLY)
+export async function GET(request) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const db = getFirestore();
     const tandasRef = db.collection('tandas');
@@ -26,16 +49,12 @@ export async function GET() {
 
     snapshot.docs.forEach(doc => {
       const tanda = doc.data();
-      
-      // Increment total tanda count
       totalTandas++;
-      
-      // Increment tanda count by type
+
       if (tanda.type && tandasByType.hasOwnProperty(tanda.type)) {
         tandasByType[tanda.type]++;
       }
 
-      // Process tracks
       if (tanda.tracks && Array.isArray(tanda.tracks)) {
         const trackCount = tanda.tracks.length;
         totalTracks += trackCount;
@@ -44,12 +63,11 @@ export async function GET() {
         }
       }
 
-      // Process orchestra stats
       if (tanda.orchestra) {
         if (!orchestraStats[tanda.orchestra]) {
           orchestraStats[tanda.orchestra] = {
             total: 0,
-            byType: { Tango: 0, Vals: 0, Milonga: 0 }
+            byType: { Tango: 0, Vals: 0, Milonga: 0 },
           };
         }
         orchestraStats[tanda.orchestra].total++;
@@ -66,9 +84,11 @@ export async function GET() {
       tracksByType,
       orchestraStats,
     });
-
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    return NextResponse.json({ message: 'Failed to fetch stats.', error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Failed to fetch stats.', error: error.message },
+      { status: 500 }
+    );
   }
 }

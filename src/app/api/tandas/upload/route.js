@@ -1,79 +1,95 @@
+// src/app/api/tandas/upload/route.js
 import { NextResponse } from 'next/server';
-import admin from 'firebase-admin';
+import { getFirestore, getServerTimestamp } from '@/lib/firebaseAdmin.server.js';
+import { getUserFromRequest } from '@/lib/getUserFromRequest';
 
-// --- Firebase Initialization ---
-// Safely initialize Firebase Admin SDK, ensuring it only runs once per instance.
-if (!admin.apps.length) {
-  try {
-    // This reads the service account key from your Vercel environment variables.
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY_JSON);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (error) {
-    console.error('Firebase initialization error:', error.message);
-  }
+const db = getFirestore();
+
+// ---------- Admin guard ----------
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAdmin(decodedUser) {
+  const email = (decodedUser?.email || '').toLowerCase();
+  return decodedUser?.admin === true || ADMIN_EMAILS.includes(email);
 }
 
-const db = admin.firestore();
+async function requireAdmin(request) {
+  const user = await getUserFromRequest(request);
+  if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  if (!isAdmin(user)) return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  return { user };
+}
 
-/**
- * API Route to save tanda metadata to Firestore.
- * This function expects a JSON payload with the tanda details, including the
- * paths to files that have already been uploaded directly to Firebase Storage.
- */
+// Save tanda metadata (ADMIN ONLY)
 export async function POST(request) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
-    // --- NEW LOGGING: Let's see what the server is actually receiving ---
-    console.log('--- UPLOAD API HIT ---');
-    console.log('Request Headers:', JSON.stringify(Object.fromEntries(request.headers), null, 2));
-    
-    // 1. Parse the incoming request body as JSON.
-    // This is the `finalTandaData` object sent from your TandaForm.js.
     const tandaData = await request.json();
 
-    // --- NEW LOGGING: Log the parsed data ---
-    console.log('Parsed JSON Body:', JSON.stringify(tandaData, null, 2));
-
-    // 2. Basic validation to ensure required fields are present.
-    if (!tandaData.orchestra || !tandaData.type || !tandaData.tracks || tandaData.tracks.length === 0) {
+    if (
+      !tandaData.orchestra ||
+      !tandaData.type ||
+      !tandaData.tracks ||
+      !Array.isArray(tandaData.tracks) ||
+      tandaData.tracks.length === 0
+    ) {
       return NextResponse.json({ message: 'Missing required tanda data.' }, { status: 400 });
     }
 
-    // 3. Prepare the final document to be saved in Firestore.
-    // We use the exact field names that your player component (`TangoPlayer.js`) expects.
+    // Normalization (labels -> codes)
+    const CATEGORY_CODE = {
+      'Traditional (Golden Age)': 'traditional',
+      'Contemporary Traditional': 'contemporary',
+      'Alternative / Alternativo': 'alternative',
+    };
+    const TYPE_CODE = { Tango: 'tango', Vals: 'vals', Milonga: 'milonga' };
+    const STYLE_CODE = { Rhythmic: 'rhythmic', Melodic: 'melodic' };
+    const instrumental = !tandaData.singer || tandaData.singer.trim() === '';
+
     const newTandaDocument = {
       orchestra: tandaData.orchestra,
-      singer: tandaData.singer || '', // Default to empty string if not provided
+      singer: tandaData.singer || '',
       type: tandaData.type,
       category: tandaData.category,
       style: tandaData.style || null,
-      // The player looks for 'artwork_url' and 'url' inside the tracks array.
-      artwork_url: tandaData.artworkPath, 
-      tracks: tandaData.tracks.map(track => ({
+      artwork_url: tandaData.artworkPath,
+      tracks: tandaData.tracks.map((track) => ({
         title: track.title,
-        url: track.filePath, // Match the field name the player expects
+        url: track.filePath, // stored storage path
       })),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(), // Add a server-side timestamp
+      createdAt: getServerTimestamp(),
+      // Non-breaking, future-proof metadata
+      meta: {
+        instrumental,
+        typeCode: TYPE_CODE[tandaData.type] || null,
+        categoryCode: CATEGORY_CODE[tandaData.category] || null,
+        styleCode: tandaData.style ? STYLE_CODE[tandaData.style] || null : null,
+        tandaLength: Array.isArray(tandaData.tracks) ? tandaData.tracks.length : null,
+      },
     };
 
-    // 4. Add the new document to the 'tandas' collection.
     const docRef = await db.collection('tandas').add(newTandaDocument);
 
-    console.log('✅ Successfully saved tanda metadata to Firestore with ID:', docRef.id);
-
-    // 5. Return a success response.
-    return NextResponse.json({
-      message: 'Tanda saved successfully!',
-      tandaId: docRef.id
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        message: 'Tanda saved successfully!',
+        tandaId: docRef.id,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('❌ Error in upload metadata API:', error);
-    // Provide a more specific error if the JSON is malformed.
     if (error instanceof SyntaxError) {
-        return NextResponse.json({ message: 'Invalid JSON body provided.' }, { status: 400 });
+      return NextResponse.json({ message: 'Invalid JSON body provided.' }, { status: 400 });
     }
-    return NextResponse.json({ message: 'Failed to save tanda metadata.', error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Failed to save tanda metadata.', error: error.message },
+      { status: 500 }
+    );
   }
 }

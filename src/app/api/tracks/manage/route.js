@@ -1,11 +1,29 @@
+// src/app/api/tracks/manage/route.js
 import { NextResponse } from 'next/server';
 import { getFirestore, getStorage } from '@/lib/firebaseAdmin.server.js';
+import { getUserFromRequest } from '@/lib/getUserFromRequest';
+
+// ---------- Admin guard ----------
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAdmin(decodedUser) {
+  const email = (decodedUser?.email || '').toLowerCase();
+  return decodedUser?.admin === true || ADMIN_EMAILS.includes(email);
+}
+
+async function requireAdmin(request) {
+  const user = await getUserFromRequest(request);
+  if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  if (!isAdmin(user)) return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  return { user };
+}
 
 // --- Helper Function to generate signed URLs ---
 async function generateV4ReadSignedUrl(filePath) {
-  if (!filePath) {
-    return null;
-  }
+  if (!filePath) return null;
   try {
     const options = {
       version: 'v4',
@@ -20,7 +38,11 @@ async function generateV4ReadSignedUrl(filePath) {
   }
 }
 
-export async function GET() {
+export async function GET(request) {
+  // Admin gate
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
   try {
     const db = getFirestore();
     const tandasRef = db.collection('tandas');
@@ -38,21 +60,18 @@ export async function GET() {
       if (tandaData.tracks && Array.isArray(tandaData.tracks)) {
         tandaData.tracks.forEach((track, index) => {
           const filePath = track.url || track.filePath;
-          // --- UPDATED: Extract file format from the path ---
-          const fileFormat = filePath?.split('.').pop().toUpperCase() || 'N/A';
+          const fileFormat = filePath?.split('.').pop()?.toUpperCase() || 'N/A';
 
           allTracks.push({
-            uniqueId: `${tandaId}-${index}`, 
-            tandaId: tandaId,
+            uniqueId: `${tandaId}-${index}`,
+            tandaId,
             orchestra: tandaData.orchestra,
             title: track.title,
             url: filePath,
-            // --- NEW: Add extra data from the parent tanda ---
             type: tandaData.type,
             style: tandaData.style || null,
             format: fileFormat,
-            // Duration is complex and will be added later
-            duration: null 
+            duration: null, // TODO: add later
           });
         });
       }
@@ -61,17 +80,16 @@ export async function GET() {
     const tracksWithSignedUrls = await Promise.all(
       allTracks.map(async (track) => {
         const signedUrl = await generateV4ReadSignedUrl(track.url);
-        return {
-          ...track,
-          playableUrl: signedUrl,
-        };
+        return { ...track, playableUrl: signedUrl };
       })
     );
 
     return NextResponse.json({ tracks: tracksWithSignedUrls });
-
   } catch (error) {
     console.error('Error fetching all tracks:', error);
-    return NextResponse.json({ message: 'Failed to fetch tracks.', error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { message: 'Failed to fetch tracks.', error: error.message },
+      { status: 500 }
+    );
   }
 }

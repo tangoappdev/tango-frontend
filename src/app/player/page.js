@@ -1,14 +1,11 @@
-// src/app/player/page.js
-import React from 'react';
-// Adjust the import path if you saved TangoPlayer.js elsewhere
+'use client';
+
 import TangoPlayer from '../../components/TangoPlayer';
 
 export default function PlayerPage() {
   return (
-    <div>
-      {/* You can add other page elements here if needed */}
+    <div className="relative min-h-screen bg-[#30333a]">
       <TangoPlayer />
-      {/* You could potentially pass initial settings or props here later */}
     </div>
   );
 }

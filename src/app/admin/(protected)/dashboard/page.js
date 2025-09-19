@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebaseClient';
-import { ArrowRightIcon, PlusCircleIcon, CogIcon, ArrowLeftStartOnRectangleIcon, MusicalNoteIcon, ChevronDownIcon, ChevronRightIcon, SpeakerWaveIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, PlusCircleIcon, CogIcon, ArrowLeftStartOnRectangleIcon, MusicalNoteIcon, ChevronDownIcon, ChevronRightIcon, SpeakerWaveIcon, UsersIcon } from '@heroicons/react/24/outline';
 
 // --- Statistics Components ---
 
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/dashboard');
+        const response = await fetch('/api/dashboard', { credentials: 'include' });
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard stats.');
         }
@@ -114,15 +114,24 @@ export default function AdminDashboard() {
   }, []);
 
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/login');
-    } catch (error) {
-      console.error('Failed to log out', error);
-      alert('Failed to log out. Please try again.');
-    }
-  };
+  // ANCHOR: admin-dashboard-logout (REPLACE)
+const handleLogout = async () => {
+  try {
+    // clear server-side admin session cookie
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+
+    // clear client Firebase state
+    await signOut(auth);
+
+    // go to the admin login, not the user login
+    router.replace('/admin/login');
+  } catch (error) {
+    console.error('Failed to log out', error);
+    alert('Failed to log out. Please try again.');
+  }
+};
+// ANCHOR: admin-dashboard-logout (END)
+
 
   const NavCard = ({ title, description, href, icon: Icon }) => (
     <button
@@ -181,6 +190,13 @@ export default function AdminDashboard() {
         </section>
 
         <main className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* --- NEW: Manage Users --- */}
+          <NavCard
+            title="Manage Users"
+            description="View users, tiers (free/trial/pro), and manually grant/revoke Pro."
+            href="/admin/users"
+            icon={UsersIcon}
+          />
           <NavCard
             title="Create New Tanda"
             description="Upload artwork and audio files for a new Tanda."
