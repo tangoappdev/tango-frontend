@@ -16,7 +16,13 @@ import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebaseClient';
 
 // --- Unified Queue Component (for Mobile Bottom Sheet) ---
-function Queue({ isOpen, onClose, isDesktop, ...props }) {
+function Queue({
+  isOpen, onClose, isDesktop, rightPanelTab, setRightPanelTab,
+  likedTandas, handleLikedDragEnd, cortinas, sensors,
+  onMenuOpen, onPlayNow, handleRefreshPlaylist, isRefreshing,
+  handleSettingChange, settings,
+  ...props
+}) {
   const panelRef = useRef(null);
   const touchStartY = useRef(0);
   const touchMoveY = useRef(0);
@@ -76,7 +82,7 @@ function Queue({ isOpen, onClose, isDesktop, ...props }) {
         className={`
           bg-[#30333a] shadow-2xl lg:shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] flex flex-col
           transition-all duration-500 ease-in-out
-          absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[70%] rounded-t-2xl transform
+          absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto h-[85%] rounded-t-2xl transform
           ${isOpen ? 'translate-y-0' : 'translate-y-full'}
           lg:relative lg:h-full lg:w-full lg:rounded-lg lg:transform-none lg:mx-0
           lg:transition-opacity ${isOpen ? 'lg:opacity-100' : 'lg:opacity-0'}
@@ -84,7 +90,86 @@ function Queue({ isOpen, onClose, isDesktop, ...props }) {
       >
         <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0 lg:hidden"></div>
         <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-          <QueueContent {...props} />
+          {/* NEW: Tab Buttons */}
+          <div className="flex-shrink-0 p-2 border-b border-white/10">
+            <div className="grid grid-cols-3">
+              <button
+                onClick={() => setRightPanelTab('liked')}
+                className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 ${rightPanelTab === 'liked' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+              >
+                Liked
+              </button>
+              <button
+                onClick={() => setRightPanelTab('queue')}
+                className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 ${rightPanelTab === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+              >
+                Queue
+              </button>
+              <button
+                onClick={() => setRightPanelTab('cortinas')}
+                className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out hover:scale-105 ${rightPanelTab === 'cortinas' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+              >
+                Cortinas
+              </button>
+            </div>
+          </div>
+
+          {/* NEW: Conditional Content */}
+          <div className="w-full h-full overflow-y-auto">
+            {rightPanelTab === 'queue' && (
+              <QueueContent {...props} settings={settings} isDesktop={isDesktop} />
+            )}
+            {rightPanelTab === 'liked' && (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
+                <SortableContext items={likedTandas.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                  {likedTandas.length > 0 ? (
+                    likedTandas.map(tanda => (
+                      <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                    ))
+                  ) : (
+                    <p className="p-4 text-center text-gray-500">Your liked tandas will appear here.</p>
+                  )}
+                </SortableContext>
+              </DndContext>
+            )}
+            {rightPanelTab === 'cortinas' && (
+              <div>
+                {cortinas.length > 0 ? (
+                  cortinas.map(cortina => (
+                    <div key={cortina.id} className="p-3 border-b border-white/5 text-sm">
+                      <p className="text-white truncate font-medium">{cortina.title}</p>
+                      <p className="text-gray-400 truncate">{cortina.artist || 'Unknown Artist'}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="p-4 text-center text-gray-500">No cortinas found.</p>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex-shrink-0 mb-2 mt-5 w-full gap-3 flex justify-around items-center">
+                <button
+                  onClick={handleRefreshPlaylist}
+                  title={'Refresh Playlist'}
+                  disabled={isRefreshing}
+                  className="w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e] disabled:opacity-50"
+                >
+                  <ArrowPathIcon className="h-5 w-5" />
+                  Refresh
+                </button>
+                <button
+                  onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
+                  title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
+                  className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${
+                    settings.cortinas
+                      ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                      : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
+                  }`}
+                >
+                  <MusicalNoteIcon className="h-5 w-5" />
+                  Cortinas
+                </button>
+           </div>
         </div>
       </div>
     </div>
@@ -106,7 +191,7 @@ function QueueContent({
   onPlayNow,
   isDesktop,
   handleSettingChange,
-  settings,
+  settings: settings,
   isRefreshing,
   handleRefreshPlaylist,
   isPro
@@ -164,31 +249,6 @@ function QueueContent({
           </SortableContext>
         </DndContext>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 p-3 bg-[#30333a] flex-shrink-0 lg:hidden">
-        <div className="w-full gap-3 flex justify-around items-center">
-          <button
-            onClick={handleRefreshPlaylist}
-            title={'Refresh Playlist'}
-            disabled={isRefreshing}
-            className="w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e] disabled:opacity-50"
-          >
-            <ArrowPathIcon className="h-5 w-5" />
-            Refresh
-          </button>
-          <button
-            onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
-            title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
-            className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${
-              settings.cortinas
-                ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
-                : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
-            }`}
-          >
-            <MusicalNoteIcon className="h-5 w-5" />
-            Cortinas
-          </button>
-        </div>
-      </div>
     </>
   );
 }
@@ -238,6 +298,33 @@ function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqN
 }
 
 // --- Settings Panel Component ---
+function PanelFooter({ handleRefreshPlaylist, isRefreshing, handleSettingChange, settings }) {
+  return (
+    <div className="flex-shrink-0 mb-2 mt-5 w-full gap-3 flex justify-around items-center">
+      <button
+        onClick={handleRefreshPlaylist}
+        title={'Refresh Playlist'}
+        disabled={isRefreshing}
+        className="w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e] disabled:opacity-50"
+      >
+        <ArrowPathIcon className="h-5 w-5" />
+        Refresh
+      </button>
+      <button
+        onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
+        title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
+        className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${
+          settings.cortinas
+            ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+            : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
+        }`}
+      >
+        <MusicalNoteIcon className="h-5 w-5" />
+        Cortinas
+      </button>
+    </div>
+  );
+}
 function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, isPro }) {
   const panelRef = useRef(null);
   return (
@@ -410,6 +497,7 @@ export default function TangoPlayer() {
   const autoplayIntentRef = useRef(false);
   const isFetchingRef = useRef(false);
   const isSeekingRef = useRef(false);
+  const isResettingRef = useRef(false);
   const audioContextRef = useRef(null);
   const sourceNodeRef = useRef(null);
   const lowShelfRef = useRef(null);
@@ -489,9 +577,10 @@ export default function TangoPlayer() {
 
     // Optimistic UI update for instant feedback
     const newLikedIds = new Set(localLikedIds);
-    if (newLikedIds.has(tandaId)) {
-      newLikedIds.delete(tandaId);
-    } else {
+      if (newLikedIds.has(tandaId)) {
+        newLikedIds.delete(tandaId);
+        setLikedTandas(prev => prev.filter(t => t.id !== tandaId)); // <-- ADD THIS LINE
+      } else {
       newLikedIds.add(tandaId);
     }
     setLocalLikedIds(newLikedIds);
@@ -619,6 +708,7 @@ export default function TangoPlayer() {
     setSettings(newSettings);
     if (settingName === 'activeMode' || settingName === 'categoryFilter') {
       try {
+        isResettingRef.current = true; // <-- ADD THIS LINE
         const params = buildApiParams(newSettings);
         const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}&cb=${Date.now()}`;
         const response = await fetch(apiUrl);
@@ -630,6 +720,14 @@ export default function TangoPlayer() {
           pool = raw.sort(() => 0.5 - Math.random());
           setShuffledCortinas(pool);
         }
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.src = '';
+        }
+        setIsPlaying(false);
+        setCurrentTrackIndex(0);
+        setCurrentTime(0);
+        setError(null);
         setManualQueue([]);
         setRecentlyPlayedIds(new Set());
         const ordered = reorderWithMinGap([], data.upcomingTandas || [], MIN_SAME_TANDA_GAP);
@@ -831,6 +929,7 @@ export default function TangoPlayer() {
       console.error('Sign out failed', e);
     }
   };
+
   const handlePanelToggle = (panelName) => {
     const isOpening = activePanel !== panelName;
     if (panelName === 'queue' && isOpening) fetchAndFillPlaylist();
@@ -889,11 +988,17 @@ export default function TangoPlayer() {
   useEffect(() => {
     setLocalLikedIds(new Set(likedTandaIds));
   }, [likedTandaIds]);
+
   useEffect(() => {
-    if (rightPanelTab === 'liked' && likedTandas.length === 0 && likedTandaIds.length > 0) {
-      fetchLikedTandas();
-    }
-  }, [rightPanelTab, likedTandas.length, likedTandaIds.length, fetchLikedTandas]);
+  // Eagerly fetch liked tandas as soon as the ID list is loaded or changes.
+  if (likedTandaIds && likedTandaIds.length > 0) {
+    fetchLikedTandas();
+  } else {
+    // This ensures the list is cleared if the user unlikes their last song.
+    setLikedTandas([]);
+  }
+}, [likedTandaIds, fetchLikedTandas]);
+
   useEffect(() => {
     const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
     if ('mediaSession' in navigator && currentTanda && currentTrack) {
@@ -941,6 +1046,7 @@ export default function TangoPlayer() {
     if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
       audioRef.current.src = trackUrl;
       audioRef.current.load();
+      isResettingRef.current = false;
       if (autoplayIntentRef.current) {
         autoplayIntentRef.current = false;
         audioRef.current.play().catch(() => setIsPlaying(false));
@@ -1125,7 +1231,7 @@ export default function TangoPlayer() {
                     <div className="flex flex-col gap-4">
                       {/* 1. Orchestra Type */}
                       <div>
-                        <label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-3">Orchestra Type</label>
+                        <label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label>
                         <div className="relative">
                           <select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
                             {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
@@ -1135,7 +1241,7 @@ export default function TangoPlayer() {
                       </div>
                       {/* 2. Tanda Length */}
                       <div>
-                        <span className="block text-sm font-medium text-gray-400 mb-3">
+                        <span className="block text-sm font-medium text-gray-400 mb-2">
                           Tanda Length
                         </span>
                         <div className={`grid grid-cols-2 gap-2 mt-1 w-full ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -1147,9 +1253,9 @@ export default function TangoPlayer() {
                         </div>
                       </div>
                       {/* 3. Tanda Sequence */}
-                      <div className="flex flex-col gap-5">
+                      <div className="flex flex-col gap-3">
                         <div>
-                          <label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-3">Tanda Sequence</label>
+                          <label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Sequence</label>
                           <div className="relative">
                             <select id="tandaOrderDesktop" name="activeMode" value={settings.activeMode} onChange={(e) => handleSettingChange('activeMode', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
                               {TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
@@ -1243,7 +1349,7 @@ export default function TangoPlayer() {
                 onLoadedMetadata={handleAudioLoadedMetadata}
                 onPlay={handleAudioPlay}
                 onPause={handleAudioPause}
-                onError={() => { setError("An audio playback error occurred."); }}
+                onError={() => { if (!isResettingRef.current) { setError("An audio playback error occurred."); } }}
               />
               <div className="flex items-center gap-4 mb-4 px-4">
                 <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
@@ -1272,22 +1378,32 @@ export default function TangoPlayer() {
           {/* RIGHT: Queue */}
           {sidebarsVisible && (
             <div className="w-[30%] flex flex-col bg-[#30333a] p-3 rounded-xl overflow-hidden">
-              <div className="flex-shrink-0 p-2 border-b border-white/10">
-                <div className="grid grid-cols-2 gap-2">
+              
+              {/* Tabs */}
+              <div className="flex-shrink-0">
+                <div className="grid grid-cols-3">
+                  <button
+                    onClick={() => setRightPanelTab('liked')}
+                    className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 ${rightPanelTab === 'liked' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    Liked
+                  </button>
                   <button
                     onClick={() => setRightPanelTab('queue')}
-                    className={`py-2 text-sm font-medium rounded-lg transition-colors ${rightPanelTab === 'queue' ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                    className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 ${rightPanelTab === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
                   >
                     Queue
                   </button>
                   <button
-                    onClick={() => setRightPanelTab('liked')}
-                    className={`py-2 text-sm font-medium rounded-lg transition-colors ${rightPanelTab === 'liked' ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                    onClick={() => setRightPanelTab('cortinas')}
+                    className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out hover:scale-105 ${rightPanelTab === 'cortinas' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
                   >
-                    Liked
+                    Cortinas
                   </button>
                 </div>
               </div>
+
+              {/* Content Area */}
               <div className="relative flex-grow rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
                 <div className="w-full h-full overflow-y-auto">
                   {rightPanelTab === 'queue' && (
@@ -1306,6 +1422,20 @@ export default function TangoPlayer() {
                       </SortableContext>
                     </DndContext>
                   )}
+                  {rightPanelTab === 'cortinas' && (
+                    <div>
+                      {cortinas.length > 0 ? (
+                        cortinas.map(cortina => (
+                          <div key={cortina.id} className="p-3 border-b border-white/5 text-sm">
+                            <p className="text-white truncate font-medium">{cortina.title}</p>
+                            <p className="text-gray-400 truncate">{cortina.artist || 'Unknown Artist'}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="p-4 text-center text-gray-500">No cortinas found.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {isRefreshing && (
                   <div className="absolute inset-0 bg-[#30333a80] backdrop-blur-sm flex items-center justify-center transition-opacity duration-300">
@@ -1313,33 +1443,18 @@ export default function TangoPlayer() {
                   </div>
                 )}
               </div>
-              <div className="flex-shrink-0 mb-2 mt-5 w-full gap-3 flex justify-around items-center">
-                <button
-                  onClick={handleRefreshPlaylist}
-                  title={'Refresh Playlist'}
-                  disabled={isRefreshing}
-                  className="w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e] disabled:opacity-50"
-                >
-                  <ArrowPathIcon className="h-5 w-5" />
-                  Refresh
-                </button>
-                <button
-                  onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
-                  title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
-                  className={`w-1/2 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 ${
-                    settings.cortinas
-                      ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
-                      : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
-                  }`}
-                >
-                  <MusicalNoteIcon className="h-5 w-5" />
-                  Cortinas
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+
+              {/* 3. ADD THE FOOTER COMPONENT HERE */}
+              <PanelFooter
+                handleRefreshPlaylist={handleRefreshPlaylist}
+                isRefreshing={isRefreshing}
+                handleSettingChange={handleSettingChange}
+                settings={settings}
+              />
+          </div>
+        )}
       </div>
+      </div>  
 
       {/* MOBILE LAYOUT */}
       <div className="block lg:hidden w-full p-2 sm:p-4">
@@ -1400,7 +1515,7 @@ export default function TangoPlayer() {
             onLoadedMetadata={handleAudioLoadedMetadata}
             onPlay={handleAudioPlay}
             onPause={handleAudioPause}
-            onError={() => { setError("An audio playback error occurred."); }}
+            onError={() => { if (!isResettingRef.current) { setError("An audio playback error occurred."); } }}
           />
 
           <div className="flex items-center gap-3 mb-3 px-1">
@@ -1514,6 +1629,18 @@ export default function TangoPlayer() {
           isOpen={activePanel === 'queue'}
           onClose={() => handlePanelToggle('queue')}
           isDesktop={isDesktop}
+          rightPanelTab={rightPanelTab}
+          setRightPanelTab={setRightPanelTab}
+          likedTandas={likedTandas}
+          handleLikedDragEnd={handleLikedDragEnd}
+          cortinas={cortinas}
+          sensors={sensors}
+          onMenuOpen={handleMenuOpen}
+          onPlayNow={handlePlayNow}
+          handleRefreshPlaylist={handleRefreshPlaylist}
+          isRefreshing={isRefreshing}
+          handleSettingChange={handleSettingChange}
+          settings={settings}
           {...queueProps}
         />
       )}
