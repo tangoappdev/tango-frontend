@@ -990,14 +990,18 @@ export default function TangoPlayer() {
   }, [likedTandaIds]);
 
   useEffect(() => {
-  // Eagerly fetch liked tandas as soon as the ID list is loaded or changes.
-  if (likedTandaIds && likedTandaIds.length > 0) {
-    fetchLikedTandas();
-  } else {
-    // This ensures the list is cleared if the user unlikes their last song.
-    setLikedTandas([]);
-  }
-}, [likedTandaIds, fetchLikedTandas]);
+    // Keep the cached liked queue in sync once auth profile is ready.
+    if (!user) {
+      setLikedTandas([]);
+      return;
+    }
+
+    if (likedTandaIds && likedTandaIds.length > 0) {
+      fetchLikedTandas();
+    } else {
+      setLikedTandas([]);
+    }
+  }, [user, likedTandaIds, fetchLikedTandas]);
 
   useEffect(() => {
     const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];

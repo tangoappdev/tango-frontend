@@ -23,6 +23,8 @@ export async function GET(request) {
   const tier = profile?.tier || 'free';
   const trialEndsAt = profile?.trialEndsAt ? new Date(profile.trialEndsAt).getTime() : 0;
   const trialActive = trialEndsAt > Date.now();
+  const likedTandaIds = Array.isArray(profile?.likedTandaIds) ? profile.likedTandaIds.filter(Boolean) : [];
+  const isPro = Boolean(profile?.isPro);
 
   return NextResponse.json(
     {
@@ -36,6 +38,8 @@ export async function GET(request) {
       photoURL: profile?.photoURL || '',
       tier,
       trialActive,
+      isPro,
+      likedTandaIds,
     },
     { status: 200, headers: { 'cache-control': 'no-store' } }
   );
