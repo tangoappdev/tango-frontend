@@ -171,7 +171,7 @@ function Queue({
               </div>
             )}
           </div>
-          <div className="flex-shrink-0 p-3 mt-5 w-full gap-3 flex justify-around items-center">
+          <div className="flex-shrink-0 mb-4 p-3 mt-5 w-full gap-3 flex justify-around items-center">
                 <button
                   onClick={handleRefreshPlaylist}
                   title={'Refresh Playlist'}
@@ -280,7 +280,7 @@ function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqN
       <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
       <div
         ref={panelRef}
-        className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
         <div className="p-6 relative">
@@ -349,7 +349,7 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
       <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
       <div
         ref={panelRef}
-        className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
         <div className="p-4">
@@ -399,7 +399,7 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
                 <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid mb-4 grid-cols-3 gap-2">
               {JUST_MODE_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
