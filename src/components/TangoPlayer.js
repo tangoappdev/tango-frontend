@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -15,18 +15,42 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebaseClient';
 
+function CortinaRow({ item, isActive }) {
+  const containerClasses = `p-3 border-b border-white/5 text-sm space-y-1 ${isActive ? 'bg-[#25edda]/10 border-[#25edda]/40' : ''}`;
+  const orderClasses = `text-xs font-semibold ${isActive ? 'text-[#25edda]' : 'text-gray-400'}`;
+
+  return (
+    <div className={containerClasses}>
+      <div className="flex items-center gap-2">
+        <span className={orderClasses}>#{item.order}</span>
+        <div className="flex flex-1 items-baseline gap-2 min-w-0">
+          <span className="text-sm text-white whitespace-nowrap">{item.title}</span>
+          {item.artist && (
+            <span className="text-xs text-gray-400 truncate">- {item.artist}</span>
+          )}
+        </div>
+      </div>
+      <p className="text-xs uppercase tracking-wide text-[#25edda] truncate">{item.genre}</p>
+      {isActive && (
+        <p className="text-[10px] uppercase tracking-wide text-[#25edda]">Now playing</p>
+      )}
+    </div>
+  );
+}
+
 // --- Unified Queue Component (for Mobile Bottom Sheet) ---
 function Queue({
   isOpen, onClose, isDesktop, rightPanelTab, setRightPanelTab,
-  likedTandas, handleLikedDragEnd, cortinas, sensors,
+  likedTandas, handleLikedDragEnd, scheduledCortinas, sensors,
   onMenuOpen, onPlayNow, handleRefreshPlaylist, isRefreshing,
-  handleSettingChange, settings,
+  handleSettingChange, settings, currentCortina, isCortinaPlaying,
   ...props
 }) {
   const panelRef = useRef(null);
   const touchStartY = useRef(0);
   const touchMoveY = useRef(0);
-  const isDraggingPanel = useRef(false);
+  const activeCortinaId = isCortinaPlaying && currentCortina ? currentCortina.id : null;
+  const scheduledCortinaList = Array.isArray(scheduledCortinas) ? scheduledCortinas : [];
 
   const handleTouchStart = (e) => {
     if (isDesktop) return;
@@ -120,29 +144,31 @@ function Queue({
               <QueueContent {...props} settings={settings} isDesktop={isDesktop} />
             )}
             {rightPanelTab === 'liked' && (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
-                <SortableContext items={likedTandas.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                  {likedTandas.length > 0 ? (
-                    likedTandas.map(tanda => (
-                      <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
-                    ))
-                  ) : (
-                    <p className="p-4 text-center text-gray-500">Your liked tandas will appear here.</p>
-                  )}
-                </SortableContext>
-              </DndContext>
+              <div className="p-3 px-2 pb-20">
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
+                  <SortableContext items={likedTandas.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                    {likedTandas.length > 0 ? (
+                      likedTandas.map(tanda => (
+                        <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                      ))
+                    ) : (
+                      <p className="p-4 text-center text-gray-500">Your liked tandas will appear here.</p>
+                    )}
+                  </SortableContext>
+                </DndContext>
+              </div>
             )}
             {rightPanelTab === 'cortinas' && (
-              <div>
-                {cortinas.length > 0 ? (
-                  cortinas.map(cortina => (
-                    <div key={cortina.id} className="p-3 border-b border-white/5 text-sm">
-                      <p className="text-white truncate font-medium">{cortina.title}</p>
-                      <p className="text-gray-400 truncate">{cortina.artist || 'Unknown Artist'}</p>
-                    </div>
-                  ))
+              <div className="p-3 px-2 pb-20">
+                {scheduledCortinaList.length > 0 ? (
+                  scheduledCortinaList.map((item, idx) => {
+                    const isActive = isCortinaPlaying && idx === 0 && activeCortinaId && item.cortinaId && activeCortinaId === item.cortinaId;
+                    return (
+                      <CortinaRow key={`${item.order}-${idx}`} item={item} isActive={isActive} />
+                    );
+                  })
                 ) : (
-                  <p className="p-4 text-center text-gray-500">No cortinas found.</p>
+                  <p className="p-4 text-center text-gray-500">No cortinas scheduled.</p>
                 )}
               </div>
             )}
@@ -548,6 +574,29 @@ export default function TangoPlayer() {
   const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
   const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
   const upcomingPlaylistIds = useMemo(() => upcomingPlaylist.map(t => t.id), [upcomingPlaylist]);
+  const queueWithCurrent = useMemo(() => (
+    manualQueue.length > 0 ? [...manualQueue, ...upcomingPlaylist] : [...upcomingPlaylist]
+  ), [manualQueue, upcomingPlaylist]);
+  const scheduledCortinas = useMemo(() => {
+    if (!settings.cortinas) return [];
+    if (queueWithCurrent.length <= 1) return [];
+    return queueWithCurrent.slice(1).map((tanda, index) => {
+      const meta = tanda.cortinaMeta || null;
+      const title = meta?.title || 'Cortina';
+      const artist = meta?.artist || 'Unknown Artist';
+      const genre = meta?.genre || meta?.style || meta?.category || 'Unknown Genre';
+      return {
+        key: `${tanda.id}-${index}`,
+        order: index + 1,
+        title,
+        artist,
+        genre,
+        cortinaId: meta?.id || null,
+        meta,
+      };
+    });
+  }, [queueWithCurrent, settings.cortinas]);
+
 
   // 5. Callbacks
   const handlePause = useCallback(() => { if (audioRef.current) audioRef.current.pause(); }, []);
@@ -841,13 +890,34 @@ export default function TangoPlayer() {
     const lengthRule = (currentTanda?.type === 'Tango') ? settings.tandaLength : 3;
     const isLastTrackOfTanda = currentTrackIndex >= Math.min(totalTracks, lengthRule) - 1;
     if (isLastTrackOfTanda) {
-      if (settings.cortinas && cortinas.length > 0) {
-        const randomCortina = cortinas[Math.floor(Math.random() * cortinas.length)];
-        setCurrentCortina(randomCortina);
-        setIsCortinaPlaying(true);
-        if (audioRef.current) {
-          audioRef.current.src = randomCortina.playableUrl;
-          audioRef.current.play();
+      if (settings.cortinas) {
+        const plannedMeta = scheduledCortinas[0]?.meta;
+        let resolvedCortina = null;
+
+        if (plannedMeta?.id) {
+          resolvedCortina = cortinas.find(c => c.id === plannedMeta.id) || null;
+        }
+
+        if (!resolvedCortina && plannedMeta) {
+          const playableUrl = plannedMeta.playableUrl || plannedMeta.url_signed || plannedMeta.playable_url_signed || null;
+          if (playableUrl) {
+            resolvedCortina = { ...plannedMeta, playableUrl };
+          }
+        }
+
+        if (!resolvedCortina && cortinas.length > 0) {
+          resolvedCortina = cortinas[Math.floor(Math.random() * cortinas.length)];
+        }
+
+        if (resolvedCortina?.playableUrl) {
+          setCurrentCortina(resolvedCortina);
+          setIsCortinaPlaying(true);
+          if (audioRef.current) {
+            audioRef.current.src = resolvedCortina.playableUrl;
+            audioRef.current.play();
+          }
+        } else {
+          playNextTanda();
         }
       } else {
         playNextTanda();
@@ -856,7 +926,7 @@ export default function TangoPlayer() {
       autoplayIntentRef.current = true;
       setCurrentTrackIndex(prev => prev + 1);
     }
-  }, [currentTanda, currentTrackIndex, settings.tandaLength, settings.cortinas, cortinas, playNextTanda]);
+  }, [currentTanda, currentTrackIndex, settings.tandaLength, settings.cortinas, scheduledCortinas, cortinas, playNextTanda]);
   const handleCortinaEnded = useCallback(() => {
     setIsCortinaPlaying(false);
     setCurrentCortina(null);
@@ -1137,10 +1207,11 @@ export default function TangoPlayer() {
     isDesktop,
     handleSettingChange: handleSettingChange,
     settings: settings,
-    shuffledCortinas: shuffledCortinas,
+    scheduledCortinas,
+    currentCortina,
+    isCortinaPlaying,
     handleRefreshPlaylist,
     isRefreshing,
-    handleRefreshPlaylist,
     isPro
   };
 
@@ -1205,7 +1276,7 @@ export default function TangoPlayer() {
 <main className="flex-1 flex items-center justify-center w-full">
       {/* DESKTOP LAYOUT */}
       <div className="hidden lg:flex justify-center items-center w-full p-4">
-        <div className={`w-full h-[650px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-4 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-7xl' : 'max-w-lg'}`}>
+        <div className={`w-full h-[650px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-4 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-[90rem]' : 'max-w-lg'}`}>
           {/* LEFT: EQ & Settings */}
           {sidebarsVisible && (
             <div className="w-[30%] flex flex-col bg-[#30333a] rounded-xl overflow-hidden">
@@ -1414,29 +1485,31 @@ export default function TangoPlayer() {
                     <QueueContent {...queueProps} isDesktop={isDesktop} />
                   )}
                   {rightPanelTab === 'liked' && (
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
-                      <SortableContext items={likedTandas.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                        {likedTandas.length > 0 ? (
-                          likedTandas.map(tanda => (
-                            <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={handleMenuOpen} onPlayNow={handlePlayNow} isDesktop={isDesktop} />
-                          ))
-                        ) : (
-                          <p className="p-4 text-center text-gray-500">Your liked tandas will appear here.</p>
-                        )}
-                      </SortableContext>
-                    </DndContext>
+                    <div className="p-3 px-2 pb-20">
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
+                        <SortableContext items={likedTandas.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                          {likedTandas.length > 0 ? (
+                            likedTandas.map(tanda => (
+                              <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={handleMenuOpen} onPlayNow={handlePlayNow} isDesktop={isDesktop} />
+                            ))
+                          ) : (
+                            <p className="p-4 text-center text-gray-500">Your liked tandas will appear here.</p>
+                          )}
+                        </SortableContext>
+                      </DndContext>
+                    </div>
                   )}
                   {rightPanelTab === 'cortinas' && (
-                    <div>
-                      {cortinas.length > 0 ? (
-                        cortinas.map(cortina => (
-                          <div key={cortina.id} className="p-3 border-b border-white/5 text-sm">
-                            <p className="text-white truncate font-medium">{cortina.title}</p>
-                            <p className="text-gray-400 truncate">{cortina.artist || 'Unknown Artist'}</p>
-                          </div>
-                        ))
+                    <div className="p-3 px-2 pb-20">
+                      {scheduledCortinas.length > 0 ? (
+                        scheduledCortinas.map((item, idx) => {
+                          const isActive = isCortinaPlaying && idx === 0 && currentCortina && item.cortinaId && currentCortina.id === item.cortinaId;
+                          return (
+                            <CortinaRow key={`${item.order}-${idx}`} item={item} isActive={isActive} />
+                          );
+                        })
                       ) : (
-                        <p className="p-4 text-center text-gray-500">No cortinas found.</p>
+                        <p className="p-4 text-center text-gray-500">No cortinas scheduled.</p>
                       )}
                     </div>
                   )}
@@ -1675,3 +1748,6 @@ export default function TangoPlayer() {
     </div>
   );
 }
+
+
+
