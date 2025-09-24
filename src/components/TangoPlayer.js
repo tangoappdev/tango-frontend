@@ -1,5 +1,4 @@
 ﻿'use client';
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -14,11 +13,9 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebaseClient';
-
 function CortinaRow({ item, isActive }) {
   const containerClasses = `p-3 border-b border-white/5 text-sm space-y-1 ${isActive ? 'bg-[#25edda]/10 border-[#25edda]/40' : ''}`;
   const orderClasses = `text-xs font-semibold ${isActive ? 'text-[#25edda]' : 'text-gray-400'}`;
-
   return (
     <div className={containerClasses}>
       <div className="flex items-center gap-2">
@@ -37,7 +34,6 @@ function CortinaRow({ item, isActive }) {
     </div>
   );
 }
-
 // --- Unified Queue Component (for Mobile Bottom Sheet) ---
 function Queue({
   isOpen, onClose, isDesktop, rightPanelTab, setRightPanelTab,
@@ -47,18 +43,24 @@ function Queue({
   ...props
 }) {
   const panelRef = useRef(null);
+  const isDraggingPanel = useRef(false);
   const touchStartY = useRef(0);
   const touchMoveY = useRef(0);
   const activeCortinaId = isCortinaPlaying && currentCortina ? currentCortina.id : null;
   const scheduledCortinaList = Array.isArray(scheduledCortinas) ? scheduledCortinas : [];
-
   const handleTouchStart = (e) => {
     if (isDesktop) return;
+    const target = e.target;
+    const interactiveSelector = 'button, a, input, select, textarea, [role="button"], [data-panel-no-drag]';
+    if (target?.closest && target.closest(interactiveSelector)) {
+      isDraggingPanel.current = false;
+      return;
+    }
     touchStartY.current = e.targetTouches[0].clientY;
     touchMoveY.current = touchStartY.current;
-    isDraggingPanel.current = props.queueContainerRef.current?.scrollTop === 0;
+    const scrollTop = props.queueContainerRef.current?.scrollTop ?? 0;
+    isDraggingPanel.current = scrollTop <= 0;
   };
-
   const handleTouchMove = (e) => {
     if (isDesktop || !isDraggingPanel.current) return;
     touchMoveY.current = e.targetTouches[0].clientY;
@@ -73,7 +75,6 @@ function Queue({
       isDraggingPanel.current = false;
     }
   };
-
   const handleTouchEnd = () => {
     if (isDesktop) return;
     const deltaY = touchMoveY.current - touchStartY.current;
@@ -86,7 +87,6 @@ function Queue({
     touchMoveY.current = 0;
     isDraggingPanel.current = false;
   };
-
   const containerClasses = `
     lg:relative lg:transition-all lg:duration-500 lg:ease-in-out
     ${isOpen ? 'lg:w-100 lg:ml-4' : 'lg:w-0 lg:ml-0'}
@@ -94,7 +94,6 @@ function Queue({
     ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
     lg:opacity-100 lg:pointer-events-auto
   `;
-
   return (
     <div className={containerClasses}>
       <div className="absolute inset-0 bg-black/60 lg:hidden" onClick={onClose}></div>
@@ -137,11 +136,10 @@ function Queue({
               </button>
             </div>
           </div>
-
           {/* NEW: Conditional Content */}
           <div className="w-full h-full overflow-y-auto">
             {rightPanelTab === 'queue' && (
-              <QueueContent {...props} settings={settings} isDesktop={isDesktop} />
+              <QueueContent {...props} onMenuOpen={onMenuOpen} settings={settings} isDesktop={isDesktop} />
             )}
             {rightPanelTab === 'liked' && (
               <div className="p-3 px-2 pb-20">
@@ -173,7 +171,7 @@ function Queue({
               </div>
             )}
           </div>
-          <div className="flex-shrink-0 mb-2 mt-5 w-full gap-3 flex justify-around items-center">
+          <div className="flex-shrink-0 p-3 mt-5 w-full gap-3 flex justify-around items-center">
                 <button
                   onClick={handleRefreshPlaylist}
                   title={'Refresh Playlist'}
@@ -201,7 +199,6 @@ function Queue({
     </div>
   );
 }
-
 // --- Shared QueueContent Component ---
 function QueueContent({
   user,
@@ -223,7 +220,6 @@ function QueueContent({
   isPro
 }) {
   const fallbackCortina = { title: "Cortina", artist: "" };
-
   const renderSeparatorFor = (tanda) => {
     const cortina = tanda?.cortinaMeta || fallbackCortina;
     return (
@@ -239,7 +235,6 @@ function QueueContent({
       </div>
     );
   };
-
   return (
     <>
       <div
@@ -255,7 +250,6 @@ function QueueContent({
                 <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
               </React.Fragment>
             ))}
-
             {manualQueue.length > 0 && upcomingPlaylist.length > 0 && (
               <div className="flex items-center gap-2 my-2 px-2 text-center">
                 <div className="flex-grow h-px bg-white/10"></div>
@@ -265,7 +259,6 @@ function QueueContent({
                 <div className="flex-grow h-px bg-white/10"></div>
               </div>
             )}
-
             {upcomingPlaylist.map((tanda, index) => (
               <React.Fragment key={tanda.id}>
                 {settings.cortinas && (manualQueue.length > 0 || index > 0) && renderSeparatorFor(tanda)}
@@ -278,7 +271,6 @@ function QueueContent({
     </>
   );
 }
-
 // --- EQ Panel Component ---
 function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqNotification, isPro }) {
   const panelRef = useRef(null);
@@ -322,7 +314,6 @@ function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqN
     </div>
   );
 }
-
 // --- Settings Panel Component ---
 function PanelFooter({ handleRefreshPlaylist, isRefreshing, handleSettingChange, settings }) {
   return (
@@ -425,7 +416,6 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
     </div>
   );
 }
-
 // --- Constants ---
 const API_BASE_URL = '/api';
 const CATEGORIES = {
@@ -454,7 +444,6 @@ const initialSettings = {
   tandaLength: 4,
   cortinas: true,
 };
-
 // --- Helper Functions ---
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return '00:00';
@@ -515,7 +504,6 @@ function attachCortinas(existingBefore, batch, cortinaPool) {
     cortinaMeta: cortinaPool[(base + i) % cortinaPool.length] || null
   }));
 }
-
 export default function TangoPlayer() {
   // 1. Refs
   const audioRef = useRef(null);
@@ -529,7 +517,6 @@ export default function TangoPlayer() {
   const lowShelfRef = useRef(null);
   const midPeakingRef = useRef(null);
   const highShelfRef = useRef(null);
-
   // 2. State
   const [tier, setTier] = useState('free');
   const [skipMsg, setSkipMsg] = useState('');
@@ -551,7 +538,7 @@ export default function TangoPlayer() {
   const [volume, setVolume] = useState(1);
   const [activePanel, setActivePanel] = useState(null);
   const [eq, setEq] = useState({ low: 0, mid: 0, high: 0 });
-  const [menuState, setMenuState] = useState({ visible: false, x: 0, y: 0, tandaId: null });
+  const [menuState, setMenuState] = useState({ visible: false, x: 0, y: 0, tandaId: null, anchorRect: null, placement: 'left', verticalAlign: 'top', horizontalAlign: 'left', offset: 12, offsetY: 0 });
   const [eqNotification, setEqNotification] = useState('');
   const [isDesktop, setIsDesktop] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
@@ -562,14 +549,12 @@ export default function TangoPlayer() {
   const [isChangingSettings] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('queue');
   const [likedTandas, setLikedTandas] = useState([]);
-  
   // 3. Custom Hooks
   const { user, isPro, requireAuth, likedTandaIds, updateLikedIds } = useAuth();
   const [localLikedIds, setLocalLikedIds] = useState(new Set());
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: { delay: 250, tolerance: 5 },
   }));
-
   // 4. Memos
   const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
   const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
@@ -596,8 +581,6 @@ export default function TangoPlayer() {
       };
     });
   }, [queueWithCurrent, settings.cortinas]);
-
-
   // 5. Callbacks
   const handlePause = useCallback(() => { if (audioRef.current) audioRef.current.pause(); }, []);
   const fetchLikedTandas = useCallback(async () => {
@@ -623,7 +606,6 @@ export default function TangoPlayer() {
   }, [likedTandaIds]);
   const handleLikeToggle = useCallback(async (tandaId) => {
     if (!user || !tandaId) return;
-
     // Optimistic UI update for instant feedback
     const newLikedIds = new Set(localLikedIds);
       if (newLikedIds.has(tandaId)) {
@@ -633,7 +615,6 @@ export default function TangoPlayer() {
       newLikedIds.add(tandaId);
     }
     setLocalLikedIds(newLikedIds);
-
     // Call the API and then update the master list with the response
     try {
       const res = await fetch('/api/users/like-tanda', {
@@ -642,19 +623,16 @@ export default function TangoPlayer() {
         body: JSON.stringify({ tandaId }),
       });
       if (!res.ok) throw new Error('API call failed');
-
       const data = await res.json();
       if (data.likedTandaIds) {
         updateLikedIds(data.likedTandaIds); // Update the master list
       }
-
     } catch (error) {
       console.error("Failed to sync like status:", error);
       // Revert UI if API call fails
       setLocalLikedIds(new Set(likedTandaIds));
     }
   }, [user, localLikedIds, likedTandaIds, updateLikedIds]);
-
   const fetchAndFillPlaylist = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
@@ -690,7 +668,6 @@ export default function TangoPlayer() {
       setIsRefreshing(false);
     }
   }, [settings, recentlyPlayedIds, upcomingPlaylist, shuffledCortinas, manualQueue]);
-
   const initAudioGraph = useCallback(() => {
     if (!isDesktop || audioContextRef.current) return;
     const context = new (window.AudioContext || window.webkitAudioContext)();
@@ -702,7 +679,6 @@ export default function TangoPlayer() {
     source.connect(lowShelf); lowShelf.connect(midPeaking); midPeaking.connect(highShelf); highShelf.connect(context.destination);
     audioContextRef.current = context; sourceNodeRef.current = source; lowShelfRef.current = lowShelf; midPeakingRef.current = midPeaking; highShelfRef.current = highShelf;
   }, [eq.low, eq.mid, eq.high, isDesktop]);
-
   const handlePlay = useCallback(async () => {
     if (!audioContextRef.current && isDesktop) initAudioGraph();
     const audioCtx = audioContextRef.current;
@@ -713,7 +689,6 @@ export default function TangoPlayer() {
       fetchAndFillPlaylist();
     }
   }, [currentTanda, isLoading, fetchAndFillPlaylist, isDesktop, initAudioGraph]);
-
   const playNextTanda = useCallback(() => {
     const sourceTanda = manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0];
     if (!sourceTanda) { fetchAndFillPlaylist(); return; }
@@ -733,7 +708,7 @@ export default function TangoPlayer() {
       if (res.status === 429) {
         const data = await res.json().catch(() => ({}));
         const resetAt = data?.resetAt ? formatHHMMLocal(data.resetAt) : '';
-        setSkipMsg(`You’ve reached 3 tanda skips this hour. ${resetAt ? `Try again at ${resetAt}.` : 'Try again later.'}`);
+        setSkipMsg(`Youve reached 3 tanda skips this hour. ${resetAt ? `Try again at ${resetAt}.` : 'Try again later.'}`);
         return;
       }
       if (res.status === 401) { setSkipMsg('Please sign in to skip tanda.'); return; }
@@ -893,22 +868,18 @@ export default function TangoPlayer() {
       if (settings.cortinas) {
         const plannedMeta = scheduledCortinas[0]?.meta;
         let resolvedCortina = null;
-
         if (plannedMeta?.id) {
           resolvedCortina = cortinas.find(c => c.id === plannedMeta.id) || null;
         }
-
         if (!resolvedCortina && plannedMeta) {
           const playableUrl = plannedMeta.playableUrl || plannedMeta.url_signed || plannedMeta.playable_url_signed || null;
           if (playableUrl) {
             resolvedCortina = { ...plannedMeta, playableUrl };
           }
         }
-
         if (!resolvedCortina && cortinas.length > 0) {
           resolvedCortina = cortinas[Math.floor(Math.random() * cortinas.length)];
         }
-
         if (resolvedCortina?.playableUrl) {
           setCurrentCortina(resolvedCortina);
           setIsCortinaPlaying(true);
@@ -999,7 +970,6 @@ export default function TangoPlayer() {
       console.error('Sign out failed', e);
     }
   };
-
   const handlePanelToggle = (panelName) => {
     const isOpening = activePanel !== panelName;
     if (panelName === 'queue' && isOpening) fetchAndFillPlaylist();
@@ -1023,8 +993,55 @@ export default function TangoPlayer() {
   const handleMenuOpen = useCallback((event, tanda) => {
     event.preventDefault();
     event.stopPropagation();
-    setMenuState({ visible: true, x: event.pageX, y: event.pageY, tandaId: tanda.id });
-  }, []);
+    const target = event.currentTarget instanceof Element ? event.currentTarget : null;
+    const nativeEvent = event.nativeEvent || event;
+    const scrollX = typeof window !== 'undefined' ? (window.scrollX || window.pageXOffset || 0) : 0;
+    const scrollY = typeof window !== 'undefined' ? (window.scrollY || window.pageYOffset || 0) : 0;
+    let x = (nativeEvent.clientX ?? nativeEvent.pageX ?? 0) + scrollX;
+    let y = (nativeEvent.clientY ?? nativeEvent.pageY ?? 0) + scrollY;
+    let anchorRect = null;
+    const placement = 'left';
+    const verticalAlign = 'top';
+    const horizontalAlign = 'left';
+    const offset = 12;
+    const offsetY = 0;
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      anchorRect = {
+        top: rect.top + scrollY,
+        bottom: rect.bottom + scrollY,
+        left: rect.left + scrollX,
+        right: rect.right + scrollX,
+        width: rect.width,
+        height: rect.height,
+      };
+      x = anchorRect.left - offset;
+      y = anchorRect.top;
+    }
+    console.log('[QueueMenu] handleMenuOpen', {
+      eventType: event.type,
+      isDesktop,
+      hasAnchor: Boolean(anchorRect),
+      scrollX,
+      scrollY,
+      x,
+      y,
+      placement,
+      tandaId: tanda.id,
+    });
+    setMenuState({
+      visible: true,
+      x,
+      y,
+      tandaId: tanda.id,
+      anchorRect,
+      placement,
+      verticalAlign,
+      horizontalAlign,
+      offset,
+      offsetY,
+    });
+  }, [isDesktop]);
   const handleMenuClose = useCallback(() => {
     setMenuState(prev => ({ ...prev, visible: false }));
   }, []);
@@ -1044,7 +1061,6 @@ export default function TangoPlayer() {
   const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
   const handleAudioPause = useCallback(() => setIsPlaying(false), []);
   const toggleSidebars = useCallback(() => { setSidebarsVisible(prev => !prev); }, []);
-
   // 6. Effects
   useEffect(() => {
   setHasMounted(true);
@@ -1054,25 +1070,21 @@ export default function TangoPlayer() {
   mediaQuery.addEventListener('change', handleChange);
   return () => mediaQuery.removeEventListener('change', handleChange);
 }, []);
-
   useEffect(() => {
     setLocalLikedIds(new Set(likedTandaIds));
   }, [likedTandaIds]);
-
   useEffect(() => {
     // Keep the cached liked queue in sync once auth profile is ready.
     if (!user) {
       setLikedTandas([]);
       return;
     }
-
     if (likedTandaIds && likedTandaIds.length > 0) {
       fetchLikedTandas();
     } else {
       setLikedTandas([]);
     }
   }, [user, likedTandaIds, fetchLikedTandas]);
-
   useEffect(() => {
     const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
     if ('mediaSession' in navigator && currentTanda && currentTrack) {
@@ -1143,7 +1155,6 @@ export default function TangoPlayer() {
     // This is a cleanup function to cancel the timer if the user pauses or the component changes
     return () => clearTimeout(demoTimer);
   }, [user, isPlaying, requireAuth, handlePause, handlePlay]); // Dependencies for the effect
-
   if (!hasMounted) {
   return (
     <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
@@ -1153,7 +1164,6 @@ export default function TangoPlayer() {
     </div>
   );
 }
-
   if (!currentTanda && isLoading && tandaHistory.length === 0 && resetCounter === 0) {
   return (
     <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
@@ -1166,7 +1176,6 @@ export default function TangoPlayer() {
     </div>
   );
 }
-
   if (!currentTanda && error) {
   return (
     <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
@@ -1182,16 +1191,13 @@ export default function TangoPlayer() {
     </div>
   );
 }
-
   const currentTrackTitle = currentTanda?.tracks_signed?.[currentTrackIndex]?.title || '...';
   const displayTandaLength = currentTanda ? ((currentTanda.type === 'Tango') ? settings.tandaLength : 3) : '?';
   const displayTotalTracks = currentTanda?.tracks_signed?.length || 0;
-
   const baseButtonClasses = "rounded-full text-gray-300 transition-all duration-200 ease-in-out shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[inset_5px_5px_10px_#131417,inset_-5px_-5px_10px_#4d525d] hover:text-[#25edda]";
   const regularButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#33373e] to-[#2b2e34]`;
   const primaryButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#25edda] to-[#23d9c8] text-white`;
   const playPauseButtonStyle = `${baseButtonClasses} bg-gradient-[145deg] from-[#25edda] to-[#23d9c8] text-white`;
-
   const queueProps = {
     user,
     manualQueue,
@@ -1214,7 +1220,6 @@ export default function TangoPlayer() {
     isRefreshing,
     isPro
   };
-
   return (
     <div className="w-full min-h-screen flex flex-col font-sans text-white">
       {/* Top-right auth area */}
@@ -1249,7 +1254,6 @@ export default function TangoPlayer() {
           </span>
         )}
       </button>
-
       {userMenuOpen && (
         <>
           <div className="fixed inset-0 z-[-1]" onClick={() => setUserMenuOpen(false)} />
@@ -1276,7 +1280,7 @@ export default function TangoPlayer() {
 <main className="flex-1 flex items-center justify-center w-full">
       {/* DESKTOP LAYOUT */}
       <div className="hidden lg:flex justify-center items-center w-full p-4">
-        <div className={`w-full h-[650px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-4 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-[90rem]' : 'max-w-lg'}`}>
+        <div className={`w-full h-[650px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-4 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-[85rem]' : 'max-w-lg'}`}>
           {/* LEFT: EQ & Settings */}
           {sidebarsVisible && (
             <div className="w-[30%] flex flex-col bg-[#30333a] rounded-xl overflow-hidden">
@@ -1295,7 +1299,6 @@ export default function TangoPlayer() {
                     <div className="flex flex-col"><label htmlFor="low-eq-desktop" className="text-sm font-medium text-gray-400">LOW</label><input id="low-eq-desktop" type="range" min="-12" max="12" step="0.1" value={eq.low} onChange={(e) => handleEqChange('low', e.target.value)} className="custom-eq-slider w-full appearance-none cursor-pointer bg-transparent h-2 rounded-lg" /></div>
                   </div>
                 </div>
-
                 <div className="mt-auto">
                   <hr className="my-6 border-white/10" />
                   <div>
@@ -1306,7 +1309,7 @@ export default function TangoPlayer() {
                     <div className="flex flex-col gap-4">
                       {/* 1. Orchestra Type */}
                       <div>
-                        <label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label>
+                        <label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-3">Orchestra Type</label>
                         <div className="relative">
                           <select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
                             {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
@@ -1316,7 +1319,7 @@ export default function TangoPlayer() {
                       </div>
                       {/* 2. Tanda Length */}
                       <div>
-                        <span className="block text-sm font-medium text-gray-400 mb-2">
+                        <span className="block text-sm font-medium text-gray-400 mb-3   ">
                           Tanda Length
                         </span>
                         <div className={`grid grid-cols-2 gap-2 mt-1 w-full ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -1328,9 +1331,9 @@ export default function TangoPlayer() {
                         </div>
                       </div>
                       {/* 3. Tanda Sequence */}
-                      <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-5">
                         <div>
-                          <label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-1">Tanda Sequence</label>
+                          <label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-3">Tanda Sequence</label>
                           <div className="relative">
                             <select id="tandaOrderDesktop" name="activeMode" value={settings.activeMode} onChange={(e) => handleSettingChange('activeMode', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
                               {TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
@@ -1356,7 +1359,6 @@ export default function TangoPlayer() {
               </div>
             </div>
           )}
-
           {/* CENTER: Player */}
           <div className={`flex flex-col transition-all duration-500 ease-in-out ${sidebarsVisible ? 'w-[40%]' : 'w-full'}`}>
             <div className="relative">
@@ -1438,24 +1440,21 @@ export default function TangoPlayer() {
               </div>
               <div className="flex justify-center items-center space-x-4 mb-1">
                 <button onClick={handleRewind} title="Previous Tanda" disabled={tandaHistory.length === 0} className={`${regularButtonStyle} p-3`}><ChevronDoubleLeftIcon className="h-5 w-5" /></button>
-                <button onClick={handleSkipBackward} title={isPro ? 'Previous Track' : 'Pro only — Upgrade'} disabled={!currentTanda || (user && !isPro)} className={`${regularButtonStyle} p-3`}><ChevronLeftIcon className="h-5 w-5" /></button>
+                <button onClick={handleSkipBackward} title={isPro ? 'Previous Track' : 'Pro only  Upgrade'} disabled={!currentTanda || (user && !isPro)} className={`${regularButtonStyle} p-3`}><ChevronLeftIcon className="h-5 w-5" /></button>
                 <button onClick={isPlaying ? handlePause : handlePlay} disabled={!currentTanda && isLoading} className={`${playPauseButtonStyle} p-4`} title={isPlaying ? "Pause" : "Play"}>{isPlaying ? <PauseIcon className="h-7 w-7" /> : <PlayIcon className="h-7 w-7" />}</button>
-                <button onClick={handleSkipForward} title={isPro ? 'Next Track' : 'Pro only — Upgrade'} disabled={!currentTanda || (user && !isPro)} className={`${regularButtonStyle} p-3`}><ChevronRightIcon className="h-5 w-5" /></button>
+                <button onClick={handleSkipForward} title={isPro ? 'Next Track' : 'Pro only  Upgrade'} disabled={!currentTanda || (user && !isPro)} className={`${regularButtonStyle} p-3`}><ChevronRightIcon className="h-5 w-5" /></button>
                 <button onClick={handleNextTandaClick} disabled={isLoading || (manualQueue.length === 0 && upcomingPlaylist.length <= 1)} className={`${primaryButtonStyle} p-3`} title="Next Tanda"><ChevronDoubleRightIcon className="h-5 w-5" /></button>
               </div>
-
               {skipMsg && (
                 <p className="text-xs text-yellow-300 text-center mb-3">{skipMsg}</p>
               )}
             </div>
           </div>
-
           {/* RIGHT: Queue */}
           {sidebarsVisible && (
             <div className="w-[30%] flex flex-col bg-[#30333a] p-3 rounded-xl overflow-hidden">
-              
               {/* Tabs */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 mb-2">
                 <div className="grid grid-cols-3">
                   <button
                     onClick={() => setRightPanelTab('liked')}
@@ -1477,7 +1476,6 @@ export default function TangoPlayer() {
                   </button>
                 </div>
               </div>
-
               {/* Content Area */}
               <div className="relative flex-grow rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
                 <div className="w-full h-full overflow-y-auto">
@@ -1520,7 +1518,6 @@ export default function TangoPlayer() {
                   </div>
                 )}
               </div>
-
               {/* 3. ADD THE FOOTER COMPONENT HERE */}
               <PanelFooter
                 handleRefreshPlaylist={handleRefreshPlaylist}
@@ -1532,7 +1529,6 @@ export default function TangoPlayer() {
         )}
       </div>
       </div>  
-
       {/* MOBILE LAYOUT */}
       <div className="block lg:hidden w-full p-2 sm:p-4">
         <div className="p-1 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto">
@@ -1548,7 +1544,6 @@ export default function TangoPlayer() {
               <div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>
             )}
           </div>
-
           <div className="mb-4 text-center min-h-[4em]">
             {isCortinaPlaying && currentCortina ? (
               <>
@@ -1581,7 +1576,6 @@ export default function TangoPlayer() {
               !isLoading && !error && <span className="text-lg text-gray-500">No music loaded.</span>
             )}
           </div>
-
           <audio
             ref={audioRef}
             crossOrigin="anonymous"
@@ -1594,7 +1588,6 @@ export default function TangoPlayer() {
             onPause={handleAudioPause}
             onError={() => { if (!isResettingRef.current) { setError("An audio playback error occurred."); } }}
           />
-
           <div className="flex items-center gap-3 mb-3 px-1">
             <span className="text-xs w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
             <div className="relative w-full h-2 cursor-pointer group" onClick={handleProgressClick}>
@@ -1605,7 +1598,6 @@ export default function TangoPlayer() {
             </div>
             <span className="text-xs w-10 text-left tabular-nums">{formatTime(duration)}</span>
           </div>  
-
                     <div className="flex justify-center items-center space-x-3 sm:space-x-4 mb-4">
             <button
               onClick={handleRewind}
@@ -1617,7 +1609,7 @@ export default function TangoPlayer() {
             </button>
             <button
               onClick={handleSkipBackward}
-              title={isPro ? 'Skip Track Backward' : 'Pro only — Upgrade'}
+              title={isPro ? 'Skip Track Backward' : 'Pro only  Upgrade'}
               disabled={!currentTanda || !isPro}
               className="rounded-full text-gray-300 transition-all duration-200 ease-in-out shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] p-3 hover:shadow-[inset_5px_5px_10px_#131417,inset_-5px_-5px_10px_#4d525d] hover:text-[#25edda] disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1633,7 +1625,7 @@ export default function TangoPlayer() {
             </button>
             <button
               onClick={handleSkipForward}
-              title={isPro ? 'Skip Track Forward' : 'Pro only — Upgrade'}
+              title={isPro ? 'Skip Track Forward' : 'Pro only  Upgrade'}
               disabled={!currentTanda || !isPro}
               className="rounded-full text-gray-300 transition-all duration-200 ease-in-out shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] p-3 hover:shadow-[inset_5px_5px_10px_#131417,inset_-5px_-5px_10px_#4d525d] hover:text-[#25edda] disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1648,11 +1640,9 @@ export default function TangoPlayer() {
               <ChevronDoubleRightIcon className="h-5 w-5" />
             </button>
           </div>
-
           {skipMsg && (
             <p className="text-xs text-yellow-300 text-center mb-2">{skipMsg}</p>
           )}
-
           <div className="flex justify-center items-center space-x-4 mt-4 border-t border-gray-700/50 pt-2">
             <button
               onClick={() => handlePanelToggle('settings')}
@@ -1679,28 +1669,34 @@ export default function TangoPlayer() {
         </div>
       </div>
       </main>
-
-
       {/* Context menu + mobile panels */}
-      
       {menuState.visible && (
         <ContextMenu
-          position={{ x: menuState.x, y: menuState.y }}
+          position={{
+            x: menuState.x,
+            y: menuState.y,
+            anchorRect: menuState.anchorRect,
+            placement: menuState.placement,
+            verticalAlign: menuState.verticalAlign,
+            horizontalAlign: menuState.horizontalAlign,
+            offset: menuState.offset,
+            offsetY: menuState.offsetY,
+          }}
           onClose={handleMenuClose}
           options={[
-              { label: 'Play Next', action: () => handleMenuAction(handlePlayNext) },
-              !manualQueueIds.includes(menuState.tandaId) && { label: 'Add to Queue', action: () => handleMenuAction(handleAddToQueue) },
-              user && { // Only show for logged-in users
-                  label: localLikedIds.has(menuState.tandaId) ? 'Remove from Liked' : 'Add to Liked',
-                  action: () => {
-                      handleLikeToggle(menuState.tandaId);
-                      handleMenuClose();
-                  }
-              }
+            { label: 'Play Next', action: () => handleMenuAction(handlePlayNext) },
+            !manualQueueIds.includes(menuState.tandaId) && { label: 'Add to Queue', action: () => handleMenuAction(handleAddToQueue) },
+            user && {
+              // Only show for logged-in users
+              label: localLikedIds.has(menuState.tandaId) ? 'Remove from Liked' : 'Add to Liked',
+              action: () => {
+                handleLikeToggle(menuState.tandaId);
+                handleMenuClose();
+              },
+            },
           ].filter(Boolean)}
         />
       )}
-
       {hasMounted && !isDesktop && (
         <Queue
           isOpen={activePanel === 'queue'}
@@ -1721,7 +1717,6 @@ export default function TangoPlayer() {
           {...queueProps}
         />
       )}
-
       {hasMounted && !isDesktop && (
         <EqPanel
           isOpen={activePanel === 'eq'}
@@ -1734,7 +1729,6 @@ export default function TangoPlayer() {
           isPro={isPro}
         />
       )}
-
       {hasMounted && !isDesktop && (
         <SettingsPanel
           isOpen={activePanel === 'settings'}
@@ -1748,6 +1742,3 @@ export default function TangoPlayer() {
     </div>
   );
 }
-
-
-

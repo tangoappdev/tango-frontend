@@ -63,8 +63,26 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
 
       <div className="flex-shrink-0">
         <button
+          data-panel-no-drag
           {...listeners}
-          onClick={(e) => onMenuOpen(e, tanda)}
+          onPointerDown={(e) => {
+            console.log('[QueueItem] pointer down', { pointerType: e.pointerType, button: e.button, id: tanda.id });
+            if (e.pointerType === 'touch') {
+              e.currentTarget.releasePointerCapture(e.pointerId);
+            }
+          }}
+          onPointerUp={(e) => {
+            console.log('[QueueItem] pointer up', { pointerType: e.pointerType, button: e.button, id: tanda.id });
+            if (e.pointerType === 'touch') {
+              e.preventDefault();
+              e.stopPropagation();
+              onMenuOpen(e, tanda);
+            }
+          }}
+          onClick={(e) => {
+            console.log('[QueueItem] click', { id: tanda.id, isDesktop });
+            onMenuOpen(e, tanda);
+          }}
           className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
           title="Click for options, press and hold to drag"
         >
