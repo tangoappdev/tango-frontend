@@ -236,7 +236,7 @@ export default function TrackLibraryPage() {
         <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-white mb-2">Delete Track?</h2>
         <p className="text-gray-300 mb-6">
-          Are you sure you want to permanently delete the track <span className="font-bold text-white">"{trackToDelete?.title}"</span>? This action cannot be undone.
+          Are you sure you want to permanently delete the track <span className="font-bold text-white">&quot;{trackToDelete?.title}&quot;</span>? This action cannot be undone.
         </p>
         <div className="flex justify-center gap-4">
           <button onClick={() => setIsConfirmingDelete(false)} className="px-6 py-2 rounded-full text-white bg-gray-500 hover:bg-gray-600 transition-colors">Cancel</button>
@@ -341,3 +341,5 @@ export default function TrackLibraryPage() {
     </div>
   );
 }
+
+

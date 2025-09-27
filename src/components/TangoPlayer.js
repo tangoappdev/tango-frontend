@@ -1,23 +1,58 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import QueueItem from './QueueItem';
 import ContextMenu from './ContextMenu';
+import Image from 'next/image';
 import {
   PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
   ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, AdjustmentsVerticalIcon,
   SparklesIcon, QueueListIcon, MusicalNoteIcon,
   ArrowsPointingOutIcon, ArrowsPointingInIcon, ArrowUturnLeftIcon, ArrowPathIcon, PlusCircleIcon, CheckCircleIcon
 } from '@heroicons/react/24/outline';
+import { EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebaseClient';
-function CortinaRow({ item, isActive }) {
+import { signOut } from 'firebase/auth';
+function CortinaRow({ item, isActive, onMenuOpen }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.key });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.85 : 1,
+    zIndex: isDragging ? 12 : 'auto',
+  };
   const containerClasses = `p-3 border-b border-white/5 text-sm space-y-1 ${isActive ? 'bg-[#25edda]/10 border-[#25edda]/40' : ''}`;
   const orderClasses = `text-xs font-semibold ${isActive ? 'text-[#25edda]' : 'text-gray-400'}`;
+  const handleDragHandlePointerDown = (event) => {
+    if (event.pointerType === 'touch') {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    }
+    listeners.onPointerDown?.(event);
+  };
+  const handleDragHandlePointerUp = (event) => {
+    if (event.pointerType === 'touch') {
+      event.preventDefault();
+      event.stopPropagation();
+      onMenuOpen?.(event);
+    }
+    listeners.onPointerUp?.(event);
+  };
+  const handleDragHandleClick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onMenuOpen?.(event);
+  };
   return (
-    <div className={containerClasses}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={`${containerClasses} select-none`}
+    >
       <div className="flex items-center gap-2">
         <span className={orderClasses}>#{item.order}</span>
         <div className="flex flex-1 items-baseline gap-2 min-w-0">
@@ -26,6 +61,17 @@ function CortinaRow({ item, isActive }) {
             <span className="text-xs text-gray-400 truncate">- {item.artist}</span>
           )}
         </div>
+        <button
+          data-panel-no-drag
+          {...listeners}
+          onPointerDown={handleDragHandlePointerDown}
+          onPointerUp={handleDragHandlePointerUp}
+          onClick={handleDragHandleClick}
+          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
+          title="Click for options, press and hold to drag"
+        >
+          <EllipsisVerticalIcon className="h-5 w-5" />
+        </button>
       </div>
       <p className="text-xs uppercase tracking-wide text-[#25edda] truncate">{item.genre}</p>
       {isActive && (
@@ -40,6 +86,7 @@ function Queue({
   likedTandas, handleLikedDragEnd, scheduledCortinas, sensors,
   onMenuOpen, onPlayNow, handleRefreshPlaylist, isRefreshing,
   handleSettingChange, settings, currentCortina, isCortinaPlaying,
+  handleCortinaDragEnd, onCortinaMenuOpen,
   ...props
 }) {
   const panelRef = useRef(null);
@@ -159,12 +206,21 @@ function Queue({
             {rightPanelTab === 'cortinas' && (
               <div className="p-3 px-2 pb-20">
                 {scheduledCortinaList.length > 0 ? (
-                  scheduledCortinaList.map((item, idx) => {
-                    const isActive = isCortinaPlaying && idx === 0 && activeCortinaId && item.cortinaId && activeCortinaId === item.cortinaId;
-                    return (
-                      <CortinaRow key={`${item.order}-${idx}`} item={item} isActive={isActive} />
-                    );
-                  })
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleCortinaDragEnd}>
+                    <SortableContext items={scheduledCortinaList.map(item => item.key)} strategy={verticalListSortingStrategy}>
+                      {scheduledCortinaList.map((item, idx) => {
+                        const isActive = isCortinaPlaying && idx === 0 && activeCortinaId && item.cortinaId && activeCortinaId === item.cortinaId;
+                        return (
+                          <CortinaRow
+                            key={item.key}
+                            item={item}
+                            isActive={isActive}
+                            onMenuOpen={(event) => onCortinaMenuOpen?.(event, item)}
+                          />
+                        );
+                      })}
+                    </SortableContext>
+                  </DndContext>
                 ) : (
                   <p className="p-4 text-center text-gray-500">No cortinas scheduled.</p>
                 )}
@@ -538,7 +594,21 @@ export default function TangoPlayer() {
   const [volume, setVolume] = useState(1);
   const [activePanel, setActivePanel] = useState(null);
   const [eq, setEq] = useState({ low: 0, mid: 0, high: 0 });
-  const [menuState, setMenuState] = useState({ visible: false, x: 0, y: 0, tandaId: null, anchorRect: null, placement: 'left', verticalAlign: 'top', horizontalAlign: 'left', offset: 12, offsetY: 0 });
+  const [menuState, setMenuState] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    anchorRect: null,
+    placement: 'left',
+    verticalAlign: 'top',
+    horizontalAlign: 'left',
+    offset: 12,
+    offsetY: 0,
+    itemType: null,
+    tandaId: null,
+    cortinaKey: null,
+    cortinaMeta: null,
+  });
   const [eqNotification, setEqNotification] = useState('');
   const [isDesktop, setIsDesktop] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
@@ -570,8 +640,9 @@ export default function TangoPlayer() {
       const title = meta?.title || 'Cortina';
       const artist = meta?.artist || 'Unknown Artist';
       const genre = meta?.genre || meta?.style || meta?.category || 'Unknown Genre';
+      const key = meta?.id ? `cortina-${meta.id}-${index}` : `${tanda.id}-${index}`;
       return {
-        key: `${tanda.id}-${index}`,
+        key,
         order: index + 1,
         title,
         artist,
@@ -708,7 +779,7 @@ export default function TangoPlayer() {
       if (res.status === 429) {
         const data = await res.json().catch(() => ({}));
         const resetAt = data?.resetAt ? formatHHMMLocal(data.resetAt) : '';
-        setSkipMsg(`Youve reached 3 tanda skips this hour. ${resetAt ? `Try again at ${resetAt}.` : 'Try again later.'}`);
+        setSkipMsg(`You?ve reached 3 tanda skips this hour. ${resetAt ? `Try again at ${resetAt}.` : 'Try again later.'}`);
         return;
       }
       if (res.status === 401) { setSkipMsg('Please sign in to skip tanda.'); return; }
@@ -769,6 +840,53 @@ export default function TangoPlayer() {
       setIsRefreshing(false);
     }
   }, [settings, shuffledCortinas]);
+  const reorderCortinas = useCallback((fromIndex, toIndex) => {
+    const manualCount = manualQueue.length;
+    const combined = manualCount > 0 ? [...manualQueue, ...upcomingPlaylist] : [...upcomingPlaylist];
+    if (combined.length <= 1) return;
+    const cortinaTargets = combined.slice(1);
+    const length = cortinaTargets.length;
+    if (fromIndex < 0 || fromIndex >= length || toIndex < 0 || toIndex >= length || fromIndex === toIndex) return;
+    const metas = cortinaTargets.map(item => item?.cortinaMeta || null);
+    const reorderedMetas = arrayMove(metas, fromIndex, toIndex);
+    const rebuiltCombined = combined.map((tanda, idx) => {
+      if (idx === 0) return { ...tanda };
+      return { ...tanda, cortinaMeta: reorderedMetas[idx - 1] || null };
+    });
+    if (manualCount > 0) {
+      setManualQueue(rebuiltCombined.slice(0, manualCount));
+      setUpcomingPlaylist(rebuiltCombined.slice(manualCount));
+    } else {
+      setManualQueue([]);
+      setUpcomingPlaylist(rebuiltCombined);
+    }
+    setShuffledCortinas(prev => {
+      if (!prev || prev.length === 0) return prev;
+      const seen = new Set();
+      const ordered = [];
+      reorderedMetas.forEach(meta => {
+        const id = meta?.id;
+        if (!id || seen.has(id)) return;
+        const match = prev.find(item => item.id === id) || meta;
+        if (match) {
+          ordered.push(match);
+          seen.add(id);
+        }
+      });
+      const rest = prev.filter(item => !seen.has(item.id));
+      return ordered.length > 0 ? [...ordered, ...rest] : prev;
+    });
+  }, [manualQueue, upcomingPlaylist, setManualQueue, setUpcomingPlaylist, setShuffledCortinas]);
+  const handleCortinaDragEnd = useCallback((event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = scheduledCortinas.map(item => item.key);
+    const fromIndex = ids.indexOf(active.id);
+    const toIndex = ids.indexOf(over.id);
+    if (fromIndex === -1 || toIndex === -1) return;
+    reorderCortinas(fromIndex, toIndex);
+  }, [scheduledCortinas, reorderCortinas]);
+
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -810,44 +928,85 @@ export default function TangoPlayer() {
       });
     }
   };
-  const handlePlayNext = (tandaToPlayNext) => {
-    if (!currentTanda || currentTanda.id === tandaToPlayNext.id) {
-      if (!currentTanda) handleAddToQueue(tandaToPlayNext);
-      return;
-    }
-    let newManualQueue = [...manualQueue];
-    let newUpcomingPlaylist = [...upcomingPlaylist];
-    newManualQueue = newManualQueue.filter(t => t.id !== tandaToPlayNext.id);
-    newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToPlayNext.id);
-    const currentTandaIndexInManual = newManualQueue.findIndex(t => t.id === currentTanda.id);
-    if (currentTandaIndexInManual !== -1) {
-      newManualQueue.splice(currentTandaIndexInManual + 1, 0, tandaToPlayNext);
-    } else {
-      newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== currentTanda.id);
-      newManualQueue = [currentTanda, tandaToPlayNext, ...newManualQueue];
-    }
-    setManualQueue(newManualQueue);
-    setUpcomingPlaylist(newUpcomingPlaylist);
-  };
-  const handleAddToQueue = (tandaToAdd) => {
+  const handleAddToQueue = useCallback((tandaToAdd) => {
+
     if (manualQueue.some(t => t.id === tandaToAdd.id)) return;
+
     let newManualQueue = [...manualQueue];
+
     let newUpcomingPlaylist = [...upcomingPlaylist];
+
     newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToAdd.id);
+
     if (newManualQueue.length > 0) {
+
       newManualQueue.push(tandaToAdd);
+
     } else {
+
       if (currentTanda) {
+
         newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== currentTanda.id);
+
         if (currentTanda.id === tandaToAdd.id) newManualQueue = [currentTanda];
+
         else newManualQueue = [currentTanda, tandaToAdd];
+
       } else {
+
         newManualQueue = [tandaToAdd];
+
       }
+
     }
+
     setManualQueue(newManualQueue);
+
     setUpcomingPlaylist(newUpcomingPlaylist);
-  };
+
+  }, [manualQueue, upcomingPlaylist, currentTanda, setManualQueue, setUpcomingPlaylist]);
+
+
+  const handlePlayNext = useCallback((tandaToPlayNext) => {
+
+    if (!currentTanda || currentTanda.id === tandaToPlayNext.id) {
+
+      if (!currentTanda) handleAddToQueue(tandaToPlayNext);
+
+      return;
+
+    }
+
+    let newManualQueue = [...manualQueue];
+
+    let newUpcomingPlaylist = [...upcomingPlaylist];
+
+    newManualQueue = newManualQueue.filter(t => t.id !== tandaToPlayNext.id);
+
+    newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== tandaToPlayNext.id);
+
+    const currentTandaIndexInManual = newManualQueue.findIndex(t => t.id === currentTanda.id);
+
+    if (currentTandaIndexInManual !== -1) {
+
+      newManualQueue.splice(currentTandaIndexInManual + 1, 0, tandaToPlayNext);
+
+    } else {
+
+      newUpcomingPlaylist = newUpcomingPlaylist.filter(t => t.id !== currentTanda.id);
+
+      newManualQueue = [currentTanda, tandaToPlayNext, ...newManualQueue];
+
+    }
+
+    setManualQueue(newManualQueue);
+
+    setUpcomingPlaylist(newUpcomingPlaylist);
+
+  }, [currentTanda, handleAddToQueue, manualQueue, upcomingPlaylist, setManualQueue, setUpcomingPlaylist]);
+
+
+
   const handlePlayNow = useCallback((tandaToPlay) => {
     if (currentTanda?.id === tandaToPlay.id) return;
     if (currentTanda) {
@@ -990,7 +1149,7 @@ export default function TangoPlayer() {
     if (band === 'mid' && midPeakingRef.current) midPeakingRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
     if (band === 'high' && highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(gainValue, audioCtx.currentTime, 0.01);
   }, [isDesktop, isPro, user]);
-  const handleMenuOpen = useCallback((event, tanda) => {
+  const openContextMenu = useCallback((event, extraState) => {
     event.preventDefault();
     event.stopPropagation();
     const target = event.currentTarget instanceof Element ? event.currentTarget : null;
@@ -1018,38 +1177,44 @@ export default function TangoPlayer() {
       x = anchorRect.left - offset;
       y = anchorRect.top;
     }
-    console.log('[QueueMenu] handleMenuOpen', {
-      eventType: event.type,
-      isDesktop,
-      hasAnchor: Boolean(anchorRect),
-      scrollX,
-      scrollY,
-      x,
-      y,
-      placement,
-      tandaId: tanda.id,
-    });
     setMenuState({
       visible: true,
       x,
       y,
-      tandaId: tanda.id,
       anchorRect,
       placement,
       verticalAlign,
       horizontalAlign,
       offset,
       offsetY,
+      itemType: extraState.itemType,
+      tandaId: extraState.tandaId ?? null,
+      cortinaKey: extraState.cortinaKey ?? null,
+      cortinaMeta: extraState.cortinaMeta ?? null,
     });
-  }, [isDesktop]);
+  }, []);
+  const handleMenuOpen = useCallback((event, tanda) => {
+    openContextMenu(event, { itemType: 'tanda', tandaId: tanda.id });
+  }, [openContextMenu]);
+  const handleCortinaMenuOpen = useCallback((event, item) => {
+    openContextMenu(event, { itemType: 'cortina', cortinaKey: item.key, cortinaMeta: item.meta || null });
+  }, [openContextMenu]);
   const handleMenuClose = useCallback(() => {
     setMenuState(prev => ({ ...prev, visible: false }));
   }, []);
-  const handleMenuAction = useCallback((action) => {
+  const handleTandaMenuAction = useCallback((action) => {
+    if (menuState.itemType !== 'tanda') return;
     const tanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === menuState.tandaId);
     if (tanda) action(tanda);
     handleMenuClose();
-  }, [manualQueue, upcomingPlaylist, menuState.tandaId, handleMenuClose]);
+  }, [manualQueue, upcomingPlaylist, menuState.itemType, menuState.tandaId, handleMenuClose]);
+  const handleCortinaMenuMove = useCallback((targetIndex) => {
+    const ids = scheduledCortinas.map(item => item.key);
+    const currentIndex = menuState.cortinaKey ? ids.indexOf(menuState.cortinaKey) : -1;
+    if (currentIndex === -1 || targetIndex === null || targetIndex === undefined || currentIndex === targetIndex) return;
+    reorderCortinas(currentIndex, targetIndex);
+    handleMenuClose();
+  }, [scheduledCortinas, menuState.cortinaKey, reorderCortinas, handleMenuClose]);
   const handleSeek = (event) => { if (audioRef.current?.duration) { const seekTime = Number(event.target.value); audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); } };
   const handleProgressClick = useCallback((event) => { if (!audioRef.current || !duration) return; const barElement = event.currentTarget; const rect = barElement.getBoundingClientRect(); const clickX = event.clientX - rect.left; const seekTime = (clickX / rect.width) * duration; audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); }, [duration]);
   const handleSeekingStart = () => { isSeekingRef.current = true; };
@@ -1155,6 +1320,36 @@ export default function TangoPlayer() {
     // This is a cleanup function to cancel the timer if the user pauses or the component changes
     return () => clearTimeout(demoTimer);
   }, [user, isPlaying, requireAuth, handlePause, handlePlay]); // Dependencies for the effect
+    const menuOptions = useMemo(() => {
+    if (!menuState.visible) return [];
+    if (menuState.itemType === 'cortina') {
+      const index = scheduledCortinas.findIndex(item => item.key === menuState.cortinaKey);
+      const lastIndex = scheduledCortinas.length - 1;
+      if (index === -1) return [];
+      const options = [];
+      if (index > 0) {
+        options.push({ label: 'Move to Top', action: () => handleCortinaMenuMove(0) });
+        options.push({ label: 'Move Up', action: () => handleCortinaMenuMove(index - 1) });
+      }
+      if (index < lastIndex) {
+        options.push({ label: 'Move Down', action: () => handleCortinaMenuMove(index + 1) });
+        options.push({ label: 'Move to Bottom', action: () => handleCortinaMenuMove(lastIndex) });
+      }
+      return options;
+    }
+    return [
+      { label: 'Play Next', action: () => handleTandaMenuAction(handlePlayNext) },
+      !manualQueueIds.includes(menuState.tandaId) && { label: 'Add to Queue', action: () => handleTandaMenuAction(handleAddToQueue) },
+      user && {
+        label: localLikedIds.has(menuState.tandaId) ? 'Remove from Liked' : 'Add to Liked',
+        action: () => {
+          handleLikeToggle(menuState.tandaId);
+          handleMenuClose();
+        },
+      },
+    ].filter(Boolean);
+  }, [menuState.visible, menuState.itemType, menuState.cortinaKey, menuState.tandaId, scheduledCortinas, handleCortinaMenuMove, handleTandaMenuAction, handlePlayNext, manualQueueIds, handleAddToQueue, user, localLikedIds, handleLikeToggle, handleMenuClose]);
+
   if (!hasMounted) {
   return (
     <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
@@ -1169,7 +1364,7 @@ export default function TangoPlayer() {
     <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
       <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">
         <div className="flex flex-col items-center justify-center gap-4 py-8">
-          <img src="/VinylLoader.svg" alt="Loading..." className="h-24 w-24" />
+          <Image src="/VinylLoader.svg" alt="Loading..." width={96} height={96} priority />
           <p className="text-lg font-semibold">Loading Music...</p>
         </div>
       </div>
@@ -1216,6 +1411,8 @@ export default function TangoPlayer() {
     scheduledCortinas,
     currentCortina,
     isCortinaPlaying,
+    handleCortinaDragEnd,
+    onCortinaMenuOpen: handleCortinaMenuOpen,
     handleRefreshPlaylist,
     isRefreshing,
     isPro
@@ -1247,7 +1444,7 @@ export default function TangoPlayer() {
         title={user.displayName || user.email || 'Account'}
       >
         {user.photoURL ? (
-          <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+          <Image src={user.photoURL} alt="Avatar" width={36} height={36} className="object-cover" unoptimized />
         ) : (
           <span className="font-semibold">
             {(user.displayName?.[0] || user.email?.[0] || '?').toUpperCase()}
@@ -1370,10 +1567,13 @@ export default function TangoPlayer() {
             <div className="flex-grow flex flex-col items-center justify-center gap-8">
               <div className="flex items-center gap-6">
                 {currentTanda && currentTanda.artwork_signed ? (
-                  <img
-                    src={isCortinaPlaying && currentCortina ? currentCortina.artwork_url_signed : currentTanda?.artwork_signed}
+                  <Image
+                    src={isCortinaPlaying && currentCortina ? currentCortina.artwork_url_signed ?? '/default-artwork.png' : currentTanda?.artwork_signed || '/default-artwork.png'}
                     alt={`Artwork for ${isCortinaPlaying ? currentCortina.title : currentTanda?.orchestra}`}
-                    className="w-56 h-56 object-cover shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] rounded-lg"
+                    width={224}
+                    height={224}
+                    className="object-cover shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] rounded-lg"
+                    priority
                   />
                 ) : (!currentTanda && !currentCortina) && (
                   <div className="w-56 h-56 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>
@@ -1440,9 +1640,9 @@ export default function TangoPlayer() {
               </div>
               <div className="flex justify-center items-center space-x-4 mb-1">
                 <button onClick={handleRewind} title="Previous Tanda" disabled={tandaHistory.length === 0} className={`${regularButtonStyle} p-3`}><ChevronDoubleLeftIcon className="h-5 w-5" /></button>
-                <button onClick={handleSkipBackward} title={isPro ? 'Previous Track' : 'Pro only  Upgrade'} disabled={!currentTanda || (user && !isPro)} className={`${regularButtonStyle} p-3`}><ChevronLeftIcon className="h-5 w-5" /></button>
+                <button onClick={handleSkipBackward} title={isPro ? 'Previous Track' : 'Pro only ? Upgrade'} disabled={!currentTanda || (user && !isPro)} className={`${regularButtonStyle} p-3`}><ChevronLeftIcon className="h-5 w-5" /></button>
                 <button onClick={isPlaying ? handlePause : handlePlay} disabled={!currentTanda && isLoading} className={`${playPauseButtonStyle} p-4`} title={isPlaying ? "Pause" : "Play"}>{isPlaying ? <PauseIcon className="h-7 w-7" /> : <PlayIcon className="h-7 w-7" />}</button>
-                <button onClick={handleSkipForward} title={isPro ? 'Next Track' : 'Pro only  Upgrade'} disabled={!currentTanda || (user && !isPro)} className={`${regularButtonStyle} p-3`}><ChevronRightIcon className="h-5 w-5" /></button>
+                <button onClick={handleSkipForward} title={isPro ? 'Next Track' : 'Pro only ? Upgrade'} disabled={!currentTanda || (user && !isPro)} className={`${regularButtonStyle} p-3`}><ChevronRightIcon className="h-5 w-5" /></button>
                 <button onClick={handleNextTandaClick} disabled={isLoading || (manualQueue.length === 0 && upcomingPlaylist.length <= 1)} className={`${primaryButtonStyle} p-3`} title="Next Tanda"><ChevronDoubleRightIcon className="h-5 w-5" /></button>
               </div>
               {skipMsg && (
@@ -1500,12 +1700,21 @@ export default function TangoPlayer() {
                   {rightPanelTab === 'cortinas' && (
                     <div className="p-3 px-2 pb-20">
                       {scheduledCortinas.length > 0 ? (
-                        scheduledCortinas.map((item, idx) => {
-                          const isActive = isCortinaPlaying && idx === 0 && currentCortina && item.cortinaId && currentCortina.id === item.cortinaId;
-                          return (
-                            <CortinaRow key={`${item.order}-${idx}`} item={item} isActive={isActive} />
-                          );
-                        })
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleCortinaDragEnd}>
+                          <SortableContext items={scheduledCortinas.map(item => item.key)} strategy={verticalListSortingStrategy}>
+                            {scheduledCortinas.map((item, idx) => {
+                              const isActive = isCortinaPlaying && idx === 0 && currentCortina && item.cortinaId && currentCortina.id === item.cortinaId;
+                              return (
+                                <CortinaRow
+                                  key={item.key}
+                                  item={item}
+                                  isActive={isActive}
+                                  onMenuOpen={(event) => onCortinaMenuOpen?.(event, item)}
+                                />
+                              );
+                            })}
+                          </SortableContext>
+                        </DndContext>
                       ) : (
                         <p className="p-4 text-center text-gray-500">No cortinas scheduled.</p>
                       )}
@@ -1535,10 +1744,13 @@ export default function TangoPlayer() {
           <h2 className="text-xl mb-8 text-center">Virtual Tango DJ</h2>
           <div className="flex justify-center mb-4">
             {currentTanda && currentTanda.artwork_signed ? (
-              <img
-                src={isCortinaPlaying && currentCortina ? currentCortina.artwork_url_signed : currentTanda?.artwork_signed}
+              <Image
+                src={isCortinaPlaying && currentCortina ? currentCortina.artwork_url_signed ?? '/default-artwork.png' : currentTanda?.artwork_signed || '/default-artwork.png'}
                 alt={`Artwork for ${isCortinaPlaying ? currentCortina.title : currentTanda?.orchestra}`}
-                className="w-64 h-64 object-cover shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] rounded-lg"
+                width={256}
+                height={256}
+                className="object-cover shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] rounded-lg"
+                priority
               />
             ) : (!currentTanda && !currentCortina) && (
               <div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>
@@ -1609,7 +1821,7 @@ export default function TangoPlayer() {
             </button>
             <button
               onClick={handleSkipBackward}
-              title={isPro ? 'Skip Track Backward' : 'Pro only  Upgrade'}
+              title={isPro ? 'Skip Track Backward' : 'Pro only ? Upgrade'}
               disabled={!currentTanda || !isPro}
               className="rounded-full text-gray-300 transition-all duration-200 ease-in-out shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] p-3 hover:shadow-[inset_5px_5px_10px_#131417,inset_-5px_-5px_10px_#4d525d] hover:text-[#25edda] disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1625,7 +1837,7 @@ export default function TangoPlayer() {
             </button>
             <button
               onClick={handleSkipForward}
-              title={isPro ? 'Skip Track Forward' : 'Pro only  Upgrade'}
+              title={isPro ? 'Skip Track Forward' : 'Pro only ? Upgrade'}
               disabled={!currentTanda || !isPro}
               className="rounded-full text-gray-300 transition-all duration-200 ease-in-out shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] p-3 hover:shadow-[inset_5px_5px_10px_#131417,inset_-5px_-5px_10px_#4d525d] hover:text-[#25edda] disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1683,18 +1895,7 @@ export default function TangoPlayer() {
             offsetY: menuState.offsetY,
           }}
           onClose={handleMenuClose}
-          options={[
-            { label: 'Play Next', action: () => handleMenuAction(handlePlayNext) },
-            !manualQueueIds.includes(menuState.tandaId) && { label: 'Add to Queue', action: () => handleMenuAction(handleAddToQueue) },
-            user && {
-              // Only show for logged-in users
-              label: localLikedIds.has(menuState.tandaId) ? 'Remove from Liked' : 'Add to Liked',
-              action: () => {
-                handleLikeToggle(menuState.tandaId);
-                handleMenuClose();
-              },
-            },
-          ].filter(Boolean)}
+          options={menuOptions}
         />
       )}
       {hasMounted && !isDesktop && (
@@ -1742,3 +1943,6 @@ export default function TangoPlayer() {
     </div>
   );
 }
+
+
+

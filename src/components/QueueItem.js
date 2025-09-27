@@ -3,13 +3,16 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import Image from 'next/image';
 import { EllipsisVerticalIcon, PlayCircleIcon } from '@heroicons/react/24/solid';
 
 export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
-  if (!tanda) return null;
+  const sortableId = tanda?.id ?? 'queue-item-placeholder';
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: tanda.id });
+  const { attributes, listeners, setNodeRef, activatorAttributes, transform, transition, isDragging } =
+    useSortable({ id: sortableId });
+
+  if (!tanda) return null;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -30,6 +33,25 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
   };
 
   const tagInfo = getTagInfo(tanda.type);
+  const handleActivatorPointerDown = (event) => {
+    if (event.pointerType === 'touch') {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    }
+    listeners.onPointerDown?.(event);
+    activatorAttributes?.onPointerDown?.(event);
+  };
+  const handleActivatorPointerUp = (event) => {
+    if (event.pointerType === 'touch') {
+      event.preventDefault();
+      event.stopPropagation();
+      onMenuOpen(event, tanda);
+    }
+    listeners.onPointerUp?.(event);
+    activatorAttributes?.onPointerUp?.(event);
+  };
+  const handleActivatorClick = (event) => {
+    onMenuOpen(event, tanda);
+  };
 
   return (
     <div
@@ -40,10 +62,13 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
       className="group flex items-center p-2 rounded-md hover:bg-white/10"
     >
       <div className="relative w-12 h-12 object-cover rounded-md flex-shrink-0">
-        <img
+        <Image
           src={tanda.artwork_signed || '/default-artwork.png'}
           alt={`Artwork for ${tanda.orchestra}`}
-          className="w-full h-full object-cover rounded-md"
+          fill
+          sizes="48px"
+          className="object-cover rounded-md"
+          unoptimized
         />
         <div
           onMouseDown={handlePlayClick}
@@ -65,24 +90,10 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
         <button
           data-panel-no-drag
           {...listeners}
-          onPointerDown={(e) => {
-            console.log('[QueueItem] pointer down', { pointerType: e.pointerType, button: e.button, id: tanda.id });
-            if (e.pointerType === 'touch') {
-              e.currentTarget.releasePointerCapture(e.pointerId);
-            }
-          }}
-          onPointerUp={(e) => {
-            console.log('[QueueItem] pointer up', { pointerType: e.pointerType, button: e.button, id: tanda.id });
-            if (e.pointerType === 'touch') {
-              e.preventDefault();
-              e.stopPropagation();
-              onMenuOpen(e, tanda);
-            }
-          }}
-          onClick={(e) => {
-            console.log('[QueueItem] click', { id: tanda.id, isDesktop });
-            onMenuOpen(e, tanda);
-          }}
+          {...activatorAttributes}
+          onPointerDown={handleActivatorPointerDown}
+          onPointerUp={handleActivatorPointerUp}
+          onClick={handleActivatorClick}
           className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
           title="Click for options, press and hold to drag"
         >

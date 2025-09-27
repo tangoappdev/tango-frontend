@@ -177,7 +177,7 @@ export default function ManageCortinasPage() {
         <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
         <h2 className="text-2xl font-bold text-white mb-2">Are you sure?</h2>
         <p className="text-gray-300 mb-6">
-          This will permanently delete the cortina "{cortinaToDelete?.title}". This action cannot be undone.
+          This will permanently delete the cortina &quot;{cortinaToDelete?.title}&quot;. This action cannot be undone.
         </p>
         <div className="flex justify-center gap-4">
           <button onClick={() => setIsConfirming(false)} className="px-6 py-2 rounded-full text-white bg-gray-500 hover:bg-gray-600">Cancel</button>
@@ -248,7 +248,7 @@ export default function ManageCortinasPage() {
               />
             ))}
             {!isLoading && !error && displayedCortinas.length === 0 && (
-              <p className="text-center text-gray-400 py-8">No cortinas found. Click "Create New Cortina" to add one.</p>
+              <p className="text-center text-gray-400 py-8">No cortinas found. Click &quot;Create New Cortina&quot; to add one.</p>
             )}
           </main>
         </div>
@@ -263,3 +263,4 @@ export default function ManageCortinasPage() {
     </div>
   );
 }
+

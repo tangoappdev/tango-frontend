@@ -6,19 +6,6 @@ function ContextMenu({ options, position, onClose }) {
   const menuRef = useRef(null);
   const [coords, setCoords] = useState(position);
 
-  useEffect(() => {
-    console.log('[ContextMenu] mount');
-    return () => console.log('[ContextMenu] unmount');
-  }, []);
-
-  useEffect(() => {
-    console.log('[ContextMenu] position prop', position);
-  }, [position]);
-
-  useEffect(() => {
-    console.log('[ContextMenu] coords state', coords);
-  }, [coords]);
-
   const computePosition = useCallback((desiredX, desiredY, menuWidth, menuHeight) => {
     const padding = 12;
     let x = desiredX ?? 0;

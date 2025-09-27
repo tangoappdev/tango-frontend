@@ -7,6 +7,7 @@ import {
   ArrowPathIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 
 // ANCHOR: ADMIN_USERS_PAGE_UTILS
 function clsx(...xs){ return xs.filter(Boolean).join(' '); }
@@ -198,7 +199,7 @@ export default function AdminUsersPage() {
                 <tr key={u.uid} className="[&>td]:px-3 [&>td]:py-2">
                   <td className="flex items-center gap-2">
                     {u.photoURL ? (
-                      <img src={u.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
+                      <Image src={u.photoURL} alt="" width={32} height={32} className="rounded-full object-cover" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-[#30333a] flex items-center justify-center">
                         <span className="text-xs text-gray-300">{initials(u.displayName, u.email)}</span>

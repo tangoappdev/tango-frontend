@@ -1,6 +1,6 @@
 // src/components/AuthGateModal.jsx
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { auth } from '@/lib/firebaseClient';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import SignUpStepTwoModal from './SignUpStepTwoModal';
@@ -18,50 +18,36 @@ const GoogleIcon = () => (
 );
 
 const AppleIcon = () => (
-    <svg height="24" viewBox="0 0 24 24" width="24" fill="#ffffffff" xmlns="http://www.w3.org/2000/svg">
+  <svg height="24" viewBox="0 0 24 24" width="24" fill="#ffffffff" xmlns="http://www.w3.org/2000/svg">
     <path d="M15.195 4.513C15.873 3.69 16.351 2.567 16.351 1.433C16.351 1.278 16.341 1.123 16.318 1C15.206 1.044 13.872 1.734 13.083 2.668C12.449 3.379 11.871 4.513 11.871 5.647C11.871 5.825 11.905 5.991 11.916 6.047C11.982 6.058 12.094 6.08 12.216 6.08C13.206 6.08 14.45 5.413 15.195 4.513ZM15.973 6.313C14.317 6.313 12.961 7.325 12.093 7.325C11.171 7.325 9.97 6.38 8.525 6.38C5.779 6.38 3 8.648 3 12.918C3 15.586 4.023 18.398 5.301 20.211C6.391 21.744 7.347 23 8.725 23C10.081 23 10.682 22.1 12.371 22.1C14.083 22.1 14.472 22.978 15.973 22.978C17.463 22.978 18.453 21.61 19.397 20.265C20.442 18.72 20.887 17.219 20.897 17.142C20.809 17.119 17.963 15.952 17.963 12.695C17.963 9.871 20.198 8.604 20.331 8.504C18.852 6.381 16.596 6.314 15.973 6.314V6.313Z"/>
   </svg>
 );
 
 const FacebookIcon = () => (
-    <svg className="w-6 h-6" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+  <svg className="w-6 h-6" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
     <path fill="#1877F2" d="M20.181 35.87C29.094 34.791 36 27.202 36 18c0-9.941-8.059-18-18-18S0 8.059 0 18c0 8.442 5.811 15.526 13.652 17.471L14 34h5.5l.681 1.87Z"/>
     <path fill="#FFFFFF" d="M13.651 35.471v-11.97H9.936V18h3.715v-2.37c0-6.127 2.772-8.964 8.784-8.964 1.138 0 3.103.223 3.91.446v4.983c-.425-.043-1.167-.065-2.081-.065-2.952 0-4.09 1.116-4.09 4.025V18h5.883l-1.008 5.5h-4.867v12.37a18.183 18.183 0 0 1-6.53-.399Z"/>
   </svg>
 );
 
-
-
 export default function AuthGateModal({ open, initialMode, onClose, afterAuth }) {
-
-  if (!open) return null;
-
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [mode, setMode] = useState(initialMode || 'login');
-
-useEffect(() => {
-  if (open) {
-    setMode(initialMode || 'login');
-  }
-}, [open, initialMode]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [signupStep, setSignupStep] = useState(1);
   const [signupEmail, setSignupEmail] = useState('');
-  const withBusy = (fn) => async () => {
-    try {
-      setBusy(true);
-      setErr('');
-      await fn();
-    } catch (e) {
-      setErr(e?.message ?? 'Authentication failed');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setMode(initialMode || 'login');
+  }, [open, initialMode]);
+
+  useEffect(() => {
+    if (!open) return;
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         onClose();
@@ -71,9 +57,21 @@ useEffect(() => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [open, onClose]);
 
-  const finish = async (cred) => {
+  const withBusy = useCallback((fn) => async () => {
+    try {
+      setBusy(true);
+      setErr('');
+      await fn();
+    } catch (e) {
+      setErr(e?.message ?? 'Authentication failed');
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  const finish = useCallback(async (cred) => {
     try {
       const idToken = await cred.user.getIdToken(true);
       await fetch('/api/auth/session', {
@@ -91,7 +89,7 @@ useEffect(() => {
       afterAuth?.(cred);
       onClose();
     }
-  };
+  }, [afterAuth, onClose]);
 
   const handleEmailContinue = withBusy(async () => {
     if (!email) {
@@ -114,7 +112,6 @@ useEffect(() => {
       setSignupStep(2);
     }
   });
-
 
   const google = withBusy(async () => {
     const prov = new GoogleAuthProvider();
@@ -140,14 +137,17 @@ useEffect(() => {
     const cred = await signInWithEmailAndPassword(auth, email, pass);
     await finish(cred);
   });
-  
-  // If we're in signup mode on step 2, show the new modal and stop.
+
+  if (!open) {
+    return null;
+  }
+
   if (mode === 'register' && signupStep === 2) {
     return (
-      <SignUpStepTwoModal 
-        email={signupEmail} 
-        onClose={onClose} 
-        afterAuth={finish} 
+      <SignUpStepTwoModal
+        email={signupEmail}
+        onClose={onClose}
+        afterAuth={finish}
       />
     );
   }
@@ -155,7 +155,7 @@ useEffect(() => {
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
       <div className="w-full max-w-md bg-[#30333a] rounded-2xl p-6 space-y-4 relative" onClick={(e) => e.stopPropagation()}>
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-3 right-3 p-1 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
           aria-label="Close"
@@ -165,7 +165,7 @@ useEffect(() => {
         <h2 className="text-xl font-semibold text-white text-center">
           {mode === 'login' ? 'Login' : 'Sign up'}
         </h2>
-        
+
         <div className="border-t border-white/10 pt-4">
           <input
             value={email}
@@ -185,23 +185,13 @@ useEffect(() => {
               className="w-full mb-3 p-3 rounded-full bg-[#30333a] text-white shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
             />
           )}
-          {mode === 'login' ? (
-            <button
-              onClick={emailLogin}
-              disabled={busy}
-              className="w-full rounded-full py-2 border border-[#25edda] text-[#25edda] hover:bg-[#25edda] hover:text-black"
-            >
-              Continue
-            </button>
-          ) : (
-            <button
-              onClick={handleEmailContinue}
-              disabled={busy}
-              className="w-full rounded-full py-2 border border-[#25edda] text-[#25edda] hover:bg-[#25edda] hover:text-black"
-            >
-              Continue
-            </button>
-          )}
+          <button
+            onClick={mode === 'login' ? emailLogin : handleEmailContinue}
+            disabled={busy}
+            className="w-full rounded-full py-2 border border-[#25edda] text-[#25edda] hover:bg-[#25edda] hover:text-black"
+          >
+            Continue
+          </button>
           <p className="text-center text-gray-300 text-sm mt-3">
             or
           </p>
@@ -241,7 +231,7 @@ useEffect(() => {
             className="text-[#25edda]"
             onClick={() => {
               setMode(mode === 'login' ? 'register' : 'login');
-              setSignupStep(1); // Reset to step 1
+              setSignupStep(1);
             }}
           >
             {mode === 'login' ? 'Sign up' : 'Sign in'}

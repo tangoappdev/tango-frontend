@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { ArrowLeftIcon, ArrowUpOnSquareIcon, TrashIcon, Bars3Icon, PlusIcon } from '@heroicons/react/24/outline';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -190,7 +191,7 @@ const EditTandaForm = ({ initialTanda }) => {
       {/* Artwork and Main Info */}
       <div className="flex flex-col md:flex-row gap-6 items-start">
         <div className="relative w-48 h-48 flex-shrink-0">
-          {imagePreview ? <img src={imagePreview} alt="Artwork preview" className="w-full h-full object-cover rounded-[20px]" /> : <div className="w-full h-full bg-[#30333a] rounded-[20px] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"></div>}
+          {imagePreview ? <Image src={imagePreview} alt="Artwork preview" fill sizes="192px" className="object-cover rounded-[20px]" unoptimized /> : <div className="w-full h-full bg-[#30333a] rounded-[20px] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"></div>}
           <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer group bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded-[20px]">
             <ArrowUpOnSquareIcon className="h-8 w-8 text-white mb-1" />
             <span className="text-white text-xs text-center">Replace Artwork</span>
@@ -326,3 +327,4 @@ export default function EditTandaPage() {
     </div>
   );
 }
+
