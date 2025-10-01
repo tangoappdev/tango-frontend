@@ -44,10 +44,9 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
       className={`${containerClasses} select-none`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" {...attributes} {...listeners}>
         <span className={orderClasses}>#{item.order}</span>
         <div className="flex flex-1 items-baseline gap-2 min-w-0">
           <span className="text-sm text-white whitespace-nowrap">{item.title}</span>
@@ -56,9 +55,8 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
           )}
         </div>
         <button
-          data-panel-no-drag
-          {...listeners}
-          onContextMenu={(e) => {
+          data-no-dnd="true"
+          onClick={(e) => {
             e.preventDefault();
             onMenuOpen?.(e, item);
           }}
@@ -88,10 +86,9 @@ function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
       className="p-3 border-t border-b border-white/5 text-sm space-y-1 select-none"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" {...attributes} {...listeners}>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
             <p className="text-sm font-semibold text-white whitespace-nowrap">{item.title}</p>
@@ -100,9 +97,8 @@ function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
           <p className="text-[11px] uppercase tracking-wide text-[#25edda] mt-1">Cortina - {item.genre || 'Unknown Genre'}</p>
         </div>
         <button
-          data-panel-no-drag
-          {...listeners}
-          onContextMenu={(e) => {
+          data-no-dnd="true"
+          onClick={(e) => {
             e.preventDefault();
             onMenuOpen?.(e, item);
           }}
