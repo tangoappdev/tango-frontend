@@ -40,16 +40,6 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
   };
   const containerClasses = `p-3 border-b border-white/5 text-sm space-y-1 ${isActive ? 'bg-[#25edda]/10 border-[#25edda]/40' : ''}`;
   const orderClasses = `text-xs font-semibold ${isActive ? 'text-[#25edda]' : 'text-gray-400'}`;
-  const handleDragHandlePointerUp = (event) => {
-    if (event.pointerType === 'touch') {
-      onMenuOpen?.(event, item);
-    }
-  };
-  const handleDragHandleClick = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onMenuOpen?.(event, item);
-  };
   return (
     <div
       ref={setNodeRef}
@@ -68,9 +58,11 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
         <button
           data-panel-no-drag
           {...listeners}
-          onPointerUp={handleDragHandlePointerUp}
-          onClick={handleDragHandleClick}
-          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full"
+          onContextMenu={(e) => {
+            e.preventDefault();
+            onMenuOpen?.(e, item);
+          }}
+          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
           title="Click for options, press and hold to drag"
         >
           <EllipsisVerticalIcon className="h-5 w-5" />
@@ -110,16 +102,11 @@ function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
         <button
           data-panel-no-drag
           {...listeners}
-          onPointerUp={(event) => {
-            if (event.pointerType === 'touch') {
-              onMenuOpen?.(event, item);
-            }
+          onContextMenu={(e) => {
+            e.preventDefault();
+            onMenuOpen?.(e, item);
           }}
-          onClick={(event) => {
-            event.preventDefault();
-            onMenuOpen?.(event, item);
-          }}
-          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full"
+          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
           title="Click for options"
         >
           <EllipsisVerticalIcon className="h-5 w-5" />
