@@ -24,6 +24,19 @@ export async function GET(request) {
   const trialEndsAt = profile?.trialEndsAt ? new Date(profile.trialEndsAt).getTime() : 0;
   const trialActive = trialEndsAt > Date.now();
   const likedTandaIds = Array.isArray(profile?.likedTandaIds) ? profile.likedTandaIds.filter(Boolean) : [];
+  const likedCortinaIds = Array.isArray(profile?.likedCortinaIds) ? profile.likedCortinaIds.filter(Boolean) : [];
+  const tandaIdSet = new Set(likedTandaIds);
+  const cortinaIdSet = new Set(likedCortinaIds);
+  const likedMixedOrder = Array.isArray(profile?.likedMixedOrder)
+    ? profile.likedMixedOrder
+        .map(entry => ({ type: entry?.type, id: typeof entry?.id === 'string' ? entry.id : null }))
+        .filter(entry => {
+          if (!entry.id) return false;
+          if (entry.type === 'tanda' && tandaIdSet.has(entry.id)) return true;
+          if (entry.type === 'cortina' && cortinaIdSet.has(entry.id)) return true;
+          return false;
+        })
+    : [];
   const isPro = Boolean(profile?.isPro);
 
   return NextResponse.json(
@@ -40,6 +53,8 @@ export async function GET(request) {
       trialActive,
       isPro,
       likedTandaIds,
+      likedCortinaIds,
+      likedMixedOrder,
     },
     { status: 200, headers: { 'cache-control': 'no-store' } }
   );

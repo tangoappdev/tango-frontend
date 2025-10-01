@@ -43,7 +43,6 @@ async function generateV4WriteSignedUrl(filePath) {
       version: 'v4',
       action: 'write',
       expires: Date.now() + 15 * 60 * 1000, // 15 minutes
-      contentType: 'application/octet-stream',
     };
     const [url] = await getStorage().bucket().file(filePath).getSignedUrl(options);
     return url;
@@ -54,12 +53,12 @@ async function generateV4WriteSignedUrl(filePath) {
 }
 
 // -------- Handlers --------
-export async function GET(request, { params }) {
+export async function GET(request, context) {
+  const params = await (context?.params);
+  const { tandaId } = params || {};
   // Admin gate
   const gate = await requireAdmin(request);
   if (gate.error) return gate.error;
-
-  const { tandaId } = params;
   try {
     if (!tandaId) {
       return NextResponse.json({ message: 'Tanda ID is required.' }, { status: 400 });
@@ -92,12 +91,12 @@ export async function GET(request, { params }) {
   }
 }
 
-export async function PUT(request, { params }) {
+export async function PUT(request, context) {
+  const params = await (context?.params);
+  const { tandaId } = params || {};
   // Admin gate
   const gate = await requireAdmin(request);
   if (gate.error) return gate.error;
-
-  const { tandaId } = params;
   try {
     if (!tandaId) {
       return NextResponse.json({ message: 'Tanda ID is required.' }, { status: 400 });

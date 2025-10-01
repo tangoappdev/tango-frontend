@@ -120,28 +120,41 @@ export default function TandaForm() {
 
             // --- Part 2: Upload files directly to Firebase Storage ---
             console.log('Step 2: Starting direct file uploads to Firebase Storage...');
-            const uploadPromises = [];
-            
+            const uploadTasks = [];
+
             if (imageFile && imageUploadInfo?.url) {
-                uploadPromises.push(fetch(imageUploadInfo.url, {
-                    method: 'PUT',
-                    body: imageFile,
-                    headers: { 'Content-Type': imageFile.type },
-                }));
+                uploadTasks.push((async () => {
+                    const response = await fetch(imageUploadInfo.url, {
+                        method: 'PUT',
+                        body: imageFile,
+                        headers: { 'Content-Type': imageFile.type || 'application/octet-stream' },
+                    });
+                    if (!response.ok) {
+                        const errorBody = await response.text().catch(() => '');
+                        throw new Error(`Failed to upload artwork (${response.status}): ${errorBody}`);
+                    }
+                })());
             }
 
-            trackUploadInfos.forEach((info, index) => {
-                const audioFile = audioFiles.find(f => f.name === info.originalName);
-                if(audioFile) {
-                    uploadPromises.push(fetch(info.url, {
-                        method: 'PUT',
-                        body: audioFile,
-                        headers: { 'Content-Type': audioFile.type },
-                    }));
+            const safeTrackUploadInfos = Array.isArray(trackUploadInfos) ? trackUploadInfos : [];
+            safeTrackUploadInfos.forEach((info) => {
+                const audioFile = audioFiles.find(f => f && f.name === info.originalName);
+                if (audioFile) {
+                    uploadTasks.push((async () => {
+                        const response = await fetch(info.url, {
+                            method: 'PUT',
+                            body: audioFile,
+                            headers: { 'Content-Type': audioFile.type || 'application/octet-stream' },
+                        });
+                        if (!response.ok) {
+                            const errorBody = await response.text().catch(() => '');
+                            throw new Error(`Failed to upload track "${audioFile.name}" (${response.status}): ${errorBody}`);
+                        }
+                    })());
                 }
             });
 
-            await Promise.all(uploadPromises);
+            await Promise.all(uploadTasks);
             console.log('Step 2 Success: All files uploaded directly to storage.');
 
             // --- Part 3: Save the final metadata ---
@@ -153,7 +166,7 @@ export default function TandaForm() {
                 style: type === 'Tango' ? style : null,
                 artworkPath: imageUploadInfo?.path || null,
                 tracks: selectedTracks.map((track) => {
-                    const correspondingInfo = trackUploadInfos.find(info => info.originalName === track.file?.name);
+                    const correspondingInfo = safeTrackUploadInfos.find(info => info.originalName === track.file?.name);
                     return {
                         title: track.title.trim(),
                         filePath: correspondingInfo?.path || null,

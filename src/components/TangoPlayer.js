@@ -37,14 +37,14 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
     if (event.pointerType === 'touch') {
       event.preventDefault();
       event.stopPropagation();
-      onMenuOpen?.(event);
+      onMenuOpen?.(event, item);
     }
     listeners.onPointerUp?.(event);
   };
   const handleDragHandleClick = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    onMenuOpen?.(event);
+    onMenuOpen?.(event, item);
   };
   return (
     <div
@@ -80,10 +80,73 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
     </div>
   );
 }
+function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
+  const resolvedId = sortableId ?? item?.key ?? item?.id ?? item?.meta?.id ?? 'liked-cortina-placeholder';
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: resolvedId });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.85 : 1,
+    zIndex: isDragging ? 12 : 'auto',
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className="p-3 border-b border-white/5 text-sm space-y-1 select-none"
+    >
+      <div className="flex items-center gap-3">
+        <div className="relative h-12 w-12 flex-shrink-0 rounded-md bg-[#2b2e34] overflow-hidden">
+          <Image
+            src={item.artwork || item.meta?.artwork_url_signed || '/default-artwork.png'}
+            alt={item.title ? `Artwork for ${item.title}` : 'Cortina artwork'}
+            fill
+            sizes="48px"
+            className="object-cover"
+            unoptimized
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white truncate">{item.title}</p>
+          {item.artist && (<p className="text-xs text-gray-400 truncate">{item.artist}</p>)}
+          <p className="text-[11px] uppercase tracking-wide text-[#25edda]">Cortina - {item.genre || 'Unknown Genre'}</p>
+        </div>
+        <button
+          data-panel-no-drag
+          {...listeners}
+          onPointerDown={(event) => {
+            if (event.pointerType === 'touch') {
+              event.currentTarget.releasePointerCapture?.(event.pointerId);
+            }
+            listeners.onPointerDown?.(event);
+          }}
+          onPointerUp={(event) => {
+            if (event.pointerType === 'touch') {
+              event.preventDefault();
+              event.stopPropagation();
+              onMenuOpen?.(event, item);
+            }
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onMenuOpen?.(event, item);
+          }}
+          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
+          title="Click for options"
+        >
+          <EllipsisVerticalIcon className="h-5 w-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // --- Unified Queue Component (for Mobile Bottom Sheet) ---
 function Queue({
   isOpen, onClose, isDesktop, rightPanelTab, setRightPanelTab,
-  likedTandas, handleLikedDragEnd, scheduledCortinas, sensors,
+  likedItems, handleLikedDragEnd, scheduledCortinas, sensors,
   onMenuOpen, onPlayNow, handleRefreshPlaylist, isRefreshing,
   handleSettingChange, settings, currentCortina, isCortinaPlaying,
   handleCortinaDragEnd, onCortinaMenuOpen,
@@ -94,6 +157,7 @@ function Queue({
   const touchStartY = useRef(0);
   const touchMoveY = useRef(0);
   const activeCortinaId = isCortinaPlaying && currentCortina ? currentCortina.id : null;
+  const likedList = Array.isArray(likedItems) ? likedItems : [];
   const scheduledCortinaList = Array.isArray(scheduledCortinas) ? scheduledCortinas : [];
   const handleTouchStart = (e) => {
     if (isDesktop) return;
@@ -191,13 +255,29 @@ function Queue({
             {rightPanelTab === 'liked' && (
               <div className="p-3 px-2 pb-20">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
-                  <SortableContext items={likedTandas.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                    {likedTandas.length > 0 ? (
-                      likedTandas.map(tanda => (
-                        <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                  <SortableContext items={likedList.map(item => item.sortableId ?? item.key)} strategy={verticalListSortingStrategy}>
+                    {likedList.length > 0 ? (
+                      likedList.map(item => (
+                        item.itemType === 'tanda' ? (
+                          <QueueItem
+                            key={item.key}
+                            tanda={item.tanda}
+                            sortableId={item.sortableId}
+                            onMenuOpen={onMenuOpen}
+                            onPlayNow={onPlayNow}
+                            isDesktop={isDesktop}
+                          />
+                        ) : (
+                          <LikedCortinaItem
+                            key={item.key}
+                            item={item.cortina}
+                            sortableId={item.sortableId}
+                            onMenuOpen={onCortinaMenuOpen}
+                          />
+                        )
                       ))
                     ) : (
-                      <p className="p-4 text-center text-gray-500">Your liked tandas will appear here.</p>
+                      <p className="p-4 text-center text-gray-500">Your liked items will appear here.</p>
                     )}
                   </SortableContext>
                 </DndContext>
@@ -213,9 +293,8 @@ function Queue({
                         return (
                           <CortinaRow
                             key={item.key}
-                            item={item}
-                            isActive={isActive}
-                            onMenuOpen={(event) => onCortinaMenuOpen?.(event, item)}
+                            item={item} isActive={isActive}
+                            onMenuOpen={onCortinaMenuOpen}
                           />
                         );
                       })}
@@ -619,8 +698,11 @@ export default function TangoPlayer() {
   const [isChangingSettings] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('queue');
   const [likedTandas, setLikedTandas] = useState([]);
+  const [likedCortinas, setLikedCortinas] = useState([]);
+  const [localLikedCortinaIds, setLocalLikedCortinaIds] = useState(new Set());
   // 3. Custom Hooks
-  const { user, isPro, requireAuth, likedTandaIds, updateLikedIds } = useAuth();
+  const { user, isPro, requireAuth, likedTandaIds, likedCortinaIds, likedMixedOrder, updateLikedIds, updateLikedCortinaIds, updateLikedMixedOrder } = useAuth();
+  const [likedItemOrder, setLikedItemOrder] = useState(() => (Array.isArray(likedMixedOrder) ? likedMixedOrder : []));
   const [localLikedIds, setLocalLikedIds] = useState(new Set());
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: { delay: 250, tolerance: 5 },
@@ -632,6 +714,78 @@ export default function TangoPlayer() {
   const queueWithCurrent = useMemo(() => (
     manualQueue.length > 0 ? [...manualQueue, ...upcomingPlaylist] : [...upcomingPlaylist]
   ), [manualQueue, upcomingPlaylist]);
+  const buildLikedCortinaKey = useCallback((cortina) => {
+    if (!cortina) return 'cortina-unknown';
+    const candidates = [
+      cortina.key,
+      cortina.id,
+      cortina.meta?.id,
+      cortina.meta?.cortina_id,
+      cortina.meta?.slug,
+    ].filter(Boolean).map(String);
+    if (candidates.length > 0) {
+      const candidate = candidates.find(value => value.startsWith('cortina-')) || candidates[0];
+      return candidate.startsWith('cortina-') ? candidate : `cortina-${candidate}`;
+    }
+    const slugSource = [cortina.title, cortina.artist, cortina.genre].filter(Boolean).join('-').toLowerCase();
+    const sanitized = slugSource.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '');
+    return sanitized ? `cortina-${sanitized}` : 'cortina-unknown';
+  }, []);
+  const syncLikedOrderToAuth = useCallback((order) => {
+    if (!Array.isArray(order)) {
+      console.warn('[syncLikedOrderToAuth] ignoring non-array order', order);
+      return;
+    }
+    const currentKey = JSON.stringify(Array.isArray(likedMixedOrder) ? likedMixedOrder : []);
+    const nextKey = JSON.stringify(order);
+    if (currentKey !== nextKey) {
+      console.log('[syncLikedOrderToAuth] updating auth order', order);
+      updateLikedMixedOrder(order);
+    } else {
+      console.log('[syncLikedOrderToAuth] no change needed', { order });
+    }
+  }, [likedMixedOrder, updateLikedMixedOrder]);
+
+  const likedItems = useMemo(() => {
+    console.log('[likedItems useMemo] start', { likedTandasLength: likedTandas.length, likedCortinasLength: likedCortinas.length, likedItemOrder });
+    const tandaMap = new Map(likedTandas.map(t => [t.id, t]));
+    const cortinaMap = new Map(likedCortinas.map(c => [c.id, c]));
+    const fallbackOrder = [
+      ...likedTandas.map(t => ({ type: 'tanda', id: t.id })),
+      ...likedCortinas.map(c => ({ type: 'cortina', id: c.id })),
+    ];
+    const orderSource = likedItemOrder.length > 0 ? likedItemOrder : fallbackOrder;
+    console.log('[likedItems useMemo] orderSource', orderSource);
+    return orderSource.map((entry) => {
+      if (!entry) {
+        console.warn('[likedItems useMemo] encountered null entry');
+        return null;
+      }
+      if (entry.type === 'tanda') {
+        const tanda = tandaMap.get(entry.id);
+        if (!tanda) return null;
+        return {
+          key: `tanda-${tanda.id}`,
+          sortableId: tanda?.id ?? `tanda-${tanda.id}`,
+          itemType: 'tanda',
+          tanda,
+        };
+      }
+      if (entry.type === 'cortina') {
+        const cortina = cortinaMap.get(entry.id);
+        if (!cortina) return null;
+        const cortinaKey = buildLikedCortinaKey(cortina);
+        const cortinaWithKey = cortina?.key === cortinaKey ? cortina : { ...cortina, key: cortinaKey };
+        return {
+          key: cortinaKey,
+          sortableId: cortinaKey,
+          itemType: 'cortina',
+          cortina: cortinaWithKey,
+        };
+      }
+      return null;
+    }).filter(Boolean);
+  }, [likedTandas, likedCortinas, likedItemOrder, buildLikedCortinaKey]);
   const scheduledCortinas = useMemo(() => {
     if (!settings.cortinas) return [];
     if (queueWithCurrent.length <= 1) return [];
@@ -675,18 +829,59 @@ export default function TangoPlayer() {
       setIsRefreshing(false);
     }
   }, [likedTandaIds]);
+  const persistLikedOrdering = useCallback(async (order, tandaIds, cortinaIds) => {
+    const payload = {
+      tandaIds,
+      cortinaIds,
+      order: Array.isArray(order) ? order.map(entry => ({ type: entry.type, id: entry.id })) : [],
+    };
+    try {
+      const res = await fetch('/api/users/liked-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        console.error('Failed to persist liked order:', res.status);
+        return;
+      }
+      const data = await res.json();
+      if (Array.isArray(data.likedTandaIds)) updateLikedIds(data.likedTandaIds);
+      if (Array.isArray(data.likedCortinaIds)) updateLikedCortinaIds(data.likedCortinaIds);
+      if (Array.isArray(data.likedMixedOrder)) updateLikedMixedOrder(data.likedMixedOrder);
+    } catch (error) {
+      console.error('Failed to save liked order:', error);
+    }
+  }, [updateLikedIds, updateLikedCortinaIds, updateLikedMixedOrder]);
+
   const handleLikeToggle = useCallback(async (tandaId) => {
     if (!user || !tandaId) return;
-    // Optimistic UI update for instant feedback
-    const newLikedIds = new Set(localLikedIds);
-      if (newLikedIds.has(tandaId)) {
-        newLikedIds.delete(tandaId);
-        setLikedTandas(prev => prev.filter(t => t.id !== tandaId)); // <-- ADD THIS LINE
-      } else {
-      newLikedIds.add(tandaId);
+    const previousOrder = likedItemOrder;
+    const previousTandas = likedTandas;
+    const isRemoving = localLikedIds.has(tandaId);
+    const updatedSet = new Set(localLikedIds);
+    let updatedTandas = likedTandas;
+    let nextOrder = likedItemOrder;
+
+    if (isRemoving) {
+      updatedSet.delete(tandaId);
+      updatedTandas = likedTandas.filter(t => t.id !== tandaId);
+      nextOrder = likedItemOrder.filter(entry => !(entry.type === 'tanda' && entry.id === tandaId));
+    } else {
+      updatedSet.add(tandaId);
+      if (!likedItemOrder.some(entry => entry.type === 'tanda' && entry.id === tandaId)) {
+        nextOrder = [...likedItemOrder, { type: 'tanda', id: tandaId }];
+      }
     }
-    setLocalLikedIds(newLikedIds);
-    // Call the API and then update the master list with the response
+
+
+    setLocalLikedIds(updatedSet);
+    if (isRemoving) {
+      setLikedTandas(updatedTandas);
+    }
+    setLikedItemOrder(nextOrder);
+    syncLikedOrderToAuth(nextOrder);
+
     try {
       const res = await fetch('/api/users/like-tanda', {
         method: 'POST',
@@ -695,15 +890,22 @@ export default function TangoPlayer() {
       });
       if (!res.ok) throw new Error('API call failed');
       const data = await res.json();
-      if (data.likedTandaIds) {
-        updateLikedIds(data.likedTandaIds); // Update the master list
-      }
+      console.log('[handleLikeToggle] API success', data);
+      updateLikedIds(Array.from(updatedSet));
+      persistLikedOrdering(
+        nextOrder,
+        Array.from(updatedSet),
+        Array.from(localLikedCortinaIds)
+      );
     } catch (error) {
-      console.error("Failed to sync like status:", error);
-      // Revert UI if API call fails
+      console.error('Failed to sync like status:', error);
       setLocalLikedIds(new Set(likedTandaIds));
+      setLikedTandas(previousTandas);
+      const rollbackOrder = Array.isArray(likedMixedOrder) ? likedMixedOrder : previousOrder;
+      setLikedItemOrder(rollbackOrder);
+      syncLikedOrderToAuth(rollbackOrder);
     }
-  }, [user, localLikedIds, likedTandaIds, updateLikedIds]);
+  }, [user, localLikedIds, likedItemOrder, likedTandas, likedTandaIds, likedMixedOrder, updateLikedIds, syncLikedOrderToAuth, persistLikedOrdering]);
   const fetchAndFillPlaylist = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
@@ -840,18 +1042,73 @@ export default function TangoPlayer() {
       setIsRefreshing(false);
     }
   }, [settings, shuffledCortinas]);
-  const reorderCortinas = useCallback((fromIndex, toIndex) => {
+  const normalizeCortinaMeta = useCallback((meta, fallbackKey = null) => {
+    if (!meta && !fallbackKey) return null;
+    const normalized = { ...(meta || {}) };
+    if (!normalized.id && fallbackKey) {
+      normalized.id = fallbackKey;
+    }
+    if (!normalized.key && (normalized.id || fallbackKey)) {
+      normalized.key = `cortina-${normalized.id || fallbackKey}`;
+    }
+    normalized.title = normalized.title || 'Cortina';
+    normalized.artist = normalized.artist || normalized.performer || '';
+    normalized.genre = normalized.genre || normalized.style || normalized.category || '';
+    if (!normalized.artwork_url_signed && normalized.artwork) {
+      normalized.artwork_url_signed = normalized.artwork;
+    }
+    normalized.playableUrl = normalized.playableUrl || normalized.url_signed || normalized.playable_url_signed || null;
+    return normalized;
+  }, []);
+  const fetchLikedCortinas = useCallback(async () => {
+    if (!likedCortinaIds || likedCortinaIds.length === 0) {
+      setLikedCortinas([]);
+      return;
+    }
+    try {
+      const res = await fetch('/api/cortinas/by-ids', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cortinaIds: likedCortinaIds }),
+      });
+      if (!res.ok) throw new Error('Failed to fetch liked cortinas');
+      const data = await res.json();
+      const entries = (data.cortinas || []).map((item) => {
+        const normalized = normalizeCortinaMeta(item, item?.id);
+        if (!normalized?.id) return null;
+        return {
+          id: normalized.id,
+          key: `cortina-liked-${normalized.id}`,
+          title: normalized.title,
+          artist: normalized.artist,
+          genre: normalized.genre,
+          artwork: normalized.artwork_url_signed || normalized.artwork || '/default-artwork.png',
+          meta: normalized,
+        };
+      }).filter(Boolean);
+      setLikedCortinas(entries);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [likedCortinaIds, normalizeCortinaMeta]);
+
+  const updateCortinaMetas = useCallback((mutator) => {
     const manualCount = manualQueue.length;
     const combined = manualCount > 0 ? [...manualQueue, ...upcomingPlaylist] : [...upcomingPlaylist];
     if (combined.length <= 1) return;
-    const cortinaTargets = combined.slice(1);
-    const length = cortinaTargets.length;
-    if (fromIndex < 0 || fromIndex >= length || toIndex < 0 || toIndex >= length || fromIndex === toIndex) return;
-    const metas = cortinaTargets.map(item => item?.cortinaMeta || null);
-    const reorderedMetas = arrayMove(metas, fromIndex, toIndex);
+    const metas = combined.slice(1).map(item => item?.cortinaMeta || null);
+    let nextMetas = mutator ? mutator([...metas]) : metas;
+    if (!Array.isArray(nextMetas)) {
+      nextMetas = metas;
+    }
+    if (nextMetas.length < metas.length) {
+      nextMetas = [...nextMetas, ...metas.slice(nextMetas.length)];
+    } else if (nextMetas.length > metas.length) {
+      nextMetas = nextMetas.slice(0, metas.length);
+    }
     const rebuiltCombined = combined.map((tanda, idx) => {
       if (idx === 0) return { ...tanda };
-      return { ...tanda, cortinaMeta: reorderedMetas[idx - 1] || null };
+      return { ...tanda, cortinaMeta: nextMetas[idx - 1] || null };
     });
     if (manualCount > 0) {
       setManualQueue(rebuiltCombined.slice(0, manualCount));
@@ -864,7 +1121,7 @@ export default function TangoPlayer() {
       if (!prev || prev.length === 0) return prev;
       const seen = new Set();
       const ordered = [];
-      reorderedMetas.forEach(meta => {
+      nextMetas.forEach(meta => {
         const id = meta?.id;
         if (!id || seen.has(id)) return;
         const match = prev.find(item => item.id === id) || meta;
@@ -877,6 +1134,96 @@ export default function TangoPlayer() {
       return ordered.length > 0 ? [...ordered, ...rest] : prev;
     });
   }, [manualQueue, upcomingPlaylist, setManualQueue, setUpcomingPlaylist, setShuffledCortinas]);
+
+  const insertCortinaMeta = useCallback((meta, position = 0, fallbackKey = null) => {
+    const normalized = normalizeCortinaMeta(meta, fallbackKey);
+    if (!normalized) return;
+    updateCortinaMetas((metas) => {
+      if (!metas || metas.length === 0) return metas;
+      const filtered = normalized.id ? metas.filter(item => !(item?.id === normalized.id)) : [...metas];
+      const targetIndex = Number.isFinite(position) ? Math.max(0, Math.min(position, filtered.length)) : filtered.length;
+      filtered.splice(targetIndex, 0, normalized);
+      return filtered;
+    });
+  }, [normalizeCortinaMeta, updateCortinaMetas]);
+
+  const handleCortinaLikeToggle = useCallback((meta, fallbackKey = null) => {
+    if (!user) {
+      requireAuth(() => handleCortinaLikeToggle(meta, fallbackKey));
+      return;
+    }
+    const normalized = normalizeCortinaMeta(meta, fallbackKey);
+    if (!normalized?.id) return;
+    const cortinaId = normalized.id;
+    const wasLiked = localLikedCortinaIds.has(cortinaId);
+    const entry = {
+      id: normalized.id,
+      key: `cortina-liked-${normalized.id}`,
+      title: normalized.title,
+      artist: normalized.artist,
+      genre: normalized.genre,
+      artwork: normalized.artwork_url_signed || normalized.artwork || '/default-artwork.png',
+      meta: normalized,
+    };
+
+    const updatedCortinaSet = new Set(localLikedCortinaIds);
+    const previousOrder = likedItemOrder;
+    const previousCortinas = likedCortinas;
+    let nextOrder = likedItemOrder;
+
+    if (wasLiked) {
+      updatedCortinaSet.delete(cortinaId);
+      setLikedCortinas(prev => prev.filter(item => item.id !== cortinaId));
+      nextOrder = likedItemOrder.filter(entry => !(entry.type === 'cortina' && entry.id === cortinaId));
+    } else {
+      updatedCortinaSet.add(cortinaId);
+      if (!likedCortinas.some(item => item.id === cortinaId)) {
+        setLikedCortinas(prev => [...prev, entry]);
+      }
+      if (!likedItemOrder.some(entry => entry.type === 'cortina' && entry.id === cortinaId)) {
+        nextOrder = [...likedItemOrder, { type: 'cortina', id: cortinaId }];
+      }
+    }
+
+    const nextTandaIds = nextOrder.filter(entry => entry.type === 'tanda').map(entry => entry.id);
+    const nextCortinaIds = nextOrder.filter(entry => entry.type === 'cortina').map(entry => entry.id);
+
+    setLocalLikedCortinaIds(updatedCortinaSet);
+    setLikedItemOrder(nextOrder);
+    syncLikedOrderToAuth(nextOrder);
+
+    (async () => {
+      try {
+        const res = await fetch('/api/users/like-cortina', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cortinaId }),
+        });
+        if (!res.ok) throw new Error('Failed to toggle cortina like');
+        const data = await res.json();
+        console.log('[handleCortinaLikeToggle] API success', data);
+        updateLikedCortinaIds(nextCortinaIds);
+        persistLikedOrdering(nextOrder, nextTandaIds, nextCortinaIds);
+      } catch (error) {
+        console.error('Failed to sync cortina like status:', error);
+        setLocalLikedCortinaIds(new Set(localLikedCortinaIds));
+        setLikedCortinas(previousCortinas);
+        const rollbackOrder = Array.isArray(likedMixedOrder) ? likedMixedOrder : previousOrder;
+        setLikedItemOrder(rollbackOrder);
+        syncLikedOrderToAuth(rollbackOrder);
+      }
+    })();
+  }, [user, requireAuth, normalizeCortinaMeta, localLikedCortinaIds, likedItemOrder, likedCortinas, likedMixedOrder, updateLikedCortinaIds, syncLikedOrderToAuth, persistLikedOrdering]);
+
+  const reorderCortinas = useCallback((fromIndex, toIndex) => {
+    updateCortinaMetas((metas) => {
+      if (!Array.isArray(metas)) return metas;
+      if (fromIndex < 0 || fromIndex >= metas.length || toIndex < 0 || toIndex >= metas.length || fromIndex === toIndex) {
+        return metas;
+      }
+      return arrayMove(metas, fromIndex, toIndex);
+    });
+  }, [updateCortinaMetas]);
   const handleCortinaDragEnd = useCallback((event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -918,16 +1265,37 @@ export default function TangoPlayer() {
       }
     }
   };
-  const handleLikedDragEnd = (event) => {
+  const handleLikedDragEnd = useCallback((event) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setLikedTandas((items) => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
-  };
+    if (!over || active.id === over.id) return;
+    const activeIndex = likedItems.findIndex(item => item.sortableId === active.id);
+    const overIndex = likedItems.findIndex(item => item.sortableId === over.id);
+    if (activeIndex === -1 || overIndex === -1) return;
+    const reordered = arrayMove(likedItems, activeIndex, overIndex);
+    const nextTandas = [];
+    const nextCortinas = [];
+    const nextOrder = [];
+    reordered.forEach(item => {
+      if (item.itemType === 'tanda') {
+        nextTandas.push(item.tanda);
+        nextOrder.push({ type: 'tanda', id: item.tanda.id });
+      } else if (item.itemType === 'cortina') {
+        const cortinaId = item.cortina?.id || item.cortina?.meta?.id;
+        if (!cortinaId) return;
+        nextCortinas.push(item.cortina);
+        nextOrder.push({ type: 'cortina', id: cortinaId });
+      }
+    });
+    const tandaIds = nextOrder.filter(entry => entry.type === 'tanda').map(entry => entry.id);
+    const cortinaIds = nextOrder.filter(entry => entry.type === 'cortina').map(entry => entry.id);
+    setLikedTandas(nextTandas);
+    setLikedCortinas(nextCortinas);
+    setLikedItemOrder(nextOrder);
+    syncLikedOrderToAuth(nextOrder);
+    updateLikedIds(tandaIds);
+    updateLikedCortinaIds(cortinaIds);
+    persistLikedOrdering(nextOrder, tandaIds, cortinaIds);
+  }, [likedItems, updateLikedIds, updateLikedCortinaIds, syncLikedOrderToAuth, persistLikedOrdering]);
   const handleAddToQueue = useCallback((tandaToAdd) => {
 
     if (manualQueue.some(t => t.id === tandaToAdd.id)) return;
@@ -1236,12 +1604,76 @@ export default function TangoPlayer() {
   return () => mediaQuery.removeEventListener('change', handleChange);
 }, []);
   useEffect(() => {
+    if (!Array.isArray(likedMixedOrder)) return;
+    setLikedItemOrder(prev => {
+      const prevKey = JSON.stringify(prev);
+      const nextKey = JSON.stringify(likedMixedOrder);
+      if (prevKey === nextKey) return prev;
+      console.log('[useEffect likedMixedOrder] applying server order', likedMixedOrder);
+      return likedMixedOrder;
+    });
+  }, [likedMixedOrder]);
+  useEffect(() => {
     setLocalLikedIds(new Set(likedTandaIds));
   }, [likedTandaIds]);
+  useEffect(() => {
+    setLocalLikedCortinaIds(new Set(Array.isArray(likedCortinaIds) ? likedCortinaIds : []));
+  }, [likedCortinaIds]);
+  useEffect(() => {
+    setLikedItemOrder(prev => {
+      const tandaIds = new Set(likedTandas.map(t => t.id));
+      const cortinaIds = new Set(likedCortinas.map(c => c.id));
+      const nextOrder = [];
+      const seen = new Set();
+
+      prev.forEach(entry => {
+        if (entry.type === 'tanda' && tandaIds.has(entry.id)) {
+          nextOrder.push(entry);
+          seen.add(`tanda-${entry.id}`);
+        } else if (entry.type === 'cortina' && cortinaIds.has(entry.id)) {
+          nextOrder.push(entry);
+          seen.add(`cortina-${entry.id}`);
+        }
+      });
+
+      likedTandas.forEach(tanda => {
+        const key = `tanda-${tanda.id}`;
+        if (!seen.has(key)) {
+          nextOrder.push({ type: 'tanda', id: tanda.id });
+          seen.add(key);
+        }
+      });
+
+      likedCortinas.forEach(cortina => {
+        const key = `cortina-${cortina.id}`;
+        if (!seen.has(key)) {
+          nextOrder.push({ type: 'cortina', id: cortina.id });
+          seen.add(key);
+        }
+      });
+
+      const sameLength = nextOrder.length === prev.length;
+      const sameOrder = sameLength && nextOrder.every((entry, idx) => {
+        const prevEntry = prev[idx];
+        return prevEntry && prevEntry.type === entry.type && prevEntry.id === entry.id;
+      });
+      if (sameOrder) {
+        console.log('[useEffect likedTandas/likedCortinas] order unchanged');
+        return prev;
+      }
+      console.log('[useEffect likedTandas/likedCortinas] derived order', nextOrder);
+      syncLikedOrderToAuth(nextOrder);
+      return nextOrder;
+    });
+  }, [likedTandas, likedCortinas, syncLikedOrderToAuth]);
   useEffect(() => {
     // Keep the cached liked queue in sync once auth profile is ready.
     if (!user) {
       setLikedTandas([]);
+      setLikedCortinas([]);
+      setLocalLikedIds(new Set());
+      setLocalLikedCortinaIds(new Set());
+      setLikedItemOrder([]);
       return;
     }
     if (likedTandaIds && likedTandaIds.length > 0) {
@@ -1249,7 +1681,12 @@ export default function TangoPlayer() {
     } else {
       setLikedTandas([]);
     }
-  }, [user, likedTandaIds, fetchLikedTandas]);
+    if (likedCortinaIds && likedCortinaIds.length > 0) {
+      fetchLikedCortinas();
+    } else {
+      setLikedCortinas([]);
+    }
+  }, [user, likedTandaIds, likedCortinaIds, fetchLikedTandas, fetchLikedCortinas]);
   useEffect(() => {
     const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
     if ('mediaSession' in navigator && currentTanda && currentTrack) {
@@ -1325,18 +1762,46 @@ export default function TangoPlayer() {
     if (menuState.itemType === 'cortina') {
       const index = scheduledCortinas.findIndex(item => item.key === menuState.cortinaKey);
       const lastIndex = scheduledCortinas.length - 1;
-      if (index === -1) return [];
+      const menuItem = index > -1 ? scheduledCortinas[index] : null;
+      const resolvedMeta = normalizeCortinaMeta(menuState.cortinaMeta || menuItem?.meta || null, menuState.cortinaKey || menuItem?.key || null);
       const options = [];
+      if (resolvedMeta) {
+        options.push({
+          label: 'Play Next',
+          action: () => {
+            insertCortinaMeta(resolvedMeta, 0, menuState.cortinaKey || resolvedMeta.key);
+            handleMenuClose();
+          },
+        });
+        options.push({
+          label: 'Add to Queue',
+          action: () => {
+            insertCortinaMeta(resolvedMeta, Number.POSITIVE_INFINITY, menuState.cortinaKey || resolvedMeta.key);
+            handleMenuClose();
+          },
+        });
+      }
       if (index > 0) {
         options.push({ label: 'Move to Top', action: () => handleCortinaMenuMove(0) });
         options.push({ label: 'Move Up', action: () => handleCortinaMenuMove(index - 1) });
       }
-      if (index < lastIndex) {
+      if (index > -1 && index < lastIndex) {
         options.push({ label: 'Move Down', action: () => handleCortinaMenuMove(index + 1) });
         options.push({ label: 'Move to Bottom', action: () => handleCortinaMenuMove(lastIndex) });
       }
-      return options;
+      if (user && resolvedMeta?.id) {
+        const isLiked = localLikedCortinaIds.has(resolvedMeta.id);
+        options.push({
+          label: isLiked ? 'Remove from Liked' : 'Add to Liked',
+          action: () => {
+            handleCortinaLikeToggle(resolvedMeta, menuState.cortinaKey || resolvedMeta.key);
+            handleMenuClose();
+          },
+        });
+      }
+      return options.filter(Boolean);
     }
+
     return [
       { label: 'Play Next', action: () => handleTandaMenuAction(handlePlayNext) },
       !manualQueueIds.includes(menuState.tandaId) && { label: 'Add to Queue', action: () => handleTandaMenuAction(handleAddToQueue) },
@@ -1348,7 +1813,7 @@ export default function TangoPlayer() {
         },
       },
     ].filter(Boolean);
-  }, [menuState.visible, menuState.itemType, menuState.cortinaKey, menuState.tandaId, scheduledCortinas, handleCortinaMenuMove, handleTandaMenuAction, handlePlayNext, manualQueueIds, handleAddToQueue, user, localLikedIds, handleLikeToggle, handleMenuClose]);
+  }, [menuState.visible, menuState.itemType, menuState.cortinaKey, menuState.tandaId, scheduledCortinas, handleCortinaMenuMove, handleTandaMenuAction, handlePlayNext, manualQueueIds, handleAddToQueue, user, localLikedIds, handleLikeToggle, handleMenuClose, insertCortinaMeta, normalizeCortinaMeta, localLikedCortinaIds, handleCortinaLikeToggle]);
 
   if (!hasMounted) {
   return (
@@ -1399,6 +1864,8 @@ export default function TangoPlayer() {
     upcomingPlaylist,
     manualQueueIds,
     upcomingPlaylistIds,
+    likedItems,
+    handleLikedDragEnd,
     handleDragEnd,
     handleQueueScroll,
     queueContainerRef,
@@ -1685,13 +2152,29 @@ export default function TangoPlayer() {
                   {rightPanelTab === 'liked' && (
                     <div className="p-3 px-2 pb-20">
                       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
-                        <SortableContext items={likedTandas.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                          {likedTandas.length > 0 ? (
-                            likedTandas.map(tanda => (
-                              <QueueItem key={tanda.id} tanda={tanda} onMenuOpen={handleMenuOpen} onPlayNow={handlePlayNow} isDesktop={isDesktop} />
+                        <SortableContext items={likedItems.map(item => item.sortableId ?? item.key)} strategy={verticalListSortingStrategy}>
+                          {likedItems.length > 0 ? (
+                            likedItems.map(item => (
+                              item.itemType === 'tanda' ? (
+                                <QueueItem
+                                  key={item.key}
+                                  tanda={item.tanda}
+                                  sortableId={item.sortableId}
+                                  onMenuOpen={handleMenuOpen}
+                                  onPlayNow={handlePlayNow}
+                                  isDesktop={isDesktop}
+                                />
+                              ) : (
+                                <LikedCortinaItem
+                                  key={item.key}
+                                  item={item.cortina}
+                                  sortableId={item.sortableId}
+                                  onMenuOpen={handleCortinaMenuOpen}
+                                />
+                              )
                             ))
                           ) : (
-                            <p className="p-4 text-center text-gray-500">Your liked tandas will appear here.</p>
+                            <p className="p-4 text-center text-gray-500">Your liked items will appear here.</p>
                           )}
                         </SortableContext>
                       </DndContext>
@@ -1707,9 +2190,8 @@ export default function TangoPlayer() {
                               return (
                                 <CortinaRow
                                   key={item.key}
-                                  item={item}
-                                  isActive={isActive}
-                                  onMenuOpen={(event) => onCortinaMenuOpen?.(event, item)}
+                                  item={item} isActive={isActive}
+                                  onMenuOpen={handleCortinaMenuOpen}
                                 />
                               );
                             })}
@@ -1902,19 +2384,8 @@ export default function TangoPlayer() {
         <Queue
           isOpen={activePanel === 'queue'}
           onClose={() => handlePanelToggle('queue')}
-          isDesktop={isDesktop}
           rightPanelTab={rightPanelTab}
           setRightPanelTab={setRightPanelTab}
-          likedTandas={likedTandas}
-          handleLikedDragEnd={handleLikedDragEnd}
-          cortinas={cortinas}
-          sensors={sensors}
-          onMenuOpen={handleMenuOpen}
-          onPlayNow={handlePlayNow}
-          handleRefreshPlaylist={handleRefreshPlaylist}
-          isRefreshing={isRefreshing}
-          handleSettingChange={handleSettingChange}
-          settings={settings}
           {...queueProps}
         />
       )}
@@ -1943,6 +2414,14 @@ export default function TangoPlayer() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
 
 
 

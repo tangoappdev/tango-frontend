@@ -161,17 +161,37 @@ const EditTandaForm = ({ initialTanda }) => {
         
         const { uploadUrls } = await response.json();
 
-        const uploadPromises = [];
+        const uploadTasks = [];
         if (imageFile && uploadUrls.artwork) {
-            uploadPromises.push(fetch(uploadUrls.artwork, { method: 'PUT', body: imageFile }));
+            uploadTasks.push((async () => {
+                const response = await fetch(uploadUrls.artwork, {
+                    method: 'PUT',
+                    body: imageFile,
+                    headers: { 'Content-Type': imageFile.type || 'application/octet-stream' },
+                });
+                if (!response.ok) {
+                    const errorBody = await response.text().catch(() => '');
+                    throw new Error(`Failed to upload updated artwork (${response.status}): ${errorBody}`);
+                }
+            })());
         }
         formData.tracks.forEach((track, index) => {
             if (track.newFile && uploadUrls[`track_${index}`]) {
-                uploadPromises.push(fetch(uploadUrls[`track_${index}`], { method: 'PUT', body: track.newFile }));
+                uploadTasks.push((async () => {
+                    const response = await fetch(uploadUrls[`track_${index}`], {
+                        method: 'PUT',
+                        body: track.newFile,
+                        headers: { 'Content-Type': track.newFile.type || 'application/octet-stream' },
+                    });
+                    if (!response.ok) {
+                        const errorBody = await response.text().catch(() => '');
+                        throw new Error(`Failed to upload replacement for track ${index + 1} (${response.status}): ${errorBody}`);
+                    }
+                })());
             }
         });
-        
-        await Promise.all(uploadPromises);
+
+        await Promise.all(uploadTasks);
 
         alert('Tanda updated successfully!');
         router.push('/admin/manage-tandas');

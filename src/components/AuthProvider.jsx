@@ -11,7 +11,7 @@ export function useAuth() { return useContext(Ctx); }
 
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [me, setMe] = useState({ tier: 'anon', isPro: false, trialActive: false, likedTandaIds: [] });
+  const [me, setMe] = useState({ tier: 'anon', isPro: false, trialActive: false, likedTandaIds: [], likedCortinaIds: [], likedMixedOrder: [] });
   const [loading, setLoading] = useState(true);
   const [gateOpen, setGateOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
@@ -26,9 +26,11 @@ export default function AuthProvider({ children }) {
         isPro: !!data?.isPro || !!data?.trialActive,
         trialActive: !!data?.trialActive,
         likedTandaIds: data?.likedTandaIds || [],
+        likedCortinaIds: data?.likedCortinaIds || [],
+        likedMixedOrder: data?.likedMixedOrder || [],
       });
     } catch {
-      setMe({ tier: 'anon', isPro: false, trialActive: false, likedTandaIds: [] });
+      setMe({ tier: 'anon', isPro: false, trialActive: false, likedTandaIds: [], likedCortinaIds: [], likedMixedOrder: [] });
     }
   }, []);
 
@@ -67,12 +69,20 @@ export default function AuthProvider({ children }) {
     } catch {}
     await signOut(auth).catch(()=>{});
     setUser(null);
-    setMe({ tier: 'anon', isPro: false, trialActive: false, likedTandaIds: [] });
+    setMe({ tier: 'anon', isPro: false, trialActive: false, likedTandaIds: [], likedCortinaIds: [], likedMixedOrder: [] });
   }, []);
 
   const updateLikedIds = useCallback((newIdList) => {
-  setMe(prev => ({ ...prev, likedTandaIds: newIdList }));
-}, []);
+    setMe(prev => ({ ...prev, likedTandaIds: newIdList }));
+  }, []);
+
+  const updateLikedCortinaIds = useCallback((newIdList) => {
+    setMe(prev => ({ ...prev, likedCortinaIds: newIdList }));
+  }, []);
+
+  const updateLikedMixedOrder = useCallback((newOrder) => {
+    setMe(prev => ({ ...prev, likedMixedOrder: Array.isArray(newOrder) ? newOrder : [] }));
+  }, []);
 
   return (
     <Ctx.Provider value={{
@@ -83,10 +93,14 @@ export default function AuthProvider({ children }) {
       isPro: me.isPro,
       trialActive: me.trialActive,
       likedTandaIds: me.likedTandaIds,
+      likedCortinaIds: me.likedCortinaIds,
+      likedMixedOrder: me.likedMixedOrder,
       requireAuth,
       refreshMe,
       logout,
       updateLikedIds,
+      updateLikedCortinaIds,
+      updateLikedMixedOrder,
     }}>
       {children}
       <AuthGateModal

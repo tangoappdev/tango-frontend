@@ -32,7 +32,6 @@ async function generateV4WriteSignedUrl(filePath) {
         version: 'v4',
         action: 'write',
         expires: Date.now() + 15 * 60 * 1000, // 15 minutes
-        contentType: 'application/octet-stream',
       });
     return url;
   } catch (error) {
@@ -42,12 +41,13 @@ async function generateV4WriteSignedUrl(filePath) {
 }
 
 // Replace a single track file (ADMIN ONLY)
-export async function POST(request, { params }) {
+export async function POST(request, context) {
+  const params = await (context?.params);
+  const { trackId } = params || {};
   const gate = await requireAdmin(request);
   if (gate.error) return gate.error;
 
   try {
-    const { trackId } = params;
     const { newFileName } = await request.json();
 
     if (!trackId || !newFileName) {

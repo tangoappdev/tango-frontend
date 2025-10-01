@@ -6,8 +6,8 @@ import { CSS } from '@dnd-kit/utilities';
 import Image from 'next/image';
 import { EllipsisVerticalIcon, PlayCircleIcon } from '@heroicons/react/24/solid';
 
-export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
-  const sortableId = tanda?.id ?? 'queue-item-placeholder';
+export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sortableId: sortableIdProp }) {
+  const sortableId = sortableIdProp ?? tanda?.id ?? 'queue-item-placeholder';
 
   const { attributes, listeners, setNodeRef, activatorAttributes, transform, transition, isDragging } =
     useSortable({ id: sortableId });
@@ -34,6 +34,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
 
   const tagInfo = getTagInfo(tanda.type);
   const handleActivatorPointerDown = (event) => {
+    console.log('QueueItem: handleActivatorPointerDown', { tandaId: tanda.id, pointerType: event.pointerType });
     if (event.pointerType === 'touch') {
       event.currentTarget.releasePointerCapture?.(event.pointerId);
     }
@@ -41,6 +42,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
     activatorAttributes?.onPointerDown?.(event);
   };
   const handleActivatorPointerUp = (event) => {
+    console.log('QueueItem: handleActivatorPointerUp', { tandaId: tanda.id, pointerType: event.pointerType });
     if (event.pointerType === 'touch') {
       event.preventDefault();
       event.stopPropagation();
@@ -50,6 +52,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
     activatorAttributes?.onPointerUp?.(event);
   };
   const handleActivatorClick = (event) => {
+    console.log('QueueItem: handleActivatorClick', { tandaId: tanda.id });
     onMenuOpen(event, tanda);
   };
 
@@ -89,10 +92,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop }) {
       <div className="flex-shrink-0">
         <button
           data-panel-no-drag
-          {...listeners}
-          {...activatorAttributes}
-          onPointerDown={handleActivatorPointerDown}
-          onPointerUp={handleActivatorPointerUp}
+          {...listeners}          
           onClick={handleActivatorClick}
           className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
           title="Click for options, press and hold to drag"

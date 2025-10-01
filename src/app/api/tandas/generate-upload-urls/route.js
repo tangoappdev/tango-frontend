@@ -45,7 +45,6 @@ export async function POST(request) {
       version: 'v4',
       action: 'write',
       expires,
-      contentType: 'application/octet-stream', // generic, lets client set Content-Type on upload
     };
 
     let imageUploadInfo = null;
