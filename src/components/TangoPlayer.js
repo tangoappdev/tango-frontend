@@ -16,6 +16,19 @@ import {
 import { EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebaseClient';
+import {
+  API_BASE_URL,
+  CATEGORIES,
+  TANDA_SEQUENCES,
+  JUST_MODE_OPTIONS,
+  TANDA_ORDER_OPTIONS,
+  ORCHESTRA_TYPE_OPTIONS,
+  TANDA_LENGTH_OPTIONS,
+  FREESTYLE_FETCH_BATCH_SIZE,
+  PLAYLIST_REFILL_THRESHOLD,
+  MIN_SAME_TANDA_GAP,
+  initialSettings
+} from './tangoPlayerConstants';
 import { signOut } from 'firebase/auth';
 function CortinaRow({ item, isActive, onMenuOpen }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.key });
@@ -94,23 +107,15 @@ function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="p-3 border-b border-white/5 text-sm space-y-1 select-none"
+      className="p-3 border-t border-b border-white/5 text-sm space-y-1 select-none"
     >
-      <div className="flex items-center gap-3">
-        <div className="relative h-12 w-12 flex-shrink-0 rounded-md bg-[#2b2e34] overflow-hidden">
-          <Image
-            src={item.artwork || item.meta?.artwork_url_signed || '/default-artwork.png'}
-            alt={item.title ? `Artwork for ${item.title}` : 'Cortina artwork'}
-            fill
-            sizes="48px"
-            className="object-cover"
-            unoptimized
-          />
-        </div>
+      <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{item.title}</p>
-          {item.artist && (<p className="text-xs text-gray-400 truncate">{item.artist}</p>)}
-          <p className="text-[11px] uppercase tracking-wide text-[#25edda]">Cortina - {item.genre || 'Unknown Genre'}</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-sm font-semibold text-white whitespace-nowrap">{item.title}</p>
+            {item.artist && (<p className="text-xs text-gray-400 truncate">- {item.artist}</p>)}
+          </div>
+          <p className="text-[11px] uppercase tracking-wide text-[#25edda] mt-1">Cortina - {item.genre || 'Unknown Genre'}</p>
         </div>
         <button
           data-panel-no-drag
@@ -551,34 +556,6 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
     </div>
   );
 }
-// --- Constants ---
-const API_BASE_URL = '/api';
-const CATEGORIES = {
-  TRADITIONAL_GOLDEN_AGE: "Traditional (Golden Age)",
-  CONTEMPORARY_TRADITIONAL: "Contemporary Traditional",
-  ALTERNATIVE: "Alternative / Alternativo"
-};
-const TANDA_SEQUENCES = {
-  '2 Tangos, 1 Vals, 2 Tangos, 1 Milonga': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
-  '3 Tangos, 1 Vals, 3 Tangos, 1 Milonga': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
-};
-const JUST_MODE_OPTIONS = [
-  { value: 'tango', label: 'Just Tango' },
-  { value: 'vals', label: 'Just Vals' },
-  { value: 'milonga', label: 'Just Milonga' },
-];
-const TANDA_ORDER_OPTIONS = Object.keys(TANDA_SEQUENCES).map(key => ({ value: key, label: key }));
-const ORCHESTRA_TYPE_OPTIONS = Object.values(CATEGORIES).map(cat => ({ value: cat, label: cat }));
-const TANDA_LENGTH_OPTIONS = [3, 4];
-const FREESTYLE_FETCH_BATCH_SIZE = 6;
-const PLAYLIST_REFILL_THRESHOLD = 5;
-const MIN_SAME_TANDA_GAP = 15;
-const initialSettings = {
-  activeMode: '2 Tangos, 1 Vals, 2 Tangos, 1 Milonga',
-  categoryFilter: CATEGORIES.TRADITIONAL_GOLDEN_AGE,
-  tandaLength: 4,
-  cortinas: true,
-};
 // --- Helper Functions ---
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return '00:00';
@@ -740,14 +717,12 @@ export default function TangoPlayer() {
     const nextKey = JSON.stringify(order);
     if (currentKey !== nextKey) {
       console.log('[syncLikedOrderToAuth] updating auth order', order);
-      updateLikedMixedOrder(order);
     } else {
       console.log('[syncLikedOrderToAuth] no change needed', { order });
     }
   }, [likedMixedOrder, updateLikedMixedOrder]);
 
   const likedItems = useMemo(() => {
-    console.log('[likedItems useMemo] start', { likedTandasLength: likedTandas.length, likedCortinasLength: likedCortinas.length, likedItemOrder });
     const tandaMap = new Map(likedTandas.map(t => [t.id, t]));
     const cortinaMap = new Map(likedCortinas.map(c => [c.id, c]));
     const fallbackOrder = [
@@ -755,10 +730,8 @@ export default function TangoPlayer() {
       ...likedCortinas.map(c => ({ type: 'cortina', id: c.id })),
     ];
     const orderSource = likedItemOrder.length > 0 ? likedItemOrder : fallbackOrder;
-    console.log('[likedItems useMemo] orderSource', orderSource);
     return orderSource.map((entry) => {
       if (!entry) {
-        console.warn('[likedItems useMemo] encountered null entry');
         return null;
       }
       if (entry.type === 'tanda') {
@@ -848,7 +821,6 @@ export default function TangoPlayer() {
       const data = await res.json();
       if (Array.isArray(data.likedTandaIds)) updateLikedIds(data.likedTandaIds);
       if (Array.isArray(data.likedCortinaIds)) updateLikedCortinaIds(data.likedCortinaIds);
-      if (Array.isArray(data.likedMixedOrder)) updateLikedMixedOrder(data.likedMixedOrder);
     } catch (error) {
       console.error('Failed to save liked order:', error);
     }
@@ -890,7 +862,6 @@ export default function TangoPlayer() {
       });
       if (!res.ok) throw new Error('API call failed');
       const data = await res.json();
-      console.log('[handleLikeToggle] API success', data);
       updateLikedIds(Array.from(updatedSet));
       persistLikedOrdering(
         nextOrder,
@@ -1201,7 +1172,6 @@ export default function TangoPlayer() {
         });
         if (!res.ok) throw new Error('Failed to toggle cortina like');
         const data = await res.json();
-        console.log('[handleCortinaLikeToggle] API success', data);
         updateLikedCortinaIds(nextCortinaIds);
         persistLikedOrdering(nextOrder, nextTandaIds, nextCortinaIds);
       } catch (error) {
@@ -1609,63 +1579,12 @@ export default function TangoPlayer() {
       const prevKey = JSON.stringify(prev);
       const nextKey = JSON.stringify(likedMixedOrder);
       if (prevKey === nextKey) return prev;
-      console.log('[useEffect likedMixedOrder] applying server order', likedMixedOrder);
       return likedMixedOrder;
     });
   }, [likedMixedOrder]);
   useEffect(() => {
-    setLocalLikedIds(new Set(likedTandaIds));
-  }, [likedTandaIds]);
-  useEffect(() => {
     setLocalLikedCortinaIds(new Set(Array.isArray(likedCortinaIds) ? likedCortinaIds : []));
   }, [likedCortinaIds]);
-  useEffect(() => {
-    setLikedItemOrder(prev => {
-      const tandaIds = new Set(likedTandas.map(t => t.id));
-      const cortinaIds = new Set(likedCortinas.map(c => c.id));
-      const nextOrder = [];
-      const seen = new Set();
-
-      prev.forEach(entry => {
-        if (entry.type === 'tanda' && tandaIds.has(entry.id)) {
-          nextOrder.push(entry);
-          seen.add(`tanda-${entry.id}`);
-        } else if (entry.type === 'cortina' && cortinaIds.has(entry.id)) {
-          nextOrder.push(entry);
-          seen.add(`cortina-${entry.id}`);
-        }
-      });
-
-      likedTandas.forEach(tanda => {
-        const key = `tanda-${tanda.id}`;
-        if (!seen.has(key)) {
-          nextOrder.push({ type: 'tanda', id: tanda.id });
-          seen.add(key);
-        }
-      });
-
-      likedCortinas.forEach(cortina => {
-        const key = `cortina-${cortina.id}`;
-        if (!seen.has(key)) {
-          nextOrder.push({ type: 'cortina', id: cortina.id });
-          seen.add(key);
-        }
-      });
-
-      const sameLength = nextOrder.length === prev.length;
-      const sameOrder = sameLength && nextOrder.every((entry, idx) => {
-        const prevEntry = prev[idx];
-        return prevEntry && prevEntry.type === entry.type && prevEntry.id === entry.id;
-      });
-      if (sameOrder) {
-        console.log('[useEffect likedTandas/likedCortinas] order unchanged');
-        return prev;
-      }
-      console.log('[useEffect likedTandas/likedCortinas] derived order', nextOrder);
-      syncLikedOrderToAuth(nextOrder);
-      return nextOrder;
-    });
-  }, [likedTandas, likedCortinas, syncLikedOrderToAuth]);
   useEffect(() => {
     // Keep the cached liked queue in sync once auth profile is ready.
     if (!user) {
@@ -1687,6 +1606,9 @@ export default function TangoPlayer() {
       setLikedCortinas([]);
     }
   }, [user, likedTandaIds, likedCortinaIds, fetchLikedTandas, fetchLikedCortinas]);
+  useEffect(() => {
+    setLocalLikedIds(new Set(likedTandaIds));
+  }, [likedTandaIds]);
   useEffect(() => {
     const currentTrack = currentTanda?.tracks_signed?.[currentTrackIndex];
     if ('mediaSession' in navigator && currentTanda && currentTrack) {
@@ -2414,14 +2336,3 @@ export default function TangoPlayer() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
