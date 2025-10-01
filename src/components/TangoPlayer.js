@@ -666,10 +666,11 @@ export default function TangoPlayer() {
       const title = meta?.title || 'Cortina';
       const artist = meta?.artist || 'Unknown Artist';
       const genre = meta?.genre || meta?.style || meta?.category || 'Unknown Genre';
-      const candidateIds = [meta?.sortableId, meta?.id, meta?.cortina_id, meta?.slug].filter(Boolean).map(String);
       const fallbackId = `tanda-${tanda?.id ?? 'unknown'}-slot-${index}`;
-      const baseSortableId = candidateIds[0] || fallbackId;
-      const sortableId = `scheduled-cortina-${baseSortableId}`;
+      const baseSource = [meta?.sortableId, meta?.id, meta?.cortina_id, meta?.slug, fallbackId].find(Boolean) || fallbackId;
+      const baseSortableId = String(baseSource);
+      const slotKey = tanda?.id != null ? `tanda-${tanda.id}` : `slot-${index}`;
+      const sortableId = `scheduled-cortina-${baseSortableId}-for-${slotKey}`;
       return {
         key: sortableId,
         sortableId,
