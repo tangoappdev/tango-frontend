@@ -38,7 +38,7 @@ function Queue({
   likedItems, handleLikedDragEnd, scheduledCortinas, sensors,
   onMenuOpen, onPlayNow, handleRefreshPlaylist, isRefreshing,
   handleSettingChange, settings, currentCortina, isCortinaPlaying,
-  handleCortinaDragEnd, onCortinaMenuOpen, handleDragStart,
+  handleCortinaDragEnd, onCortinaMenuOpen, handleDragStart, handleDragCancel,
   ...props
 }) {
   const panelRef = useRef(null);
