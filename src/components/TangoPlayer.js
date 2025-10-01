@@ -35,24 +35,15 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.85 : 1,
-    zIndex: isDragging ? 12 : 'auto',
+    opacity: isDragging ? 0.8 : 1,
+    zIndex: isDragging ? 10 : 'auto',
   };
   const containerClasses = `p-3 border-b border-white/5 text-sm space-y-1 ${isActive ? 'bg-[#25edda]/10 border-[#25edda]/40' : ''}`;
   const orderClasses = `text-xs font-semibold ${isActive ? 'text-[#25edda]' : 'text-gray-400'}`;
-  const handleDragHandlePointerDown = (event) => {
-    if (event.pointerType === 'touch') {
-      event.currentTarget.releasePointerCapture?.(event.pointerId);
-    }
-    listeners.onPointerDown?.(event);
-  };
   const handleDragHandlePointerUp = (event) => {
     if (event.pointerType === 'touch') {
-      event.preventDefault();
-      event.stopPropagation();
       onMenuOpen?.(event, item);
     }
-    listeners.onPointerUp?.(event);
   };
   const handleDragHandleClick = (event) => {
     event.preventDefault();
@@ -77,10 +68,9 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
         <button
           data-panel-no-drag
           {...listeners}
-          onPointerDown={handleDragHandlePointerDown}
           onPointerUp={handleDragHandlePointerUp}
           onClick={handleDragHandleClick}
-          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
+          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full"
           title="Click for options, press and hold to drag"
         >
           <EllipsisVerticalIcon className="h-5 w-5" />
@@ -99,8 +89,8 @@ function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.85 : 1,
-    zIndex: isDragging ? 12 : 'auto',
+    opacity: isDragging ? 0.8 : 1,
+    zIndex: isDragging ? 10 : 'auto',
   };
   return (
     <div
@@ -120,25 +110,16 @@ function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
         <button
           data-panel-no-drag
           {...listeners}
-          onPointerDown={(event) => {
-            if (event.pointerType === 'touch') {
-              event.currentTarget.releasePointerCapture?.(event.pointerId);
-            }
-            listeners.onPointerDown?.(event);
-          }}
           onPointerUp={(event) => {
             if (event.pointerType === 'touch') {
-              event.preventDefault();
-              event.stopPropagation();
               onMenuOpen?.(event, item);
             }
           }}
           onClick={(event) => {
             event.preventDefault();
-            event.stopPropagation();
             onMenuOpen?.(event, item);
           }}
-          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
+          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full"
           title="Click for options"
         >
           <EllipsisVerticalIcon className="h-5 w-5" />
