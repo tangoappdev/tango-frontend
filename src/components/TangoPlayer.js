@@ -1,11 +1,13 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import QueueItem from './QueueItem';
 import ContextMenu from './ContextMenu';
+import CortinaRow from './CortinaRow';
+import LikedCortinaItem from './LikedCortinaItem';
 import Image from 'next/image';
 import {
   PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
@@ -30,91 +32,13 @@ import {
   initialSettings
 } from './tangoPlayerConstants';
 import { signOut } from 'firebase/auth';
-function CortinaRow({ item, isActive, onMenuOpen }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.key });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.8 : 1,
-    zIndex: isDragging ? 10 : 'auto',
-  };
-  const containerClasses = `p-3 border-b border-white/5 text-sm space-y-1 ${isActive ? 'bg-[#25edda]/10 border-[#25edda]/40' : ''}`;
-  const orderClasses = `text-xs font-semibold ${isActive ? 'text-[#25edda]' : 'text-gray-400'}`;
-  return (
-    <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      style={style}
-      className={`${containerClasses} select-none flex items-center gap-2`}
-    >
-        <span className={orderClasses}>#{item.order}</span>
-        <div className="flex flex-1 items-baseline gap-2 min-w-0">
-          <span className="text-sm text-white whitespace-nowrap">{item.title}</span>
-          {item.artist && (
-            <span className="text-xs text-gray-400 truncate">- {item.artist}</span>
-          )}
-        </div>
-        <button
-          data-no-dnd="true"
-          onClick={(e) => {
-            e.preventDefault();
-            onMenuOpen?.(e, item);
-          }}
-          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
-          title="Click for options, press and hold to drag"
-        >
-          <EllipsisVerticalIcon className="h-5 w-5" />
-        </button>
-    </div>
-  );
-}
-function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
-  const resolvedId = sortableId ?? item?.key ?? item?.id ?? item?.meta?.id ?? 'liked-cortina-placeholder';
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: resolvedId });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.8 : 1,
-    zIndex: isDragging ? 10 : 'auto',
-  };
-  return (
-    <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      style={style}
-      className="p-3 border-t border-b border-white/5 text-sm select-none flex items-center gap-2"
-    >
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2">
-            <p className="text-sm font-semibold text-white whitespace-nowrap">{item.title}</p>
-            {item.artist && (<p className="text-xs text-gray-400 truncate">- {item.artist}</p>)}
-          </div>
-          <p className="text-[11px] uppercase tracking-wide text-[#25edda] mt-1">Cortina - {item.genre || 'Unknown Genre'}</p>
-        </div>
-        <button
-          data-no-dnd="true"
-          onClick={(e) => {
-            e.preventDefault();
-            onMenuOpen?.(e, item);
-          }}
-          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
-          title="Click for options"
-        >
-          <EllipsisVerticalIcon className="h-5 w-5" />
-        </button>
-    </div>
-  );
-}
 
-// --- Unified Queue Component (for Mobile Bottom Sheet) ---
 function Queue({
   isOpen, onClose, isDesktop, rightPanelTab, setRightPanelTab,
   likedItems, handleLikedDragEnd, scheduledCortinas, sensors,
   onMenuOpen, onPlayNow, handleRefreshPlaylist, isRefreshing,
   handleSettingChange, settings, currentCortina, isCortinaPlaying,
-  handleCortinaDragEnd, onCortinaMenuOpen,
+  handleCortinaDragEnd, onCortinaMenuOpen, handleDragStart,
   ...props
 }) {
   const panelRef = useRef(null);
@@ -215,16 +139,16 @@ function Queue({
           {/* NEW: Conditional Content */}
           <div className="w-full h-full overflow-y-auto">
             {rightPanelTab === 'queue' && (
-              <QueueContent {...props} onMenuOpen={onMenuOpen} settings={settings} isDesktop={isDesktop} />
+              <QueueContent {...props} onMenuOpen={onMenuOpen} settings={settings} isDesktop={isDesktop} handleDragStart={handleDragStart} />
             )}
             {rightPanelTab === 'liked' && (
               <div className="p-3 px-2 pb-20">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
                   <SortableContext items={likedList.map(item => item.sortableId ?? item.key)} strategy={verticalListSortingStrategy}>
                     {likedList.length > 0 ? (
                       likedList.map(item => (
                         item.itemType === 'tanda' ? (
-                          <QueueItem
+                          <QueueItem // This is a Tanda
                             key={item.key}
                             tanda={item.tanda}
                             sortableId={item.sortableId}
@@ -232,7 +156,7 @@ function Queue({
                             onPlayNow={onPlayNow}
                             isDesktop={isDesktop}
                           />
-                        ) : (
+                        ) : ( // This is a Cortina
                           <LikedCortinaItem
                             key={item.key}
                             item={item.cortina}
@@ -251,7 +175,7 @@ function Queue({
             {rightPanelTab === 'cortinas' && (
               <div className="p-3 px-2 pb-20">
                 {scheduledCortinaList.length > 0 ? (
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleCortinaDragEnd}>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleCortinaDragEnd} modifiers={[restrictToVerticalAxis]}>
                     <SortableContext items={scheduledCortinaList.map(item => item.key)} strategy={verticalListSortingStrategy}>
                       {scheduledCortinaList.map((item, idx) => {
                         const isActive = isCortinaPlaying && idx === 0 && activeCortinaId && item.cortinaId && activeCortinaId === item.cortinaId;
@@ -299,6 +223,8 @@ function Queue({
     </div>
   );
 }
+
+// --- Unified Queue Component (for Mobile Bottom Sheet) ---
 // --- Shared QueueContent Component ---
 function QueueContent({
   user,
@@ -307,6 +233,7 @@ function QueueContent({
   manualQueueIds,
   upcomingPlaylistIds,
   handleDragEnd,
+  handleDragStart,
   handleQueueScroll,
   queueContainerRef,
   sensors,
@@ -342,7 +269,7 @@ function QueueContent({
         onScroll={handleQueueScroll}
         className="flex-grow overflow-y-auto p-3 px-2 h-full pb-20"
       >
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
           <SortableContext items={[...manualQueueIds, ...upcomingPlaylistIds]} strategy={verticalListSortingStrategy}>
             {manualQueue.map((tanda, index) => (
               <React.Fragment key={tanda.id}>
@@ -372,6 +299,7 @@ function QueueContent({
   );
 }
 // --- EQ Panel Component ---
+
 function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqNotification, isPro }) {
   const panelRef = useRef(null);
   const disabled = user && !isPro;
@@ -415,6 +343,7 @@ function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqN
   );
 }
 // --- Settings Panel Component ---
+
 function PanelFooter({ handleRefreshPlaylist, isRefreshing, handleSettingChange, settings }) {
   return (
     <div className="flex-shrink-0 mb-2 mt-5 w-full gap-3 flex justify-around items-center">
@@ -442,6 +371,7 @@ function PanelFooter({ handleRefreshPlaylist, isRefreshing, handleSettingChange,
     </div>
   );
 }
+
 function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, isPro }) {
   const panelRef = useRef(null);
   return (
@@ -516,6 +446,7 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
     </div>
   );
 }
+
 // --- Helper Functions ---
 function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return '00:00';
@@ -637,6 +568,7 @@ export default function TangoPlayer() {
   const [likedTandas, setLikedTandas] = useState([]);
   const [likedCortinas, setLikedCortinas] = useState([]);
   const [localLikedCortinaIds, setLocalLikedCortinaIds] = useState(new Set());
+  const [activeDragItem, setActiveDragItem] = useState(null);
   // 3. Custom Hooks
   const { user, isPro, requireAuth, likedTandaIds, likedCortinaIds, likedMixedOrder, updateLikedIds, updateLikedCortinaIds, updateLikedMixedOrder } = useAuth();
   const [likedItemOrder, setLikedItemOrder] = useState(() => (Array.isArray(likedMixedOrder) ? likedMixedOrder : []));
@@ -697,7 +629,7 @@ export default function TangoPlayer() {
       if (entry.type === 'tanda') {
         const tanda = tandaMap.get(entry.id);
         if (!tanda) return null;
-        return {
+        return { // Tanda Item
           key: `tanda-${tanda.id}`,
           sortableId: tanda?.id ?? `tanda-${tanda.id}`,
           itemType: 'tanda',
@@ -707,13 +639,12 @@ export default function TangoPlayer() {
       if (entry.type === 'cortina') {
         const cortina = cortinaMap.get(entry.id);
         if (!cortina) return null;
-        const cortinaKey = buildLikedCortinaKey(cortina);
-        const cortinaWithKey = cortina?.key === cortinaKey ? cortina : { ...cortina, key: cortinaKey };
-        return {
-          key: cortinaKey,
-          sortableId: cortinaKey,
+        const cortinaId = cortina.id ?? cortina.meta?.id;
+        return { // Cortina Item
+          key: `liked-cortina-${cortinaId}`,
+          sortableId: cortinaId,
           itemType: 'cortina',
-          cortina: cortinaWithKey,
+          cortina: cortina,
         };
       }
       return null;
@@ -727,7 +658,7 @@ export default function TangoPlayer() {
       const title = meta?.title || 'Cortina';
       const artist = meta?.artist || 'Unknown Artist';
       const genre = meta?.genre || meta?.style || meta?.category || 'Unknown Genre';
-      const key = meta?.id ? `cortina-${meta.id}-${index}` : `${tanda.id}-${index}`;
+      const key = `scheduled-cortina-for-tanda-${tanda.id}`;
       return {
         key,
         order: index + 1,
@@ -1156,13 +1087,30 @@ export default function TangoPlayer() {
   }, [updateCortinaMetas]);
   const handleCortinaDragEnd = useCallback((event) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!active || !over || active.id === over.id) return;
     const ids = scheduledCortinas.map(item => item.key);
     const fromIndex = ids.indexOf(active.id);
     const toIndex = ids.indexOf(over.id);
     if (fromIndex === -1 || toIndex === -1) return;
     reorderCortinas(fromIndex, toIndex);
   }, [scheduledCortinas, reorderCortinas]);
+
+  const handleDragStart = useCallback((event) => {
+    const { active } = event;
+    const allQueueTandas = [...manualQueue, ...upcomingPlaylist];
+    const allLikedItems = likedItems;
+    const allScheduledCortinas = scheduledCortinas;
+
+    let item = allQueueTandas.find(t => t.id === active.id);
+    if (item) { setActiveDragItem({ type: 'tanda', data: item }); return; }
+
+    item = allLikedItems.find(i => i.sortableId === active.id);
+    if (item) { setActiveDragItem({ type: item.itemType, data: item.itemType === 'tanda' ? item.tanda : item.cortina }); return; }
+
+    item = allScheduledCortinas.find(c => c.key === active.id);
+    if (item) { setActiveDragItem({ type: 'cortinaRow', data: item }); return; }
+
+  }, [manualQueue, upcomingPlaylist, likedItems, scheduledCortinas]);
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -1194,9 +1142,11 @@ export default function TangoPlayer() {
         setUpcomingPlaylist(items => arrayMove(items, oldIndex, newIndex));
       }
     }
+    setActiveDragItem(null);
   };
   const handleLikedDragEnd = useCallback((event) => {
     const { active, over } = event;
+    setActiveDragItem(null);
     if (!over || active.id === over.id) return;
     const activeIndex = likedItems.findIndex(item => item.sortableId === active.id);
     const overIndex = likedItems.findIndex(item => item.sortableId === over.id);
@@ -1748,6 +1698,7 @@ export default function TangoPlayer() {
     upcomingPlaylistIds,
     likedItems,
     handleLikedDragEnd,
+    handleDragStart,
     handleDragEnd,
     handleQueueScroll,
     queueContainerRef,
@@ -2267,6 +2218,7 @@ export default function TangoPlayer() {
           isOpen={activePanel === 'queue'}
           onClose={() => handlePanelToggle('queue')}
           rightPanelTab={rightPanelTab}
+          handleDragStart={handleDragStart}
           setRightPanelTab={setRightPanelTab}
           {...queueProps}
         />
@@ -2293,6 +2245,20 @@ export default function TangoPlayer() {
           isPro={isPro}
         />
       )}
+      <DragOverlay dropAnimation={null}>
+        {activeDragItem ? (() => {
+          switch (activeDragItem.type) {
+            case 'tanda':
+              return <div className="opacity-75 shadow-2xl"><QueueItem tanda={activeDragItem.data} isDesktop={isDesktop} isDragOverlay /></div>;
+            case 'cortina': // This is for LikedCortinaItem
+              return <div className="opacity-75 shadow-2xl"><LikedCortinaItem item={activeDragItem.data} isDragOverlay /></div>;
+            case 'cortinaRow': // This is for CortinaRow in the cortinas tab
+              return <div className="opacity-75 shadow-2xl"><CortinaRow item={activeDragItem.data} isDragOverlay /></div>;
+            default:
+              return null;
+          }
+        })() : null}
+      </DragOverlay>
     </div>
   );
 }
