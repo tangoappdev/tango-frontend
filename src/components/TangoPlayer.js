@@ -143,7 +143,7 @@ function Queue({
             )}
             {rightPanelTab === 'liked' && (
               <div className="p-3 px-2 pb-20">
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleLikedDragEnd} modifiers={[restrictToVerticalAxis]}>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleLikedDragEnd} onDragCancel={handleDragCancel} modifiers={[restrictToVerticalAxis]}>
                   <SortableContext items={likedList.map(item => item.sortableId ?? item.key)} strategy={verticalListSortingStrategy}>
                     {likedList.length > 0 ? (
                       likedList.map(item => (
@@ -175,7 +175,7 @@ function Queue({
             {rightPanelTab === 'cortinas' && (
               <div className="p-3 px-2 pb-20">
                 {scheduledCortinaList.length > 0 ? (
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleCortinaDragEnd} modifiers={[restrictToVerticalAxis]}>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleCortinaDragEnd} onDragCancel={handleDragCancel} modifiers={[restrictToVerticalAxis]}>
                     <SortableContext items={scheduledCortinaList.map(item => item.key)} strategy={verticalListSortingStrategy}>
                       {scheduledCortinaList.map((item, idx) => {
                         const isActive = isCortinaPlaying && idx === 0 && activeCortinaId && item.cortinaId && activeCortinaId === item.cortinaId;
@@ -234,6 +234,7 @@ function QueueContent({
   upcomingPlaylistIds,
   handleDragEnd,
   handleDragStart,
+  handleDragCancel,
   handleQueueScroll,
   queueContainerRef,
   sensors,
@@ -269,7 +270,7 @@ function QueueContent({
         onScroll={handleQueueScroll}
         className="flex-grow overflow-y-auto p-3 px-2 h-full pb-20"
       >
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} modifiers={[restrictToVerticalAxis]}>
           <SortableContext items={[...manualQueueIds, ...upcomingPlaylistIds]} strategy={verticalListSortingStrategy}>
             {manualQueue.map((tanda, index) => (
               <React.Fragment key={tanda.id}>
@@ -1095,6 +1096,10 @@ export default function TangoPlayer() {
     reorderCortinas(fromIndex, toIndex);
   }, [scheduledCortinas, reorderCortinas]);
 
+  const handleDragCancel = useCallback(() => {
+    setActiveDragItem(null);
+  }, []);
+
   const handleDragStart = useCallback((event) => {
     const { active } = event;
     const allQueueTandas = [...manualQueue, ...upcomingPlaylist];
@@ -1114,6 +1119,7 @@ export default function TangoPlayer() {
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
+    setActiveDragItem(null);
     if (!over || active.id === over.id) return;
     const draggedTanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === active.id);
     if (!draggedTanda) return;
@@ -1142,7 +1148,6 @@ export default function TangoPlayer() {
         setUpcomingPlaylist(items => arrayMove(items, oldIndex, newIndex));
       }
     }
-    setActiveDragItem(null);
   };
   const handleLikedDragEnd = useCallback((event) => {
     const { active, over } = event;
@@ -1698,6 +1703,7 @@ export default function TangoPlayer() {
     upcomingPlaylistIds,
     likedItems,
     handleLikedDragEnd,
+    handleDragCancel,
     handleDragStart,
     handleDragEnd,
     handleQueueScroll,
@@ -2016,7 +2022,7 @@ export default function TangoPlayer() {
                   {rightPanelTab === 'cortinas' && (
                     <div className="p-3 px-2 pb-20">
                       {scheduledCortinas.length > 0 ? (
-                        <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={handleCortinaDragEnd}>
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleCortinaDragEnd} onDragCancel={handleDragCancel} modifiers={[restrictToVerticalAxis]}>
                           <SortableContext items={scheduledCortinas.map(item => item.key)} strategy={verticalListSortingStrategy}>
                             {scheduledCortinas.map((item, idx) => {
                               const isActive = isCortinaPlaying && idx === 0 && currentCortina && item.cortinaId && currentCortina.id === item.cortinaId;

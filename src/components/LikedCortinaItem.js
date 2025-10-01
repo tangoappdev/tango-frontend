@@ -5,8 +5,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 
 export default function LikedCortinaItem({ item, onMenuOpen, sortableId, isDragOverlay = false }) {
+  // Ensure the ID is always a valid string, falling back to the item's key if the prop is missing.
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: sortableId,
+    id: sortableId || item.key,
     disabled: isDragOverlay,
   });
 
