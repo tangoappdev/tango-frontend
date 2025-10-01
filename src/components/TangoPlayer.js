@@ -43,10 +43,11 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
   return (
     <div
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       style={style}
-      className={`${containerClasses} select-none`}
+      className={`${containerClasses} select-none flex items-center gap-2`}
     >
-      <div className="flex items-center gap-2" {...attributes} {...listeners}>
         <span className={orderClasses}>#{item.order}</span>
         <div className="flex flex-1 items-baseline gap-2 min-w-0">
           <span className="text-sm text-white whitespace-nowrap">{item.title}</span>
@@ -65,11 +66,6 @@ function CortinaRow({ item, isActive, onMenuOpen }) {
         >
           <EllipsisVerticalIcon className="h-5 w-5" />
         </button>
-      </div>
-      <p className="text-xs uppercase tracking-wide text-[#25edda] truncate">{item.genre}</p>
-      {isActive && (
-        <p className="text-[10px] uppercase tracking-wide text-[#25edda]">Now playing</p>
-      )}
     </div>
   );
 }
@@ -85,10 +81,11 @@ function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
   return (
     <div
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       style={style}
-      className="p-3 border-t border-b border-white/5 text-sm space-y-1 select-none"
+      className="p-3 border-t border-b border-white/5 text-sm select-none flex items-center gap-2"
     >
-      <div className="flex items-center gap-2" {...attributes} {...listeners}>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
             <p className="text-sm font-semibold text-white whitespace-nowrap">{item.title}</p>
@@ -107,7 +104,6 @@ function LikedCortinaItem({ item, onMenuOpen, sortableId }) {
         >
           <EllipsisVerticalIcon className="h-5 w-5" />
         </button>
-      </div>
     </div>
   );
 }
