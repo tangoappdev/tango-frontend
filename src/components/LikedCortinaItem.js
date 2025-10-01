@@ -14,12 +14,13 @@ export default function LikedCortinaItem({ item, onMenuOpen, sortableId, isDragO
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0 : 1,
+    opacity: isDragging ? 0.65 : 1,
     zIndex: isDragging ? 10 : 'auto',
   };
   return (
     <div
       ref={setNodeRef}
+      data-panel-no-drag
       {...attributes}
       {...listeners}
       style={style}

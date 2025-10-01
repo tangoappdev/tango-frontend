@@ -4,16 +4,17 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 
-export default function CortinaRow({ item, isActive, onMenuOpen, isDragOverlay = false }) {
+export default function CortinaRow({ item, sortableId: sortableIdProp, isActive, onMenuOpen, isDragOverlay = false }) {
+  const sortableId = sortableIdProp ?? item?.sortableId ?? item?.key;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.key,
+    id: sortableId,
     disabled: isDragOverlay,
   });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0 : 1,
+    opacity: isDragging ? 0.65 : 1,
     zIndex: isDragging ? 10 : 'auto',
   };
   const containerClasses = `p-3 border-b border-white/5 text-sm space-y-1 ${isActive ? 'bg-[#25edda]/10 border-[#25edda]/40' : ''}`;
@@ -21,6 +22,7 @@ export default function CortinaRow({ item, isActive, onMenuOpen, isDragOverlay =
   return (
     <div
       ref={setNodeRef}
+      data-panel-no-drag
       {...attributes}
       {...listeners}
       style={style}

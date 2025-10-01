@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
+import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
@@ -176,13 +176,15 @@ function Queue({
               <div className="p-3 px-2 pb-20">
                 {scheduledCortinaList.length > 0 ? (
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleCortinaDragEnd} onDragCancel={handleDragCancel} modifiers={[restrictToVerticalAxis]}>
-                    <SortableContext items={scheduledCortinaList.map(item => item.key)} strategy={verticalListSortingStrategy}>
+                    <SortableContext items={scheduledCortinaList.map(item => item.sortableId || item.key)} strategy={verticalListSortingStrategy}>
                       {scheduledCortinaList.map((item, idx) => {
                         const isActive = isCortinaPlaying && idx === 0 && activeCortinaId && item.cortinaId && activeCortinaId === item.cortinaId;
                         return (
                           <CortinaRow
                             key={item.key}
-                            item={item} isActive={isActive}
+                            item={item}
+                            sortableId={item.sortableId}
+                            isActive={isActive}
                             onMenuOpen={onCortinaMenuOpen}
                           />
                         );
@@ -574,9 +576,14 @@ export default function TangoPlayer() {
   const { user, isPro, requireAuth, likedTandaIds, likedCortinaIds, likedMixedOrder, updateLikedIds, updateLikedCortinaIds, updateLikedMixedOrder } = useAuth();
   const [likedItemOrder, setLikedItemOrder] = useState(() => (Array.isArray(likedMixedOrder) ? likedMixedOrder : []));
   const [localLikedIds, setLocalLikedIds] = useState(new Set());
-  const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: { delay: 250, tolerance: 5 },
-  }));
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    })
+  );
   // 4. Memos
   const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
   const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
@@ -659,9 +666,13 @@ export default function TangoPlayer() {
       const title = meta?.title || 'Cortina';
       const artist = meta?.artist || 'Unknown Artist';
       const genre = meta?.genre || meta?.style || meta?.category || 'Unknown Genre';
-      const key = `scheduled-cortina-for-tanda-${tanda.id}`;
+      const candidateIds = [meta?.sortableId, meta?.id, meta?.cortina_id, meta?.slug].filter(Boolean).map(String);
+      const fallbackId = `tanda-${tanda?.id ?? 'unknown'}-slot-${index}`;
+      const baseSortableId = candidateIds[0] || fallbackId;
+      const sortableId = `scheduled-cortina-${baseSortableId}`;
       return {
-        key,
+        key: sortableId,
+        sortableId,
         order: index + 1,
         title,
         artist,
@@ -1089,7 +1100,7 @@ export default function TangoPlayer() {
   const handleCortinaDragEnd = useCallback((event) => {
     const { active, over } = event;
     if (!active || !over || active.id === over.id) return;
-    const ids = scheduledCortinas.map(item => item.key);
+    const ids = scheduledCortinas.map(item => item.sortableId || item.key);
     const fromIndex = ids.indexOf(active.id);
     const toIndex = ids.indexOf(over.id);
     if (fromIndex === -1 || toIndex === -1) return;
@@ -1462,7 +1473,7 @@ export default function TangoPlayer() {
     handleMenuClose();
   }, [manualQueue, upcomingPlaylist, menuState.itemType, menuState.tandaId, handleMenuClose]);
   const handleCortinaMenuMove = useCallback((targetIndex) => {
-    const ids = scheduledCortinas.map(item => item.key);
+    const ids = scheduledCortinas.map(item => item.sortableId || item.key);
     const currentIndex = menuState.cortinaKey ? ids.indexOf(menuState.cortinaKey) : -1;
     if (currentIndex === -1 || targetIndex === null || targetIndex === undefined || currentIndex === targetIndex) return;
     reorderCortinas(currentIndex, targetIndex);
@@ -2023,13 +2034,15 @@ export default function TangoPlayer() {
                     <div className="p-3 px-2 pb-20">
                       {scheduledCortinas.length > 0 ? (
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleCortinaDragEnd} onDragCancel={handleDragCancel} modifiers={[restrictToVerticalAxis]}>
-                          <SortableContext items={scheduledCortinas.map(item => item.key)} strategy={verticalListSortingStrategy}>
+                          <SortableContext items={scheduledCortinas.map(item => item.sortableId || item.key)} strategy={verticalListSortingStrategy}>
                             {scheduledCortinas.map((item, idx) => {
                               const isActive = isCortinaPlaying && idx === 0 && currentCortina && item.cortinaId && currentCortina.id === item.cortinaId;
                               return (
                                 <CortinaRow
                                   key={item.key}
-                                  item={item} isActive={isActive}
+                                  item={item}
+                                  sortableId={item.sortableId}
+                                  isActive={isActive}
                                   onMenuOpen={handleCortinaMenuOpen}
                                 />
                               );
