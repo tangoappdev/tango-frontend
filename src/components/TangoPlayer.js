@@ -432,7 +432,7 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
                 <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
-            <div className="grid mb-4 grid-cols-3 gap-2">
+            <div className="grid mb-4 mt-1 grid-cols-3 gap-4">
               {JUST_MODE_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
@@ -515,9 +515,82 @@ export default function TangoPlayer() {
   const audioRef = useRef(null);
   const queueContainerRef = useRef(null);
   const autoplayIntentRef = useRef(false);
+  const cortinaTimeoutRef = useRef(null);
+  const cortinaEndTimeRef = useRef(null);
+  const cortinaTimeUpdateHandlerRef = useRef(null);
+  const cortinaFadeRafRef = useRef(null);
+  const cortinaFadeOutStartedRef = useRef(false);
+  const fadeConfigRef = useRef({ fadeIn: 0, fadeOut: 0 });
+  const isCortinaPlayingRef = useRef(false);
   const isFetchingRef = useRef(false);
   const isSeekingRef = useRef(false);
   const isResettingRef = useRef(false);
+  const cancelCortinaFade = useCallback(() => {
+    if (typeof window !== 'undefined' && cortinaFadeRafRef.current !== null) {
+      window.cancelAnimationFrame(cortinaFadeRafRef.current);
+      cortinaFadeRafRef.current = null;
+    }
+  }, []);
+  const clearCortinaTimeout = useCallback(() => {
+    if (cortinaTimeoutRef.current) {
+      clearTimeout(cortinaTimeoutRef.current);
+      cortinaTimeoutRef.current = null;
+    }
+    if (cortinaTimeUpdateHandlerRef.current && audioRef.current) {
+      audioRef.current.removeEventListener('timeupdate', cortinaTimeUpdateHandlerRef.current);
+      cortinaTimeUpdateHandlerRef.current = null;
+    }
+    if (audioRef.current) {
+      audioRef.current.onloadedmetadata = null;
+    }
+    cancelCortinaFade();
+    cortinaEndTimeRef.current = null;
+    cortinaFadeOutStartedRef.current = false;
+    if (audioRef.current) {
+      audioRef.current.volume = volumeRef.current;
+      audioRef.current.muted = false;
+    }
+  }, [cancelCortinaFade]);
+
+  const startCortinaFade = useCallback((targetVolume, durationSeconds, onComplete) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    cancelCortinaFade();
+    const clampedTarget = Math.min(1, Math.max(0, Number(targetVolume)));
+    if (clampedTarget > 0) {
+      audio.muted = false;
+    }
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+      audio.volume = clampedTarget;
+      onComplete?.();
+      return;
+    }
+    const startVolumeRaw = Number(audio.volume);
+    const startVolume = Number.isFinite(startVolumeRaw) ? Math.min(1, Math.max(0, startVolumeRaw)) : 1;
+    if (startVolume !== startVolumeRaw) {
+      audio.volume = startVolume;
+    }
+    const startTime = typeof window !== 'undefined' ? window.performance.now() : Date.now();
+    const step = (now) => {
+      const elapsed = (now - startTime) / 1000;
+      const progress = Math.min(elapsed / durationSeconds, 1);
+      const nextVolume = startVolume + (clampedTarget - startVolume) * progress;
+      audio.volume = Math.min(1, Math.max(0, Number(nextVolume)));
+      if (progress >= 1) {
+        cortinaFadeRafRef.current = null;
+        onComplete?.();
+      } else if (typeof window !== 'undefined') {
+        cortinaFadeRafRef.current = window.requestAnimationFrame(step);
+      }
+    };
+    if (typeof window !== 'undefined') {
+      cortinaFadeRafRef.current = window.requestAnimationFrame(step);
+    } else {
+      audio.volume = clampedTarget;
+      onComplete?.();
+    }
+  }, [cancelCortinaFade]);
+
   const audioContextRef = useRef(null);
   const sourceNodeRef = useRef(null);
   const lowShelfRef = useRef(null);
@@ -542,6 +615,7 @@ export default function TangoPlayer() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const volumeRef = useRef(1);
   const [activePanel, setActivePanel] = useState(null);
   const [eq, setEq] = useState({ low: 0, mid: 0, high: 0 });
   const [menuState, setMenuState] = useState({
@@ -584,6 +658,11 @@ export default function TangoPlayer() {
       activationConstraint: { delay: 250, tolerance: 5 },
     })
   );
+  useEffect(() => {
+    const sanitized = Math.min(1, Math.max(0, Number(volume)));
+    volumeRef.current = sanitized;
+  }, [volume]);
+
   // 4. Memos
   const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
   const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
@@ -613,24 +692,36 @@ export default function TangoPlayer() {
       console.warn('[syncLikedOrderToAuth] ignoring non-array order', order);
       return;
     }
+    const nextOrder = order.filter(Boolean);
     const currentKey = JSON.stringify(Array.isArray(likedMixedOrder) ? likedMixedOrder : []);
-    const nextKey = JSON.stringify(order);
+    const nextKey = JSON.stringify(nextOrder);
     if (currentKey !== nextKey) {
-      console.log('[syncLikedOrderToAuth] updating auth order', order);
+      console.log('[syncLikedOrderToAuth] updating auth order', nextOrder);
+      updateLikedMixedOrder(nextOrder);
     } else {
-      console.log('[syncLikedOrderToAuth] no change needed', { order });
+      console.log('[syncLikedOrderToAuth] no change needed', { order: nextOrder });
     }
   }, [likedMixedOrder, updateLikedMixedOrder]);
+
+  const fallbackOrder = useMemo(() => {
+    const tandaEntries = likedTandas.map(t => ({ type: 'tanda', id: t.id }));
+    const cortinaEntries = likedCortinas.map(c => ({ type: 'cortina', id: c.id }));
+    return [...tandaEntries, ...cortinaEntries];
+  }, [likedTandas, likedCortinas]);
+
+  const mergedOrder = useMemo(() => {
+    if (likedItemOrder.length === 0) {
+      return fallbackOrder;
+    }
+    const seen = new Set(likedItemOrder.map(entry => `${entry.type}:${entry.id}`));
+    const extras = fallbackOrder.filter(entry => !seen.has(`${entry.type}:${entry.id}`));
+    return [...likedItemOrder, ...extras];
+  }, [likedItemOrder, fallbackOrder]);
 
   const likedItems = useMemo(() => {
     const tandaMap = new Map(likedTandas.map(t => [t.id, t]));
     const cortinaMap = new Map(likedCortinas.map(c => [c.id, c]));
-    const fallbackOrder = [
-      ...likedTandas.map(t => ({ type: 'tanda', id: t.id })),
-      ...likedCortinas.map(c => ({ type: 'cortina', id: c.id })),
-    ];
-    const orderSource = likedItemOrder.length > 0 ? likedItemOrder : fallbackOrder;
-    return orderSource.map((entry) => {
+    return mergedOrder.map((entry) => {
       if (!entry) {
         return null;
       }
@@ -657,7 +748,8 @@ export default function TangoPlayer() {
       }
       return null;
     }).filter(Boolean);
-  }, [likedTandas, likedCortinas, likedItemOrder, buildLikedCortinaKey]);
+  }, [likedTandas, likedCortinas, mergedOrder, buildLikedCortinaKey]);
+
   const scheduledCortinas = useMemo(() => {
     if (!settings.cortinas) return [];
     if (queueWithCurrent.length <= 1) return [];
@@ -725,6 +817,7 @@ export default function TangoPlayer() {
       const data = await res.json();
       if (Array.isArray(data.likedTandaIds)) updateLikedIds(data.likedTandaIds);
       if (Array.isArray(data.likedCortinaIds)) updateLikedCortinaIds(data.likedCortinaIds);
+      if (Array.isArray(data.likedMixedOrder)) updateLikedMixedOrder(data.likedMixedOrder);
     } catch (error) {
       console.error('Failed to save liked order:', error);
     }
@@ -732,24 +825,24 @@ export default function TangoPlayer() {
 
   const handleLikeToggle = useCallback(async (tandaId) => {
     if (!user || !tandaId) return;
-    const previousOrder = likedItemOrder;
+    const baseOrder = likedItemOrder.length > 0 ? likedItemOrder : fallbackOrder;
+    const previousOrder = baseOrder;
     const previousTandas = likedTandas;
     const isRemoving = localLikedIds.has(tandaId);
     const updatedSet = new Set(localLikedIds);
     let updatedTandas = likedTandas;
-    let nextOrder = likedItemOrder;
+    let nextOrder = [...baseOrder];
 
     if (isRemoving) {
       updatedSet.delete(tandaId);
       updatedTandas = likedTandas.filter(t => t.id !== tandaId);
-      nextOrder = likedItemOrder.filter(entry => !(entry.type === 'tanda' && entry.id === tandaId));
+      nextOrder = nextOrder.filter(entry => !(entry.type === 'tanda' && entry.id === tandaId));
     } else {
       updatedSet.add(tandaId);
-      if (!likedItemOrder.some(entry => entry.type === 'tanda' && entry.id === tandaId)) {
-        nextOrder = [...likedItemOrder, { type: 'tanda', id: tandaId }];
+      if (!nextOrder.some(entry => entry.type === 'tanda' && entry.id === tandaId)) {
+        nextOrder = [...nextOrder, { type: 'tanda', id: tandaId }];
       }
     }
-
 
     setLocalLikedIds(updatedSet);
     if (isRemoving) {
@@ -780,7 +873,8 @@ export default function TangoPlayer() {
       setLikedItemOrder(rollbackOrder);
       syncLikedOrderToAuth(rollbackOrder);
     }
-  }, [user, localLikedIds, likedItemOrder, likedTandas, likedTandaIds, likedMixedOrder, updateLikedIds, syncLikedOrderToAuth, persistLikedOrdering]);
+
+  }, [user, localLikedIds, likedItemOrder, likedTandas, likedTandaIds, likedMixedOrder, fallbackOrder, updateLikedIds, syncLikedOrderToAuth, persistLikedOrdering]);
   const fetchAndFillPlaylist = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
@@ -807,7 +901,7 @@ export default function TangoPlayer() {
         });
         setError(null);
       }
-    } catch (err) {
+    } catch {
       console.error("FETCH ERROR:", err);
       setError(err.message);
     } finally {
@@ -905,7 +999,7 @@ export default function TangoPlayer() {
         const ordered = reorderWithMinGap([], data.upcomingTandas || [], MIN_SAME_TANDA_GAP);
         const wrapped = attachCortinas([], ordered, pool);
         setUpcomingPlaylist(wrapped);
-      } catch (err) {
+      } catch {
         console.error("SETTING CHANGE FETCH ERROR:", err);
         setError(err.message);
       } finally {
@@ -933,6 +1027,15 @@ export default function TangoPlayer() {
       normalized.artwork_url_signed = normalized.artwork;
     }
     normalized.playableUrl = normalized.playableUrl || normalized.url_signed || normalized.playable_url_signed || null;
+
+    const parsedStart = Number(normalized.startTime);
+    const safeStart = Number.isFinite(parsedStart) && parsedStart >= 0 ? parsedStart : 0;
+    normalized.startTime = safeStart;
+
+    const parsedEnd = Number(normalized.endTime);
+    const safeEnd = Number.isFinite(parsedEnd) && parsedEnd > safeStart ? parsedEnd : null;
+    normalized.endTime = safeEnd;
+
     return normalized;
   }, []);
   const fetchLikedCortinas = useCallback(async () => {
@@ -1042,21 +1145,22 @@ export default function TangoPlayer() {
     };
 
     const updatedCortinaSet = new Set(localLikedCortinaIds);
-    const previousOrder = likedItemOrder;
+    const baseOrder = likedItemOrder.length > 0 ? likedItemOrder : fallbackOrder;
+    const previousOrder = baseOrder;
     const previousCortinas = likedCortinas;
-    let nextOrder = likedItemOrder;
+    let nextOrder = [...baseOrder];
 
     if (wasLiked) {
       updatedCortinaSet.delete(cortinaId);
       setLikedCortinas(prev => prev.filter(item => item.id !== cortinaId));
-      nextOrder = likedItemOrder.filter(entry => !(entry.type === 'cortina' && entry.id === cortinaId));
+      nextOrder = nextOrder.filter(entry => !(entry.type === 'cortina' && entry.id === cortinaId));
     } else {
       updatedCortinaSet.add(cortinaId);
       if (!likedCortinas.some(item => item.id === cortinaId)) {
         setLikedCortinas(prev => [...prev, entry]);
       }
-      if (!likedItemOrder.some(entry => entry.type === 'cortina' && entry.id === cortinaId)) {
-        nextOrder = [...likedItemOrder, { type: 'cortina', id: cortinaId }];
+      if (!nextOrder.some(entry => entry.type === 'cortina' && entry.id === cortinaId)) {
+        nextOrder = [...nextOrder, { type: 'cortina', id: cortinaId }];
       }
     }
 
@@ -1087,7 +1191,8 @@ export default function TangoPlayer() {
         syncLikedOrderToAuth(rollbackOrder);
       }
     })();
-  }, [user, requireAuth, normalizeCortinaMeta, localLikedCortinaIds, likedItemOrder, likedCortinas, likedMixedOrder, updateLikedCortinaIds, syncLikedOrderToAuth, persistLikedOrdering]);
+
+  }, [user, requireAuth, normalizeCortinaMeta, localLikedCortinaIds, likedItemOrder, likedCortinas, likedMixedOrder, fallbackOrder, updateLikedCortinaIds, syncLikedOrderToAuth, persistLikedOrdering]);
 
   const reorderCortinas = useCallback((fromIndex, toIndex) => {
     updateCortinaMetas((metas) => {
@@ -1284,6 +1389,30 @@ export default function TangoPlayer() {
     setCurrentTrackIndex(0);
     autoplayIntentRef.current = true;
   }, [currentTanda, manualQueue, upcomingPlaylist]);
+  const handleCortinaEnded = useCallback(() => {
+    if (!isCortinaPlayingRef.current) return;
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+      } catch {
+        // ignore pause errors
+      }
+    }
+    clearCortinaTimeout();
+    setIsCortinaPlaying(false);
+    setCurrentCortina(null);
+    playNextTanda();
+  }, [clearCortinaTimeout, playNextTanda]);
+
+  useEffect(() => {
+    return () => clearCortinaTimeout();
+  }, [clearCortinaTimeout]);
+
+
+  useEffect(() => {
+    isCortinaPlayingRef.current = isCortinaPlaying;
+  }, [isCortinaPlaying]);
+
   const handleTrackEnded = useCallback(() => {
     const totalTracks = currentTanda?.tracks_signed?.length || 0;
     const lengthRule = (currentTanda?.type === 'Tango') ? settings.tandaLength : 3;
@@ -1304,12 +1433,86 @@ export default function TangoPlayer() {
         if (!resolvedCortina && cortinas.length > 0) {
           resolvedCortina = cortinas[Math.floor(Math.random() * cortinas.length)];
         }
+        clearCortinaTimeout();
         if (resolvedCortina?.playableUrl) {
           setCurrentCortina(resolvedCortina);
           setIsCortinaPlaying(true);
-          if (audioRef.current) {
-            audioRef.current.src = resolvedCortina.playableUrl;
-            audioRef.current.play();
+          const audio = audioRef.current;
+          if (audio) {
+            const startPosition = typeof resolvedCortina.startTime === 'number' && resolvedCortina.startTime >= 0
+              ? resolvedCortina.startTime
+              : 0;
+            const endPosition = typeof resolvedCortina.endTime === 'number' && resolvedCortina.endTime > startPosition
+              ? resolvedCortina.endTime
+              : null;
+            const fadeInDuration = fadeConfigRef.current.fadeIn;
+            const fadeOutDuration = fadeConfigRef.current.fadeOut;
+
+            const applyPlaybackParams = () => {
+              try {
+                audio.currentTime = startPosition;
+              } catch {
+                // Some browsers may throw if metadata isn't ready yet; ignore.
+              }
+              cancelCortinaFade();
+              cortinaFadeOutStartedRef.current = false;
+              cortinaEndTimeRef.current = null;
+                            const targetVolume = Math.min(1, Math.max(0, volumeRef.current));
+              if (fadeInDuration > 0 && targetVolume > 0) {
+                audio.volume = 0;
+                audio.muted = false;
+                startCortinaFade(targetVolume, fadeInDuration);
+              } else {
+                audio.volume = targetVolume;
+                audio.muted = false;
+              }
+
+if (endPosition !== null) {
+                cortinaEndTimeRef.current = endPosition;
+                const onTimeUpdate = () => {
+                  if (!audioRef.current) return;
+                  if (typeof cortinaEndTimeRef.current === 'number') {
+                    const remaining = cortinaEndTimeRef.current - audioRef.current.currentTime;
+                    if (!cortinaFadeOutStartedRef.current && fadeOutDuration > 0 && remaining <= fadeOutDuration) {
+                      cortinaFadeOutStartedRef.current = true;
+                      const fadeDuration = Math.max(0, Math.min(fadeOutDuration, Math.max(remaining, 0)));
+                      startCortinaFade(0, fadeDuration, handleCortinaEnded);
+                    }
+                    if (audioRef.current.currentTime >= cortinaEndTimeRef.current - 0.05) {
+                      handleCortinaEnded();
+                    }
+                  }
+                };
+                if (cortinaTimeUpdateHandlerRef.current && audio.removeEventListener) {
+                  audio.removeEventListener('timeupdate', cortinaTimeUpdateHandlerRef.current);
+                }
+                audio.addEventListener('timeupdate', onTimeUpdate);
+                cortinaTimeUpdateHandlerRef.current = onTimeUpdate;
+                const remainingMs = Math.max(0, (endPosition - Math.max(startPosition, audio.currentTime)) * 1000);
+                if (remainingMs > 0) {
+                  if (cortinaTimeoutRef.current) clearTimeout(cortinaTimeoutRef.current);
+                  cortinaTimeoutRef.current = setTimeout(() => {
+                    handleCortinaEnded();
+                  }, remainingMs);
+                } else {
+                  handleCortinaEnded();
+                }
+              }
+              audio.play().catch(e => console.error('Error playing cortina:', e));
+            };
+
+            audio.src = resolvedCortina.playableUrl;
+
+            if (audio.readyState >= 1) {
+              // Metadata already available; apply immediately.
+              applyPlaybackParams();
+            } else {
+              audio.onloadedmetadata = () => {
+                audio.onloadedmetadata = null;
+                applyPlaybackParams();
+              };
+              audio.load();
+            }
           }
         } else {
           playNextTanda();
@@ -1321,12 +1524,19 @@ export default function TangoPlayer() {
       autoplayIntentRef.current = true;
       setCurrentTrackIndex(prev => prev + 1);
     }
-  }, [currentTanda, currentTrackIndex, settings.tandaLength, settings.cortinas, scheduledCortinas, cortinas, playNextTanda]);
-  const handleCortinaEnded = useCallback(() => {
-    setIsCortinaPlaying(false);
-    setCurrentCortina(null);
-    playNextTanda();
-  }, [playNextTanda]);
+  }, [
+    currentTanda,
+    currentTrackIndex,
+    settings.tandaLength,
+    settings.cortinas,
+    scheduledCortinas,
+    cortinas,
+    playNextTanda,
+    clearCortinaTimeout,
+    handleCortinaEnded,
+    startCortinaFade,
+    cancelCortinaFade,
+  ]);
   const handleRefreshPlaylist = useCallback(() => {
     if (isFetchingRef.current) return;
     setResetCounter(c => c + 1);
@@ -1484,7 +1694,16 @@ export default function TangoPlayer() {
   const handleProgressClick = useCallback((event) => { if (!audioRef.current || !duration) return; const barElement = event.currentTarget; const rect = barElement.getBoundingClientRect(); const clickX = event.clientX - rect.left; const seekTime = (clickX / rect.width) * duration; audioRef.current.currentTime = seekTime; setCurrentTime(seekTime); }, [duration]);
   const handleSeekingStart = () => { isSeekingRef.current = true; };
   const handleSeekingEnd = () => { isSeekingRef.current = false; };
-  const handleVolumeChange = (event) => { if (event.target) { const newVolume = Number(event.target.value); setVolume(newVolume); if (audioRef.current) audioRef.current.volume = newVolume; } };
+  const handleVolumeChange = (event) => {
+    if (!event?.target) return;
+    const newVolume = Number(event.target.value);
+    const sanitized = Math.min(1, Math.max(0, newVolume));
+    setVolume(sanitized);
+    volumeRef.current = sanitized;
+    if (audioRef.current) {
+      audioRef.current.volume = sanitized;
+    }
+  };
   const renderVerticalVolumeSlider = (currentVolume, setVolumeFunctionCallback) => { const volumePercentage = currentVolume * 100; const KNOB_DISPLAY_HEIGHT_PX = 12; const thumbOffsetPx = KNOB_DISPLAY_HEIGHT_PX / 2; const thumbTopPosition = `calc(${(1 - currentVolume) * 100}% - ${thumbOffsetPx}px)`; return (<div className="flex flex-col items-center justify-center h-56 w-16 bg-[url('/images/volumeback.png')] bg-contain bg-no-repeat bg-center p-1 rounded-md shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><div className="relative w-1 h-[80%] bg-[#222429] rounded-full shadow-inner cursor-pointer" onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); const clickY = e.clientY - rect.top; let newVolume = Math.max(0, Math.min(1, 1 - (clickY / rect.height))); setVolumeFunctionCallback({ target: { value: newVolume.toString() } }); }}><div className="absolute bottom-0 left-0 w-full bg-[#25edda] rounded-b-full pointer-events-none" style={{ height: `${volumePercentage}%` }} /><div className="absolute left-1/2 -translate-x-1/2 w-8 h-3 rounded-md bg-[#30333a] shadow-[3px_3px_3px_#222429,-3px_-3px_3px_#3e424b] pointer-events-none" style={{ top: thumbTopPosition }} /><input type="range" min="0" max="1" step="0.01" value={currentVolume} onChange={setVolumeFunctionCallback} className="absolute top-0 left-0 opacity-0 w-full h-full cursor-pointer" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }} aria-label="Volume" /></div></div>); };
   const handleAudioTimeUpdate = useCallback(() => { if (audioRef.current && !isSeekingRef.current) setCurrentTime(audioRef.current.currentTime); }, []);
   const handleAudioLoadedMetadata = useCallback(() => { if (audioRef.current) setDuration(audioRef.current.duration); }, []);
@@ -1565,9 +1784,17 @@ export default function TangoPlayer() {
         if (response.ok) {
           const data = await response.json();
           setCortinas(data.cortinas);
+          if (data.settings) {
+            const fadeInSeconds = Math.max(0, Number(data.settings.fadeInSeconds) || 0);
+            const fadeOutSeconds = Math.max(0, Number(data.settings.fadeOutSeconds) || 0);
+            fadeConfigRef.current = {
+              fadeIn: fadeInSeconds,
+              fadeOut: fadeOutSeconds,
+            };
+          }
         }
       } catch (error) {
-        console.error("Failed to fetch cortinas:", error);
+        console.error('Failed to fetch cortinas:', error);
       }
     };
     fetchCortinas();
@@ -1582,7 +1809,14 @@ export default function TangoPlayer() {
     const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
     if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
       audioRef.current.src = trackUrl;
-      audioRef.current.load();
+      // Only load if not already playing a cortina, to avoid interrupting
+      // the cortina with a new track load.
+      if (!isCortinaPlaying) {
+        audioRef.current.load();
+      } else {
+        // If a cortina is playing, defer loading the next tanda until cortina ends
+        return;
+      }
       isResettingRef.current = false;
       if (autoplayIntentRef.current) {
         autoplayIntentRef.current = false;
@@ -1590,7 +1824,7 @@ export default function TangoPlayer() {
       }
     }
   }, [currentTanda, currentTrackIndex]);
-  useEffect(() => {
+  useEffect(() => { // Demo timer for non-pro users
     // If the user is logged in, or if music isn't playing, we don't need a timer.
     if (user || !isPlaying) {
       return;
@@ -1856,7 +2090,7 @@ export default function TangoPlayer() {
                             <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
                           </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-3 gap-4">
                           {JUST_MODE_OPTIONS.map(opt => (
                             <button
                               key={opt.value}
@@ -2282,3 +2516,17 @@ export default function TangoPlayer() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

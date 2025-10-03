@@ -28,24 +28,24 @@ export default function CortinaRow({ item, sortableId: sortableIdProp, isActive,
       style={style}
       className={`${containerClasses} select-none flex items-center gap-2`}
     >
-        <span className={orderClasses}>#{item.order}</span>
-        <div className="flex flex-1 items-baseline gap-2 min-w-0">
-          <span className="text-sm text-white whitespace-nowrap">{item.title}</span>
-          {item.artist && (
-            <span className="text-xs text-gray-400 truncate">- {item.artist}</span>
-          )}
-        </div>
-        <button
-          data-no-dnd="true"
-          onClick={(e) => {
-            e.preventDefault();
-            onMenuOpen?.(e, item);
-          }}
-          className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
-          title="Click for options, press and hold to drag"
-        >
-          <EllipsisVerticalIcon className="h-5 w-5" />
-        </button>
+      <span className={orderClasses}>#{item.order}</span>
+      <div className="flex flex-1 items-baseline gap-2 min-w-0">
+        <span className="text-sm text-white whitespace-nowrap">{item.title}</span>
+        {item.artist && (
+          <span className="text-xs text-gray-400 truncate">- {item.artist}</span>
+        )}
+      </div>
+      <button
+        data-no-dnd="true"
+        onClick={(e) => {
+          e.preventDefault();
+          onMenuOpen?.(e, item);
+        }}
+        className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
+        title="Click for options, press and hold to drag"
+      >
+        <EllipsisVerticalIcon className="h-5 w-5" />
+      </button>
     </div>
   );
 }

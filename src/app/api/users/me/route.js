@@ -1,6 +1,6 @@
 // ANCHOR: api-users-me (REPLACE WHOLE FILE)
 import { NextResponse } from 'next/server';
-import { getFirestore } from '@/lib/firebaseAdmin.server.js';
+import { getFirestore, getAuth } from '@/lib/firebaseAdmin.server.js';
 import { getUserFromRequest } from '@/lib/getUserFromRequest';
 
 export async function GET(request) {
@@ -13,6 +13,15 @@ export async function GET(request) {
     );
   }
 
+  // Fetch user claims to check for admin role
+  let userClaims = {};
+  try {
+    const userRecord = await getAuth().getUser(user.uid);
+    userClaims = userRecord.customClaims || {};
+  } catch (e) {
+    console.error("Error fetching user claims:", e);
+  }
+
   const db = getFirestore();
   let profile = null;
   try {
@@ -20,24 +29,10 @@ export async function GET(request) {
     if (doc.exists) profile = doc.data();
   } catch {}
 
+
   const tier = profile?.tier || 'free';
   const trialEndsAt = profile?.trialEndsAt ? new Date(profile.trialEndsAt).getTime() : 0;
   const trialActive = trialEndsAt > Date.now();
-  const likedTandaIds = Array.isArray(profile?.likedTandaIds) ? profile.likedTandaIds.filter(Boolean) : [];
-  const likedCortinaIds = Array.isArray(profile?.likedCortinaIds) ? profile.likedCortinaIds.filter(Boolean) : [];
-  const tandaIdSet = new Set(likedTandaIds);
-  const cortinaIdSet = new Set(likedCortinaIds);
-  const likedMixedOrder = Array.isArray(profile?.likedMixedOrder)
-    ? profile.likedMixedOrder
-        .map(entry => ({ type: entry?.type, id: typeof entry?.id === 'string' ? entry.id : null }))
-        .filter(entry => {
-          if (!entry.id) return false;
-          if (entry.type === 'tanda' && tandaIdSet.has(entry.id)) return true;
-          if (entry.type === 'cortina' && cortinaIdSet.has(entry.id)) return true;
-          return false;
-        })
-    : [];
-  const isPro = Boolean(profile?.isPro);
 
   return NextResponse.json(
     {
@@ -50,13 +45,14 @@ export async function GET(request) {
         (user.email ? user.email.split('@')[0] : ''),
       photoURL: profile?.photoURL || '',
       tier,
+      isAdmin: !!userClaims.admin,
       trialActive,
-      isPro,
-      likedTandaIds,
-      likedCortinaIds,
-      likedMixedOrder,
+      likedTandaIds: profile?.likedTandaIds || [],
+      likedCortinaIds: profile?.likedCortinaIds || [],
+      likedMixedOrder: profile?.likedMixedOrder || [],
     },
     { status: 200, headers: { 'cache-control': 'no-store' } }
   );
 }
 // ANCHOR: api-users-me (END)
+
