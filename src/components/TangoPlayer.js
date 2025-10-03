@@ -531,6 +531,55 @@ export default function TangoPlayer() {
       cortinaFadeRafRef.current = null;
     }
   }, []);
+  const audioContextRef = useRef(null);
+  const sourceNodeRef = useRef(null);
+  const lowShelfRef = useRef(null);
+  const midPeakingRef = useRef(null);
+  const highShelfRef = useRef(null);
+  const masterGainRef = useRef(null);
+  const initAudioGraphRef = useRef(() => {});
+
+  const getEffectiveVolume = useCallback(() => {
+    if (masterGainRef.current && audioContextRef.current) {
+      const value = masterGainRef.current.gain.value;
+      return Number.isFinite(value) ? value : volumeRef.current;
+    }
+    if (audioRef.current) {
+      const value = Number(audioRef.current.volume);
+      return Number.isFinite(value) ? value : volumeRef.current;
+    }
+    return volumeRef.current;
+  }, []);
+
+  const setEffectiveVolume = useCallback((value) => {
+    const clamped = Math.min(1, Math.max(0, Number(value)));
+    if (masterGainRef.current && audioContextRef.current) {
+      const gainNode = masterGainRef.current.gain;
+      const audioCtx = audioContextRef.current;
+      try {
+        if (typeof gainNode.setValueAtTime === 'function') {
+          gainNode.setValueAtTime(clamped, audioCtx.currentTime);
+        }
+      } catch {
+        // ignore scheduling errors, fall back to direct assignment below
+      }
+      gainNode.value = clamped;
+      if (audioRef.current) {
+        try {
+          audioRef.current.volume = 1;
+        } catch {
+          /* ignore readonly volume */
+        }
+      }
+    } else if (audioRef.current) {
+      try {
+        audioRef.current.volume = clamped;
+      } catch {
+        /* ignore readonly volume */
+      }
+    }
+    return clamped;
+  }, []);
   const clearCortinaTimeout = useCallback(() => {
     if (cortinaTimeoutRef.current) {
       clearTimeout(cortinaTimeoutRef.current);
@@ -546,8 +595,8 @@ export default function TangoPlayer() {
     cancelCortinaFade();
     cortinaEndTimeRef.current = null;
     cortinaFadeOutStartedRef.current = false;
+    setEffectiveVolume(volumeRef.current);
     if (audioRef.current) {
-      audioRef.current.volume = volumeRef.current;
       audioRef.current.muted = false;
     }
   }, [cancelCortinaFade]);
@@ -556,26 +605,29 @@ export default function TangoPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
     cancelCortinaFade();
+    if (!audioContextRef.current) {
+      initAudioGraphRef.current();
+    }
     const clampedTarget = Math.min(1, Math.max(0, Number(targetVolume)));
     if (clampedTarget > 0) {
       audio.muted = false;
     }
     if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
-      audio.volume = clampedTarget;
+      setEffectiveVolume(clampedTarget);
       onComplete?.();
       return;
     }
-    const startVolumeRaw = Number(audio.volume);
+    const startVolumeRaw = getEffectiveVolume();
     const startVolume = Number.isFinite(startVolumeRaw) ? Math.min(1, Math.max(0, startVolumeRaw)) : 1;
     if (startVolume !== startVolumeRaw) {
-      audio.volume = startVolume;
+      setEffectiveVolume(startVolume);
     }
     const startTime = typeof window !== 'undefined' ? window.performance.now() : Date.now();
     const step = (now) => {
       const elapsed = (now - startTime) / 1000;
       const progress = Math.min(elapsed / durationSeconds, 1);
       const nextVolume = startVolume + (clampedTarget - startVolume) * progress;
-      audio.volume = Math.min(1, Math.max(0, Number(nextVolume)));
+      setEffectiveVolume(nextVolume);
       if (progress >= 1) {
         cortinaFadeRafRef.current = null;
         onComplete?.();
@@ -586,16 +638,11 @@ export default function TangoPlayer() {
     if (typeof window !== 'undefined') {
       cortinaFadeRafRef.current = window.requestAnimationFrame(step);
     } else {
-      audio.volume = clampedTarget;
+      setEffectiveVolume(clampedTarget);
       onComplete?.();
     }
-  }, [cancelCortinaFade]);
+  }, [cancelCortinaFade, getEffectiveVolume, setEffectiveVolume]);
 
-  const audioContextRef = useRef(null);
-  const sourceNodeRef = useRef(null);
-  const lowShelfRef = useRef(null);
-  const midPeakingRef = useRef(null);
-  const highShelfRef = useRef(null);
   // 2. State
   const [tier, setTier] = useState('free');
   const [skipMsg, setSkipMsg] = useState('');
@@ -911,18 +958,33 @@ export default function TangoPlayer() {
     }
   }, [settings, recentlyPlayedIds, upcomingPlaylist, shuffledCortinas, manualQueue]);
   const initAudioGraph = useCallback(() => {
-    if (!isDesktop || audioContextRef.current) return;
-    const context = new (window.AudioContext || window.webkitAudioContext)();
-    if (!audioRef.current) return;
+    if (audioContextRef.current || !audioRef.current) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const context = new AudioCtx();
     const source = context.createMediaElementSource(audioRef.current);
     const lowShelf = context.createBiquadFilter(); lowShelf.type = 'lowshelf'; lowShelf.frequency.value = 320; lowShelf.gain.value = eq.low;
     const midPeaking = context.createBiquadFilter(); midPeaking.type = 'peaking'; midPeaking.frequency.value = 1000; midPeaking.Q.value = 1; midPeaking.gain.value = eq.mid;
     const highShelf = context.createBiquadFilter(); highShelf.type = 'highshelf'; highShelf.frequency.value = 3200; highShelf.gain.value = eq.high;
-    source.connect(lowShelf); lowShelf.connect(midPeaking); midPeaking.connect(highShelf); highShelf.connect(context.destination);
-    audioContextRef.current = context; sourceNodeRef.current = source; lowShelfRef.current = lowShelf; midPeakingRef.current = midPeaking; highShelfRef.current = highShelf;
-  }, [eq.low, eq.mid, eq.high, isDesktop]);
+    const masterGain = context.createGain(); masterGain.gain.value = Math.min(1, Math.max(0, Number(volumeRef.current)));
+    source.connect(lowShelf); lowShelf.connect(midPeaking); midPeaking.connect(highShelf); highShelf.connect(masterGain); masterGain.connect(context.destination);
+    if (audioRef.current) {
+      try {
+        audioRef.current.volume = 1;
+      } catch {
+        /* ignore readonly volume */
+      }
+    }
+    audioContextRef.current = context;
+    sourceNodeRef.current = source;
+    lowShelfRef.current = lowShelf;
+    midPeakingRef.current = midPeaking;
+    highShelfRef.current = highShelf;
+    masterGainRef.current = masterGain;
+  }, [eq.low, eq.mid, eq.high]);
+  initAudioGraphRef.current = initAudioGraph;
   const handlePlay = useCallback(async () => {
-    if (!audioContextRef.current && isDesktop) initAudioGraph();
+    if (!audioContextRef.current) initAudioGraph();
     const audioCtx = audioContextRef.current;
     if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
     if (audioRef.current?.src && audioRef.current.paused) {
@@ -930,7 +992,7 @@ export default function TangoPlayer() {
     } else if (!currentTanda && !isLoading) {
       fetchAndFillPlaylist();
     }
-  }, [currentTanda, isLoading, fetchAndFillPlaylist, isDesktop, initAudioGraph]);
+  }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph]);
   const playNextTanda = useCallback(() => {
     const sourceTanda = manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0];
     if (!sourceTanda) { fetchAndFillPlaylist(); return; }
@@ -1457,17 +1519,17 @@ export default function TangoPlayer() {
               cancelCortinaFade();
               cortinaFadeOutStartedRef.current = false;
               cortinaEndTimeRef.current = null;
-                            const targetVolume = Math.min(1, Math.max(0, volumeRef.current));
+              const targetVolume = Math.min(1, Math.max(0, volumeRef.current));
               if (fadeInDuration > 0 && targetVolume > 0) {
-                audio.volume = 0;
+                setEffectiveVolume(0);
                 audio.muted = false;
                 startCortinaFade(targetVolume, fadeInDuration);
               } else {
-                audio.volume = targetVolume;
+                setEffectiveVolume(targetVolume);
                 audio.muted = false;
               }
 
-if (endPosition !== null) {
+              if (endPosition !== null) {
                 cortinaEndTimeRef.current = endPosition;
                 const onTimeUpdate = () => {
                   if (!audioRef.current) return;
@@ -1700,8 +1762,25 @@ if (endPosition !== null) {
     const sanitized = Math.min(1, Math.max(0, newVolume));
     setVolume(sanitized);
     volumeRef.current = sanitized;
-    if (audioRef.current) {
-      audioRef.current.volume = sanitized;
+    if (masterGainRef.current && audioContextRef.current) {
+      try {
+        masterGainRef.current.gain.setTargetAtTime(sanitized, audioContextRef.current.currentTime, 0.01);
+      } catch {
+        masterGainRef.current.gain.value = sanitized;
+      }
+      if (audioRef.current) {
+        try {
+          audioRef.current.volume = 1;
+        } catch {
+          /* ignore readonly volume */
+        }
+      }
+    } else if (audioRef.current) {
+      try {
+        audioRef.current.volume = sanitized;
+      } catch {
+        /* ignore readonly volume */
+      }
     }
   };
   const renderVerticalVolumeSlider = (currentVolume, setVolumeFunctionCallback) => { const volumePercentage = currentVolume * 100; const KNOB_DISPLAY_HEIGHT_PX = 12; const thumbOffsetPx = KNOB_DISPLAY_HEIGHT_PX / 2; const thumbTopPosition = `calc(${(1 - currentVolume) * 100}% - ${thumbOffsetPx}px)`; return (<div className="flex flex-col items-center justify-center h-56 w-16 bg-[url('/images/volumeback.png')] bg-contain bg-no-repeat bg-center p-1 rounded-md shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><div className="relative w-1 h-[80%] bg-[#222429] rounded-full shadow-inner cursor-pointer" onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); const clickY = e.clientY - rect.top; let newVolume = Math.max(0, Math.min(1, 1 - (clickY / rect.height))); setVolumeFunctionCallback({ target: { value: newVolume.toString() } }); }}><div className="absolute bottom-0 left-0 w-full bg-[#25edda] rounded-b-full pointer-events-none" style={{ height: `${volumePercentage}%` }} /><div className="absolute left-1/2 -translate-x-1/2 w-8 h-3 rounded-md bg-[#30333a] shadow-[3px_3px_3px_#222429,-3px_-3px_3px_#3e424b] pointer-events-none" style={{ top: thumbTopPosition }} /><input type="range" min="0" max="1" step="0.01" value={currentVolume} onChange={setVolumeFunctionCallback} className="absolute top-0 left-0 opacity-0 w-full h-full cursor-pointer" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }} aria-label="Volume" /></div></div>); };
@@ -2516,6 +2595,31 @@ if (endPosition !== null) {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
