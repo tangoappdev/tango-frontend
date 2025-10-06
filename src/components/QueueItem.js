@@ -6,12 +6,30 @@ import { CSS } from '@dnd-kit/utilities';
 import Image from 'next/image';
 import { useRef } from 'react';
 import { EllipsisVerticalIcon, PlayCircleIcon } from '@heroicons/react/24/solid';
+const NowPlayingIcon = () => (
+  <svg
+    className="h-4 w-4 flex-shrink-0 text-[#25edda]"
+    viewBox="0 0 24 24"
+    fill="none"
+    role="img"
+    aria-hidden="true"
+  >
+    <path d="M4 10v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M7 7v9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M10 4v15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M13 7v9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M16 10v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M19 7v9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+  </svg>
+);
 
-export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sortableId: sortableIdProp }) {
+
+
+export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sortableId: sortableIdProp, isActive = false, isDragOverlay = false }) {
   const sortableId = sortableIdProp ?? tanda?.id ?? 'queue-item-placeholder';
 
   const { attributes, listeners, setNodeRef, activatorAttributes, transform, transition, isDragging } =
-    useSortable({ id: sortableId });
+    useSortable({ id: sortableId, disabled: isDragOverlay });
 
   const tapStartRef = useRef(null);
   const TAP_THRESHOLD_MS = 200;
@@ -24,6 +42,10 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
     opacity: isDragging ? 0.7 : 1,
     zIndex: isDragging ? 10 : 'auto',
   };
+
+  const containerClasses = `group flex items-center p-2 mb-1 rounded-md transition-colors duration-200 ${isActive ? 'bg-[#25edda]/10' : 'border-transparent hover:bg-white/10'}`;
+  const orchestraClasses = `font-medium truncate ${isActive ? 'text-[#25edda]' : 'text-white'}`;
+  const detailsClasses = `text-sm truncate ${isActive ? 'text-gray-300' : 'text-gray-400'}`;
 
   const handlePlayClick = (e) => {
     e.stopPropagation();
@@ -70,7 +92,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
       style={style}
       {...attributes}
       onClick={() => { if (!isDesktop && onPlayNow) onPlayNow(tanda); }}
-      className="group flex items-center p-2 rounded-md hover:bg-white/10"
+      className={containerClasses}
     >
       <div className="relative w-12 h-12 object-cover rounded-md flex-shrink-0">
         <Image
@@ -91,10 +113,13 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
 
       <div className="flex-grow mx-3 overflow-hidden">
         <div className="flex items-center gap-2">
-          <p className="text-white font-medium truncate">{tanda.orchestra}</p>
+          {isActive && (
+            <NowPlayingIcon />
+          )}
+          <p className={orchestraClasses}>{tanda.orchestra}</p>
           {tagInfo && <span className={`text-s font-semibold ${tagInfo.style}`}>{tagInfo.text}</span>}
         </div>
-        <p className="text-gray-400 text-sm truncate">{tanda.singer || 'Instrumental'}</p>
+        <p className={detailsClasses}>{tanda.singer || 'Instrumental'}</p>
       </div>
 
       <div className="flex-shrink-0">

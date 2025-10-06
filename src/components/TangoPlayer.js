@@ -13,9 +13,9 @@ import {
   PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
   ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, AdjustmentsVerticalIcon,
   SparklesIcon, QueueListIcon, MusicalNoteIcon,
-  ArrowsPointingOutIcon, ArrowsPointingInIcon, ArrowUturnLeftIcon, ArrowPathIcon, PlusCircleIcon, CheckCircleIcon
+  ArrowsPointingOutIcon, ArrowsPointingInIcon, ArrowUturnLeftIcon, ArrowPathIcon, HeartIcon
 } from '@heroicons/react/24/outline';
-import { EllipsisVerticalIcon } from '@heroicons/react/24/solid';
+import { EllipsisVerticalIcon, HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebaseClient';
 import {
@@ -39,6 +39,7 @@ function Queue({
   onMenuOpen, onPlayNow, handleRefreshPlaylist, isRefreshing,
   handleSettingChange, settings, currentCortina, isCortinaPlaying,
   handleCortinaDragEnd, onCortinaMenuOpen, handleDragStart, handleDragCancel,
+  currentTandaId,
   ...props
 }) {
   const panelRef = useRef(null);
@@ -139,7 +140,7 @@ function Queue({
           {/* NEW: Conditional Content */}
           <div className="w-full h-full overflow-y-auto">
             {rightPanelTab === 'queue' && (
-              <QueueContent {...props} onMenuOpen={onMenuOpen} settings={settings} isDesktop={isDesktop} handleDragStart={handleDragStart} />
+              <QueueContent {...props} onMenuOpen={onMenuOpen} settings={settings} isDesktop={isDesktop} handleDragStart={handleDragStart} currentTandaId={currentTandaId} />
             )}
             {rightPanelTab === 'liked' && (
               <div className="p-3 px-2 pb-20">
@@ -247,7 +248,8 @@ function QueueContent({
   settings: settings,
   isRefreshing,
   handleRefreshPlaylist,
-  isPro
+  isPro,
+  currentTandaId
 }) {
   const fallbackCortina = { title: "Cortina", artist: "" };
   const renderSeparatorFor = (tanda) => {
@@ -277,7 +279,7 @@ function QueueContent({
             {manualQueue.map((tanda, index) => (
               <React.Fragment key={tanda.id}>
                 {settings.cortinas && index > 0 && renderSeparatorFor(tanda)}
-                <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} isActive={currentTandaId === tanda.id} />
               </React.Fragment>
             ))}
             {manualQueue.length > 0 && upcomingPlaylist.length > 0 && (
@@ -292,7 +294,7 @@ function QueueContent({
             {upcomingPlaylist.map((tanda, index) => (
               <React.Fragment key={tanda.id}>
                 {settings.cortinas && (manualQueue.length > 0 || index > 0) && renderSeparatorFor(tanda)}
-                <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} />
+                <QueueItem tanda={tanda} onMenuOpen={onMenuOpen} onPlayNow={onPlayNow} isDesktop={isDesktop} isActive={currentTandaId === tanda.id} />
               </React.Fragment>
             ))}
           </SortableContext>
@@ -2048,6 +2050,7 @@ export default function TangoPlayer() {
   const queueProps = {
     user,
     manualQueue,
+    currentTandaId: currentTanda?.id ?? null,
     upcomingPlaylist,
     manualQueueIds,
     upcomingPlaylistIds,
@@ -2254,9 +2257,9 @@ export default function TangoPlayer() {
                           {user && (
                             <button onClick={() => handleLikeToggle(currentTanda.id)} title={isLiked ? 'Remove from your liked tandas' : 'Add to liked tandas'}>
                               {isLiked ? (
-                                <CheckCircleIcon className="h-6 w-6 text-[#25edda]" />
+                                <HeartIconSolid className="h-6 w-6 text-[#25edda]" />
                               ) : (
-                                <PlusCircleIcon className="h-6 w-6 text-gray-400 hover:text-white" />
+                                <HeartIcon className="h-6 w-6 text-gray-400 hover:text-white" />
                               )}
                             </button>
                           )}
@@ -2445,9 +2448,9 @@ export default function TangoPlayer() {
                       {user && (
                         <button onClick={() => handleLikeToggle(currentTanda.id)} title={isLiked ? 'Remove from your liked tandas' : 'Add to liked tandas'}>
                           {isLiked ? (
-                            <CheckCircleIcon className="h-6 w-6 text-[#25edda]" />
+                            <HeartIconSolid className="h-6 w-6 text-[#25edda]" />
                           ) : (
-                            <PlusCircleIcon className="h-6 w-6 text-gray-400 hover:text-white" />
+                            <HeartIcon className="h-6 w-6 text-gray-400 hover:text-white" />
                           )}
                         </button>
                       )}
