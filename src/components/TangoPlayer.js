@@ -605,29 +605,47 @@ export default function TangoPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
     cancelCortinaFade();
-    if (!audioContextRef.current) {
+
+    const useWebAudio = shouldUseWebAudio;
+    if (useWebAudio && !audioContextRef.current) {
       initAudioGraphRef.current();
     }
+
+    const applyVolume = (value) => {
+      const clamped = Math.min(1, Math.max(0, Number(value)));
+      if (useWebAudio && masterGainRef.current && audioContextRef.current) {
+        setEffectiveVolume(clamped);
+      } else {
+        audio.volume = clamped;
+      }
+      return clamped;
+    };
+
     const clampedTarget = Math.min(1, Math.max(0, Number(targetVolume)));
     if (clampedTarget > 0) {
       audio.muted = false;
     }
+
     if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
-      setEffectiveVolume(clampedTarget);
+      applyVolume(clampedTarget);
       onComplete?.();
       return;
     }
-    const startVolumeRaw = getEffectiveVolume();
+
+    const startVolumeRaw = (useWebAudio && masterGainRef.current && audioContextRef.current)
+      ? getEffectiveVolume()
+      : Number(audio.volume);
     const startVolume = Number.isFinite(startVolumeRaw) ? Math.min(1, Math.max(0, startVolumeRaw)) : 1;
     if (startVolume !== startVolumeRaw) {
-      setEffectiveVolume(startVolume);
+      applyVolume(startVolume);
     }
+
     const startTime = typeof window !== 'undefined' ? window.performance.now() : Date.now();
     const step = (now) => {
       const elapsed = (now - startTime) / 1000;
       const progress = Math.min(elapsed / durationSeconds, 1);
       const nextVolume = startVolume + (clampedTarget - startVolume) * progress;
-      setEffectiveVolume(nextVolume);
+      applyVolume(nextVolume);
       if (progress >= 1) {
         cortinaFadeRafRef.current = null;
         onComplete?.();
@@ -638,10 +656,10 @@ export default function TangoPlayer() {
     if (typeof window !== 'undefined') {
       cortinaFadeRafRef.current = window.requestAnimationFrame(step);
     } else {
-      setEffectiveVolume(clampedTarget);
+      applyVolume(clampedTarget);
       onComplete?.();
     }
-  }, [cancelCortinaFade, getEffectiveVolume, setEffectiveVolume]);
+  }, [cancelCortinaFade, getEffectiveVolume, setEffectiveVolume, shouldUseWebAudio]);
 
   // 2. State
   const [tier, setTier] = useState('free');
@@ -682,6 +700,11 @@ export default function TangoPlayer() {
   });
   const [eqNotification, setEqNotification] = useState('');
   const [isDesktop, setIsDesktop] = useState(false);
+  const isIOS = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }, []);
+  const shouldUseWebAudio = useMemo(() => isDesktop && !isIOS, [isDesktop, isIOS]);
   const [hasMounted, setHasMounted] = useState(false);
   const [cortinas, setCortinas] = useState([]);
   const [isCortinaPlaying, setIsCortinaPlaying] = useState(false);
@@ -958,7 +981,7 @@ export default function TangoPlayer() {
     }
   }, [settings, recentlyPlayedIds, upcomingPlaylist, shuffledCortinas, manualQueue]);
   const initAudioGraph = useCallback(() => {
-    if (audioContextRef.current || !audioRef.current) return;
+    if (!shouldUseWebAudio || audioContextRef.current || !audioRef.current) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
     const context = new AudioCtx();
@@ -981,10 +1004,9 @@ export default function TangoPlayer() {
     midPeakingRef.current = midPeaking;
     highShelfRef.current = highShelf;
     masterGainRef.current = masterGain;
-  }, [eq.low, eq.mid, eq.high]);
+  }, [eq.low, eq.mid, eq.high, shouldUseWebAudio]);
   initAudioGraphRef.current = initAudioGraph;
-  const handlePlay = useCallback(async () => {
-    if (!audioContextRef.current) initAudioGraph();
+  const handlePlay = useCallback(async () => {\r\n    if (shouldUseWebAudio && !audioContextRef.current) initAudioGraph();
     const audioCtx = audioContextRef.current;
     if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
     if (audioRef.current?.src && audioRef.current.paused) {
@@ -992,7 +1014,7 @@ export default function TangoPlayer() {
     } else if (!currentTanda && !isLoading) {
       fetchAndFillPlaylist();
     }
-  }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph]);
+  }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph, shouldUseWebAudio]);
   const playNextTanda = useCallback(() => {
     const sourceTanda = manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0];
     if (!sourceTanda) { fetchAndFillPlaylist(); return; }
@@ -2595,6 +2617,9 @@ export default function TangoPlayer() {
     </div>
   );
 }
+
+
+
 
 
 
