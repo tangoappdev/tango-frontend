@@ -1908,22 +1908,24 @@ export default function TangoPlayer() {
     }
   }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist, isChangingSettings]);
   useEffect(() => {
+    if (isCortinaPlaying) {
+      return;
+    }
+
     const trackUrl = currentTanda?.tracks_signed?.[currentTrackIndex]?.url_signed;
-    if (trackUrl && audioRef.current && audioRef.current.src !== trackUrl) {
+    if (!trackUrl || !audioRef.current) {
+      return;
+    }
+
+    if (audioRef.current.src !== trackUrl) {
       audioRef.current.src = trackUrl;
-      // Only load if not already playing a cortina, to avoid interrupting
-      // the cortina with a new track load.
-      if (!isCortinaPlaying) {
-        audioRef.current.load();
-      } else {
-        // If a cortina is playing, defer loading the next tanda until cortina ends
-        return;
-      }
-      isResettingRef.current = false;
-      if (autoplayIntentRef.current) {
-        autoplayIntentRef.current = false;
-        audioRef.current.play().catch(() => setIsPlaying(false));
-      }
+      audioRef.current.load();
+    }
+
+    isResettingRef.current = false;
+    if (autoplayIntentRef.current) {
+      autoplayIntentRef.current = false;
+      audioRef.current.play().catch(() => setIsPlaying(false));
     }
   }, [currentTanda, currentTrackIndex, isCortinaPlaying]);
   useEffect(() => { // Demo timer for non-pro users
