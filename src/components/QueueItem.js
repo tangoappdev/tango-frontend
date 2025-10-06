@@ -4,6 +4,7 @@ import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Image from 'next/image';
+import { useRef } from 'react';
 import { EllipsisVerticalIcon, PlayCircleIcon } from '@heroicons/react/24/solid';
 
 export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sortableId: sortableIdProp }) {
@@ -11,6 +12,9 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
 
   const { attributes, listeners, setNodeRef, activatorAttributes, transform, transition, isDragging } =
     useSortable({ id: sortableId });
+
+  const tapStartRef = useRef(null);
+  const TAP_THRESHOLD_MS = 200;
 
   if (!tanda) return null;
 
@@ -33,27 +37,31 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
   };
 
   const tagInfo = getTagInfo(tanda.type);
+
   const handleActivatorPointerDown = (event) => {
-    console.log('QueueItem: handleActivatorPointerDown', { tandaId: tanda.id, pointerType: event.pointerType });
-    if (event.pointerType === 'touch') {
-      event.currentTarget.releasePointerCapture?.(event.pointerId);
-    }
+    tapStartRef.current = { time: Date.now(), x: event.clientX, y: event.clientY };
     listeners.onPointerDown?.(event);
-    activatorAttributes?.onPointerDown?.(event);
   };
+
   const handleActivatorPointerUp = (event) => {
-    console.log('QueueItem: handleActivatorPointerUp', { tandaId: tanda.id, pointerType: event.pointerType });
-    if (event.pointerType === 'touch') {
+    if (tapStartRef.current) {
+      const { time, x, y } = tapStartRef.current;
+      const duration = Date.now() - time;
+      const distance = Math.sqrt(Math.pow(event.clientX - x, 2) + Math.pow(event.clientY - y, 2));
+      if (duration < TAP_THRESHOLD_MS && distance < 5) {
+        onMenuOpen(event, tanda);
+      }
+    }
+    tapStartRef.current = null;
+    listeners.onPointerUp?.(event);
+  };
+
+  const handleActivatorClick = (event) => {
+    if (event.pointerType !== 'touch') {
       event.preventDefault();
       event.stopPropagation();
       onMenuOpen(event, tanda);
     }
-    listeners.onPointerUp?.(event);
-    activatorAttributes?.onPointerUp?.(event);
-  };
-  const handleActivatorClick = (event) => {
-    console.log('QueueItem: handleActivatorClick', { tandaId: tanda.id });
-    onMenuOpen(event, tanda);
   };
 
   return (
@@ -92,8 +100,9 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
       <div className="flex-shrink-0">
         <button
           data-panel-no-drag
-          {...listeners}          
+          onPointerDown={handleActivatorPointerDown}
           onClick={handleActivatorClick}
+          onPointerUp={handleActivatorPointerUp}
           className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
           title="Click for options, press and hold to drag"
         >
