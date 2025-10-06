@@ -125,6 +125,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
       <div className="flex-shrink-0">
         <button
           data-panel-no-drag
+          {...activatorAttributes}
           onPointerDown={handleActivatorPointerDown}
           onClick={handleActivatorClick}
           onPointerUp={handleActivatorPointerUp}
