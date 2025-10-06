@@ -125,10 +125,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
       <div className="flex-shrink-0">
         <button
           data-panel-no-drag
-          {...activatorAttributes}
-          onPointerDown={handleActivatorPointerDown}
-          onClick={handleActivatorClick}
-          onPointerUp={handleActivatorPointerUp}
+          {...listeners}
           className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
           title="Click for options, press and hold to drag"
         >
