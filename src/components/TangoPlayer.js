@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -599,8 +599,14 @@ export default function TangoPlayer() {
     if (audioRef.current) {
       audioRef.current.muted = false;
     }
-  }, [cancelCortinaFade]);
+  }, [cancelCortinaFade, setEffectiveVolume]);
 
+  const isIOS = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }, []);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const shouldUseWebAudio = useMemo(() => isDesktop && !isIOS, [isDesktop, isIOS]);
   const startCortinaFade = useCallback((targetVolume, durationSeconds, onComplete) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -681,6 +687,11 @@ export default function TangoPlayer() {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const volumeRef = useRef(1);
+  useEffect(() => {
+    const sanitized = Math.min(1, Math.max(0, Number(volume)));
+    volumeRef.current = sanitized;
+  }, [volume]);
+
   const [activePanel, setActivePanel] = useState(null);
   const [eq, setEq] = useState({ low: 0, mid: 0, high: 0 });
   const [menuState, setMenuState] = useState({
@@ -699,12 +710,6 @@ export default function TangoPlayer() {
     cortinaMeta: null,
   });
   const [eqNotification, setEqNotification] = useState('');
-  const [isDesktop, setIsDesktop] = useState(false);
-  const isIOS = useMemo(() => {
-    if (typeof navigator === 'undefined') return false;
-    return /iphone|ipad|ipod/i.test(navigator.userAgent);
-  }, []);
-  const shouldUseWebAudio = useMemo(() => isDesktop && !isIOS, [isDesktop, isIOS]);
   const [hasMounted, setHasMounted] = useState(false);
   const [cortinas, setCortinas] = useState([]);
   const [isCortinaPlaying, setIsCortinaPlaying] = useState(false);
@@ -728,11 +733,6 @@ export default function TangoPlayer() {
       activationConstraint: { delay: 250, tolerance: 5 },
     })
   );
-  useEffect(() => {
-    const sanitized = Math.min(1, Math.max(0, Number(volume)));
-    volumeRef.current = sanitized;
-  }, [volume]);
-
   // 4. Memos
   const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
   const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
@@ -765,6 +765,7 @@ export default function TangoPlayer() {
     const nextOrder = order.filter(Boolean);
     const currentKey = JSON.stringify(Array.isArray(likedMixedOrder) ? likedMixedOrder : []);
     const nextKey = JSON.stringify(nextOrder);
+
     if (currentKey !== nextKey) {
       console.log('[syncLikedOrderToAuth] updating auth order', nextOrder);
       updateLikedMixedOrder(nextOrder);
@@ -1006,7 +1007,8 @@ export default function TangoPlayer() {
     masterGainRef.current = masterGain;
   }, [eq.low, eq.mid, eq.high, shouldUseWebAudio]);
   initAudioGraphRef.current = initAudioGraph;
-  const handlePlay = useCallback(async () => {\r\n    if (shouldUseWebAudio && !audioContextRef.current) initAudioGraph();
+  const handlePlay = useCallback(async () => {
+    if (shouldUseWebAudio && !audioContextRef.current) initAudioGraph();
     const audioCtx = audioContextRef.current;
     if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
     if (audioRef.current?.src && audioRef.current.paused) {
@@ -1299,8 +1301,8 @@ export default function TangoPlayer() {
 
   const handleDragCancel = useCallback(() => {
     setActiveDragItem(null);
-  }, []);
 
+  }, []);
   const handleDragStart = useCallback((event) => {
     const { active } = event;
     const allQueueTandas = [...manualQueue, ...upcomingPlaylist];
@@ -1818,8 +1820,7 @@ export default function TangoPlayer() {
   const handleChange = () => setIsDesktop(mediaQuery.matches);
   handleChange();
   mediaQuery.addEventListener('change', handleChange);
-  return () => mediaQuery.removeEventListener('change', handleChange);
-}, []);
+  return () => mediaQuery.removeEventListener('change', handleChange); }, []);
   useEffect(() => {
     if (!Array.isArray(likedMixedOrder)) return;
     setLikedItemOrder(prev => {
@@ -1924,7 +1925,7 @@ export default function TangoPlayer() {
         audioRef.current.play().catch(() => setIsPlaying(false));
       }
     }
-  }, [currentTanda, currentTrackIndex]);
+  }, [currentTanda, currentTrackIndex, isCortinaPlaying]);
   useEffect(() => { // Demo timer for non-pro users
     // If the user is logged in, or if music isn't playing, we don't need a timer.
     if (user || !isPlaying) {
@@ -2617,45 +2618,3 @@ export default function TangoPlayer() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
