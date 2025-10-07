@@ -1,10 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Image from 'next/image';
-import { useRef } from 'react';
 import { EllipsisVerticalIcon, PlayCircleIcon } from '@heroicons/react/24/solid';
 const NowPlayingIcon = () => (
   <svg
@@ -28,11 +27,14 @@ const NowPlayingIcon = () => (
 export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sortableId: sortableIdProp, isActive = false, isDragOverlay = false }) {
   const sortableId = sortableIdProp ?? tanda?.id ?? 'queue-item-placeholder';
 
-  const { attributes, listeners, setNodeRef, activatorAttributes, transform, transition, isDragging } =
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: sortableId, disabled: isDragOverlay });
 
   const tapStartRef = useRef(null);
+  const lastPointerTypeRef = useRef('mouse');
+  const dragTimeoutRef = useRef(null);
   const TAP_THRESHOLD_MS = 200;
+  const TAP_MOVE_THRESHOLD_PX = 5;
 
   if (!tanda) return null;
 
@@ -60,31 +62,78 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
 
   const tagInfo = getTagInfo(tanda.type);
 
-  const handleActivatorPointerDown = (event) => {
-    tapStartRef.current = { time: Date.now(), x: event.clientX, y: event.clientY };
-    listeners.onPointerDown?.(event);
+  const resolvePointerType = (event) => {
+    if (event.pointerType) {
+      return event.pointerType;
+    }
+    if (!isDesktop && typeof window !== 'undefined') {
+      const hasTouch = 'ontouchstart' in window || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0);
+      if (hasTouch) {
+        return 'touch';
+      }
+    }
+    return 'mouse';
   };
 
-  const handleActivatorPointerUp = (event) => {
+  const handlePointerDown = useCallback((event) => {
+    const point = event.touches ? event.touches[0] : event;
+    tapStartRef.current = { time: Date.now(), x: point.clientX, y: point.clientY };
+    lastPointerTypeRef.current = resolvePointerType(event);
+    
+    // Delay starting the drag to allow for tap detection
+    dragTimeoutRef.current = setTimeout(() => {
+      if (event.type === 'touchstart') {
+        listeners.onTouchStart?.(event);
+      } else {
+        listeners.onPointerDown?.(event);
+      }
+      dragTimeoutRef.current = null;
+    }, TAP_THRESHOLD_MS); // Use the same threshold as tap
+
+  }, [listeners, tanda]);
+
+  const handlePointerUp = useCallback((event) => {
+    // If the drag timeout is still pending, it's a tap, not a drag.
+    if (dragTimeoutRef.current) {
+      clearTimeout(dragTimeoutRef.current);
+      dragTimeoutRef.current = null;
+    }
+
+    if (isDragging) {
+      tapStartRef.current = null; // Ensure we clear the ref if a drag occurred
+      return;
+    }
+
     if (tapStartRef.current) {
-      const { time, x, y } = tapStartRef.current;
-      const duration = Date.now() - time;
-      const distance = Math.sqrt(Math.pow(event.clientX - x, 2) + Math.pow(event.clientY - y, 2));
-      if (duration < TAP_THRESHOLD_MS && distance < 5) {
+      const point = event.changedTouches ? event.changedTouches[0] : event;
+      const { time, x, y } = tapStartRef.current; const duration = Date.now() - time; const distance = Math.hypot(point.clientX - x, point.clientY - y);
+
+      if (duration < TAP_THRESHOLD_MS && distance < TAP_MOVE_THRESHOLD_PX) {
+        event.preventDefault();
+        event.stopPropagation();
         onMenuOpen(event, tanda);
       }
     }
     tapStartRef.current = null;
-    listeners.onPointerUp?.(event);
-  };
 
-  const handleActivatorClick = (event) => {
-    if (event.pointerType !== 'touch') {
-      event.preventDefault();
-      event.stopPropagation();
-      onMenuOpen(event, tanda);
+  }, [isDragging, onMenuOpen, tanda, listeners]);
+
+  const handlePointerCancel = useCallback((event) => {
+    tapStartRef.current = null;
+    if (event.type === 'touchcancel') {
+      listeners.onTouchCancel?.(event);
     }
-  };
+  }, [listeners]);
+
+  useEffect(() => {
+    if (isDragging) {
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current);
+        dragTimeoutRef.current = null;
+      }
+      tapStartRef.current = null;
+    }
+  }, [isDragging]);
 
   return (
     <div
@@ -124,8 +173,14 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
 
       <div className="flex-shrink-0">
         <button
+          type="button"
           data-panel-no-drag
           {...listeners}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onTouchStart={handlePointerDown}
+          onTouchEnd={handlePointerUp}
+          onTouchCancel={handlePointerCancel}
           className="p-2 text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 rounded-full cursor-grab"
           title="Click for options, press and hold to drag"
         >
