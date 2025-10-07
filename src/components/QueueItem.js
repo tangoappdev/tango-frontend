@@ -36,19 +36,6 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
   const TAP_THRESHOLD_MS = 200;
   const TAP_MOVE_THRESHOLD_PX = 5;
 
-  if (!tanda) return null;
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.7 : 1,
-    zIndex: isDragging ? 10 : 'auto',
-  };
-
-  const containerClasses = `group flex items-center p-2 mb-1 rounded-md transition-colors duration-200 ${isActive ? 'bg-[#25edda]/10' : 'border-transparent hover:bg-white/10'}`;
-  const orchestraClasses = `font-medium truncate ${isActive ? 'text-[#25edda]' : 'text-white'}`;
-  const detailsClasses = `text-sm truncate ${isActive ? 'text-gray-300' : 'text-gray-400'}`;
-
   const handlePlayClick = (e) => {
     e.stopPropagation();
     if (onPlayNow) onPlayNow(tanda);
@@ -59,8 +46,6 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
     if (type === 'Milonga') return { text: '(M)', style: 'text-[#25edda]' };
     return null;
   };
-
-  const tagInfo = getTagInfo(tanda.type);
 
   const resolvePointerType = (event) => {
     if (event.pointerType) {
@@ -89,8 +74,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
       }
       dragTimeoutRef.current = null;
     }, TAP_THRESHOLD_MS); // Use the same threshold as tap
-
-  }, [listeners, tanda]);
+  }, [listeners, tanda, resolvePointerType]);
 
   const handlePointerUp = useCallback((event) => {
     // If the drag timeout is still pending, it's a tap, not a drag.
@@ -116,7 +100,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
     }
     tapStartRef.current = null;
 
-  }, [isDragging, onMenuOpen, tanda, listeners]);
+  }, [isDragging, onMenuOpen, tanda]);
 
   const handlePointerCancel = useCallback((event) => {
     tapStartRef.current = null;
@@ -134,6 +118,20 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
       tapStartRef.current = null;
     }
   }, [isDragging]);
+
+  if (!tanda) return null;
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.7 : 1,
+    zIndex: isDragging ? 10 : 'auto',
+  };
+
+  const containerClasses = `group flex items-center p-2 mb-1 rounded-md transition-colors duration-200 ${isActive ? 'bg-[#25edda]/10' : 'border-transparent hover:bg-white/10'}`;
+  const orchestraClasses = `font-medium truncate ${isActive ? 'text-[#25edda]' : 'text-white'}`;
+  const detailsClasses = `text-sm truncate ${isActive ? 'text-gray-300' : 'text-gray-400'}`;
+  const tagInfo = getTagInfo(tanda.type);
 
   return (
     <div
