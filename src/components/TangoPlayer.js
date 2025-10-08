@@ -118,22 +118,25 @@ function Queue({
           <div className="flex-shrink-0 p-2 border-b border-white/10">
             <div className="grid grid-cols-3">
               <button
-                onClick={() => setRightPanelTab('liked')}
-                className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 ${rightPanelTab === 'liked' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
-              >
-                Liked
-              </button>
-              <button
                 onClick={() => setRightPanelTab('queue')}
-                className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 ${rightPanelTab === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+                className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 flex items-center justify-center gap-2 ${rightPanelTab === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
               >
-                Queue
+                <QueueListIcon className="h-4 w-4" />
+                <span>Queue</span>
               </button>
               <button
                 onClick={() => setRightPanelTab('cortinas')}
-                className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out hover:scale-105 ${rightPanelTab === 'cortinas' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+                className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 flex items-center justify-center gap-2 ${rightPanelTab === 'cortinas' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
               >
-                Cortinas
+                <MusicalNoteIcon className="h-4 w-4" />
+                <span>Cortinas</span>
+              </button>
+              <button
+                onClick={() => setRightPanelTab('liked')}
+                className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out hover:scale-105 flex items-center justify-center gap-2 ${rightPanelTab === 'liked' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+              >
+                <HeartIcon className="h-4 w-4" />
+                <span>Liked</span>
               </button>
             </div>
           </div>
@@ -2316,22 +2319,25 @@ export default function TangoPlayer() {
               <div className="flex-shrink-0 mb-2">
                 <div className="grid grid-cols-3">
                   <button
-                    onClick={() => setRightPanelTab('liked')}
-                    className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 ${rightPanelTab === 'liked' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    Liked
-                  </button>
-                  <button
                     onClick={() => setRightPanelTab('queue')}
-                    className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 ${rightPanelTab === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+                    className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 flex items-center justify-center gap-2 ${rightPanelTab === 'queue' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
                   >
-                    Queue
+                    <QueueListIcon className="h-4 w-4" />
+                    <span>Queue</span>
                   </button>
                   <button
                     onClick={() => setRightPanelTab('cortinas')}
-                    className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out hover:scale-105 ${rightPanelTab === 'cortinas' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+                    className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out border-r border-white/5 hover:scale-105 flex items-center justify-center gap-2 ${rightPanelTab === 'cortinas' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
                   >
-                    Cortinas
+                    <MusicalNoteIcon className="h-4 w-4" />
+                    <span>Cortinas</span>
+                  </button>
+                  <button
+                    onClick={() => setRightPanelTab('liked')}
+                    className={`py-2 text-sm font-medium transition-all duration-200 ease-in-out hover:scale-105 flex items-center justify-center gap-2 ${rightPanelTab === 'liked' ? 'text-[#25edda]' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    <HeartIcon className="h-4 w-4" />
+                    <span>Liked</span>
                   </button>
                 </div>
               </div>
