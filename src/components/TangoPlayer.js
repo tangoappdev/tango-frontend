@@ -29,6 +29,7 @@ import {
   FREESTYLE_FETCH_BATCH_SIZE,
   PLAYLIST_REFILL_THRESHOLD,
   MIN_SAME_TANDA_GAP,
+  MIN_SAME_ORCHESTRA_GAP,
   initialSettings
 } from './tangoPlayerConstants';
 import { signOut } from 'firebase/auth';
@@ -481,28 +482,76 @@ function buildApiParams(settings, excludeIds = []) {
   }
   return params;
 }
-function reorderWithMinGap(existingList, incomingList, minGap) {
-  const recentWindowSize = Math.max(0, minGap);
-  const recent = existingList.slice(-recentWindowSize).map(x => x.id);
+function reorderWithMinGap(existingList, incomingList, minGap, minOrchestraGap = 0) {
+  const idWindow = Math.max(0, minGap);
+  const orchestraWindow = Math.max(0, minOrchestraGap);
+  const toOrchestraKey = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '');
+
+  const recentIds = idWindow > 0
+    ? existingList.slice(-idWindow).map(item => item?.id).filter((id) => id != null)
+    : [];
+
+  const recentOrchestras = orchestraWindow > 0
+    ? existingList
+        .slice(-orchestraWindow)
+        .map(item => toOrchestraKey(item?.orchestra))
+        .filter(Boolean)
+    : [];
+
   const pool = [...incomingList];
   const result = [];
-  while (pool.length) {
-    const goodIdx = pool.findIndex(item => {
-      const id = item.id;
-      if (recent.includes(id)) return false;
-      const lastInResult = result.slice(-recentWindowSize).map(x => x.id);
-      return !lastInResult.includes(id);
-    });
-    let idx = goodIdx;
-    if (idx === -1) {
-      idx = pool.findIndex(item => (result.length === 0 ? true : item.id !== result[result.length - 1].id));
-      if (idx === -1) idx = 0;
+
+  const remember = (id, orchestra) => {
+    if (idWindow > 0 && id != null) {
+      recentIds.push(id);
+      if (recentIds.length > idWindow) recentIds.shift();
     }
+    if (orchestraWindow > 0 && orchestra) {
+      recentOrchestras.push(orchestra);
+      if (recentOrchestras.length > orchestraWindow) recentOrchestras.shift();
+    }
+  };
+
+  const violatesRecent = (items, windowSize, extractor, target) => {
+    if (windowSize <= 0 || !target) return false;
+    return items.slice(-windowSize).map(extractor).filter(Boolean).includes(target);
+  };
+
+  const isCandidateValid = (item, enforceOrchestraGap) => {
+    if (!item) return false;
+    const id = item.id;
+    if (idWindow > 0) {
+      if (id != null && recentIds.includes(id)) return false;
+      if (violatesRecent(result, idWindow, entry => entry?.id, id)) return false;
+    }
+    if (enforceOrchestraGap && orchestraWindow > 0) {
+      const orchestraKey = toOrchestraKey(item.orchestra);
+      if (orchestraKey) {
+        if (recentOrchestras.includes(orchestraKey)) return false;
+        if (violatesRecent(result, orchestraWindow, entry => toOrchestraKey(entry?.orchestra), orchestraKey)) return false;
+      }
+    }
+    return true;
+  };
+
+  while (pool.length) {
+    let idx = pool.findIndex(item => isCandidateValid(item, true));
+    if (idx === -1 && orchestraWindow > 0) {
+      idx = pool.findIndex(item => isCandidateValid(item, false));
+    }
+    if (idx === -1) {
+      idx = pool.findIndex(item => {
+        if (result.length === 0) return true;
+        return item?.id !== result[result.length - 1]?.id;
+      });
+    }
+    if (idx === -1) idx = 0;
+
     const [picked] = pool.splice(idx, 1);
     result.push(picked);
-    recent.push(picked.id);
-    if (recent.length > recentWindowSize) recent.shift();
+    remember(picked?.id, toOrchestraKey(picked?.orchestra));
   }
+
   return result;
 }
 function attachCortinas(existingBefore, batch, cortinaPool) {
@@ -971,7 +1020,7 @@ export default function TangoPlayer() {
       if (data.upcomingTandas && data.upcomingTandas.length > 0) {
         setUpcomingPlaylist(prev => {
           const existing = [...manualQueue, ...prev];
-          const orderedBatch = reorderWithMinGap(existing, data.upcomingTandas, MIN_SAME_TANDA_GAP);
+          const orderedBatch = reorderWithMinGap(existing, data.upcomingTandas, MIN_SAME_TANDA_GAP, MIN_SAME_ORCHESTRA_GAP);
           const wrappedWithCortinas = attachCortinas(existing, orderedBatch, pool);
           return [...prev, ...wrappedWithCortinas];
         });
@@ -1087,7 +1136,7 @@ export default function TangoPlayer() {
         setError(null);
         setManualQueue([]);
         setRecentlyPlayedIds(new Set());
-        const ordered = reorderWithMinGap([], data.upcomingTandas || [], MIN_SAME_TANDA_GAP);
+        const ordered = reorderWithMinGap([], data.upcomingTandas || [], MIN_SAME_TANDA_GAP, MIN_SAME_ORCHESTRA_GAP);
         const wrapped = attachCortinas([], ordered, pool);
         setUpcomingPlaylist(wrapped);
       } catch {

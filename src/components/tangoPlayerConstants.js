@@ -23,6 +23,7 @@ export const TANDA_LENGTH_OPTIONS = [3, 4];
 export const FREESTYLE_FETCH_BATCH_SIZE = 6;
 export const PLAYLIST_REFILL_THRESHOLD = 5;
 export const MIN_SAME_TANDA_GAP = 15;
+export const MIN_SAME_ORCHESTRA_GAP = 7;
 
 export const initialSettings = {
   activeMode: '2 Tangos, 1 Vals, 2 Tangos, 1 Milonga',
