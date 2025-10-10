@@ -483,73 +483,87 @@ function buildApiParams(settings, excludeIds = []) {
   return params;
 }
 function reorderWithMinGap(existingList, incomingList, minGap, minOrchestraGap = 0) {
+  if (!Array.isArray(incomingList) || incomingList.length === 0) return [];
+
   const idWindow = Math.max(0, minGap);
   const orchestraWindow = Math.max(0, minOrchestraGap);
-  const toOrchestraKey = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '');
 
-  const recentIds = idWindow > 0
-    ? existingList.slice(-idWindow).map(item => item?.id).filter((id) => id != null)
+  const normalizeOrchestra = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '');
+  const normalizeType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '');
+
+  const mutableBatch = [...incomingList];
+  const result = [];
+
+  const idHistory = idWindow > 0
+    ? existingList
+        .slice(-idWindow)
+        .map(item => item?.id)
+        .filter((id) => id != null)
     : [];
 
-  const recentOrchestras = orchestraWindow > 0
+  const orchestraHistory = orchestraWindow > 0
     ? existingList
         .slice(-orchestraWindow)
-        .map(item => toOrchestraKey(item?.orchestra))
+        .filter(item => normalizeType(item?.type) === 'tango')
+        .map(item => normalizeOrchestra(item?.orchestra))
         .filter(Boolean)
     : [];
 
-  const pool = [...incomingList];
-  const result = [];
-
-  const remember = (id, orchestra) => {
-    if (idWindow > 0 && id != null) {
-      recentIds.push(id);
-      if (recentIds.length > idWindow) recentIds.shift();
-    }
-    if (orchestraWindow > 0 && orchestra) {
-      recentOrchestras.push(orchestra);
-      if (recentOrchestras.length > orchestraWindow) recentOrchestras.shift();
-    }
-  };
-
-  const violatesRecent = (items, windowSize, extractor, target) => {
-    if (windowSize <= 0 || !target) return false;
-    return items.slice(-windowSize).map(extractor).filter(Boolean).includes(target);
-  };
-
-  const isCandidateValid = (item, enforceOrchestraGap) => {
+  const violates = (item) => {
     if (!item) return false;
     const id = item.id;
-    if (idWindow > 0) {
-      if (id != null && recentIds.includes(id)) return false;
-      if (violatesRecent(result, idWindow, entry => entry?.id, id)) return false;
+    if (idWindow > 0 && id != null && idHistory.includes(id)) {
+      return true;
     }
-    if (enforceOrchestraGap && orchestraWindow > 0) {
-      const orchestraKey = toOrchestraKey(item.orchestra);
-      if (orchestraKey) {
-        if (recentOrchestras.includes(orchestraKey)) return false;
-        if (violatesRecent(result, orchestraWindow, entry => toOrchestraKey(entry?.orchestra), orchestraKey)) return false;
+    const isTango = normalizeType(item.type) === 'tango';
+    if (orchestraWindow > 0 && isTango) {
+      const key = normalizeOrchestra(item.orchestra);
+      if (key && orchestraHistory.includes(key)) {
+        return true;
       }
     }
-    return true;
+    return false;
   };
 
-  while (pool.length) {
-    let idx = pool.findIndex(item => isCandidateValid(item, true));
-    if (idx === -1 && orchestraWindow > 0) {
-      idx = pool.findIndex(item => isCandidateValid(item, false));
+  const updateHistories = (item) => {
+    if (!item) return;
+    if (idWindow > 0 && item.id != null) {
+      idHistory.push(item.id);
+      if (idHistory.length > idWindow) idHistory.shift();
     }
-    if (idx === -1) {
-      idx = pool.findIndex(item => {
-        if (result.length === 0) return true;
-        return item?.id !== result[result.length - 1]?.id;
-      });
+    if (orchestraWindow > 0 && normalizeType(item.type) === 'tango') {
+      const key = normalizeOrchestra(item.orchestra);
+      if (key) {
+        orchestraHistory.push(key);
+        if (orchestraHistory.length > orchestraWindow) orchestraHistory.shift();
+      }
     }
-    if (idx === -1) idx = 0;
+  };
 
-    const [picked] = pool.splice(idx, 1);
-    result.push(picked);
-    remember(picked?.id, toOrchestraKey(picked?.orchestra));
+  for (let i = 0; i < mutableBatch.length; i += 1) {
+    let candidate = mutableBatch[i];
+    const desiredType = normalizeType(candidate?.type);
+    const maxAttempts = mutableBatch.length - i;
+    let attempts = 0;
+
+    while (candidate && violates(candidate) && attempts < maxAttempts) {
+      const alternativeIndex = mutableBatch.findIndex((item, idx) => (
+        idx > i &&
+        normalizeType(item?.type) === desiredType &&
+        !violates(item)
+      ));
+
+      if (alternativeIndex === -1) {
+        break;
+      }
+
+      [mutableBatch[i], mutableBatch[alternativeIndex]] = [mutableBatch[alternativeIndex], mutableBatch[i]];
+      candidate = mutableBatch[i];
+      attempts += 1;
+    }
+
+    result.push(candidate);
+    updateHistories(candidate);
   }
 
   return result;
