@@ -19,16 +19,12 @@ import { EllipsisVerticalIcon, HeartIcon as HeartIconSolid } from '@heroicons/re
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebaseClient';
 import {
-  API_BASE_URL,
-  CATEGORIES,
   TANDA_SEQUENCES,
   JUST_MODE_OPTIONS,
   TANDA_ORDER_OPTIONS,
   ORCHESTRA_TYPE_OPTIONS,
   TANDA_LENGTH_OPTIONS,
-  FREESTYLE_FETCH_BATCH_SIZE,
   PLAYLIST_REFILL_THRESHOLD,
-  MIN_SAME_TANDA_GAP,
   MIN_SAME_ORCHESTRA_GAP,
   initialSettings
 } from './tangoPlayerConstants';
@@ -467,107 +463,6 @@ function formatHHMMLocal(iso) {
   try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
   catch { return iso; }
 }
-function buildApiParams(settings, excludeIds = []) {
-  const params = new URLSearchParams({
-    categoryFilter: settings.categoryFilter,
-    excludeIds: Array.from(excludeIds).join(','),
-  });
-  const isJustMode = JUST_MODE_OPTIONS.some(opt => opt.value === settings.activeMode);
-  if (isJustMode) {
-    const requiredType = settings.activeMode.charAt(0).toUpperCase() + settings.activeMode.slice(1);
-    params.append('requiredType', requiredType);
-    params.append('limit', FREESTYLE_FETCH_BATCH_SIZE);
-  } else {
-    params.append('tandaOrder', settings.activeMode);
-  }
-  return params;
-}
-function reorderWithMinGap(existingList, incomingList, minGap, minOrchestraGap = 0) {
-  if (!Array.isArray(incomingList) || incomingList.length === 0) return [];
-
-  const idWindow = Math.max(0, minGap);
-  const orchestraWindow = Math.max(0, minOrchestraGap);
-
-  const normalizeOrchestra = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '');
-  const normalizeType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : '');
-
-  const mutableBatch = [...incomingList];
-  const result = [];
-
-  const idHistory = idWindow > 0
-    ? existingList
-        .slice(-idWindow)
-        .map(item => item?.id)
-        .filter((id) => id != null)
-    : [];
-
-  const orchestraHistory = orchestraWindow > 0
-    ? existingList
-        .slice(-orchestraWindow)
-        .filter(item => normalizeType(item?.type) === 'tango')
-        .map(item => normalizeOrchestra(item?.orchestra))
-        .filter(Boolean)
-    : [];
-
-  const violates = (item) => {
-    if (!item) return false;
-    const id = item.id;
-    if (idWindow > 0 && id != null && idHistory.includes(id)) {
-      return true;
-    }
-    const isTango = normalizeType(item.type) === 'tango';
-    if (orchestraWindow > 0 && isTango) {
-      const key = normalizeOrchestra(item.orchestra);
-      if (key && orchestraHistory.includes(key)) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  const updateHistories = (item) => {
-    if (!item) return;
-    if (idWindow > 0 && item.id != null) {
-      idHistory.push(item.id);
-      if (idHistory.length > idWindow) idHistory.shift();
-    }
-    if (orchestraWindow > 0 && normalizeType(item.type) === 'tango') {
-      const key = normalizeOrchestra(item.orchestra);
-      if (key) {
-        orchestraHistory.push(key);
-        if (orchestraHistory.length > orchestraWindow) orchestraHistory.shift();
-      }
-    }
-  };
-
-  for (let i = 0; i < mutableBatch.length; i += 1) {
-    let candidate = mutableBatch[i];
-    const desiredType = normalizeType(candidate?.type);
-    const maxAttempts = mutableBatch.length - i;
-    let attempts = 0;
-
-    while (candidate && violates(candidate) && attempts < maxAttempts) {
-      const alternativeIndex = mutableBatch.findIndex((item, idx) => (
-        idx > i &&
-        normalizeType(item?.type) === desiredType &&
-        !violates(item)
-      ));
-
-      if (alternativeIndex === -1) {
-        break;
-      }
-
-      [mutableBatch[i], mutableBatch[alternativeIndex]] = [mutableBatch[alternativeIndex], mutableBatch[i]];
-      candidate = mutableBatch[i];
-      attempts += 1;
-    }
-
-    result.push(candidate);
-    updateHistories(candidate);
-  }
-
-  return result;
-}
 function attachCortinas(existingBefore, batch, cortinaPool) {
   if (!cortinaPool || cortinaPool.length === 0) {
     return batch.map(t => ({ ...t, cortinaMeta: null }));
@@ -578,6 +473,160 @@ function attachCortinas(existingBefore, batch, cortinaPool) {
     cortinaMeta: cortinaPool[(base + i) % cortinaPool.length] || null
   }));
 }
+
+const CATEGORY_KEYS = {
+  TM: 'TM',
+  TR: 'TR',
+  V: 'V',
+  M: 'M',
+};
+
+function getSequenceSlots(activeMode) {
+  if (!activeMode) return [];
+  const rawSequence = TANDA_SEQUENCES[activeMode];
+  if (Array.isArray(rawSequence) && rawSequence.length > 0) {
+    return rawSequence
+      .map(slot => String(slot || '').trim().toLowerCase())
+      .filter(Boolean);
+  }
+  const normalized = String(activeMode).trim().toLowerCase();
+  if (['tango', 'vals', 'milonga'].includes(normalized)) {
+    return [normalized];
+  }
+  return [];
+}
+
+function buildGeneratorContext(library, activeMode, orchestraGapSize = MIN_SAME_ORCHESTRA_GAP) {
+  if (!library || !Array.isArray(library.buckets?.tangoMelodic)) {
+    return null;
+  }
+
+  const sequence = getSequenceSlots(activeMode);
+  if (sequence.length === 0) return null;
+
+  const clone = (arr) => (Array.isArray(arr) ? [...arr] : []);
+
+  const context = {
+    sequence,
+    seqIndex: 0,
+    nextTangoSubtype: 'melodic',
+    lastTangoOrchestras: [],
+    orchestraGapSize: Math.max(0, orchestraGapSize || 0),
+    allIds: {
+      TM: clone(library.buckets.tangoMelodic),
+      TR: clone(library.buckets.tangoRhythmic),
+      V: clone(library.buckets.vals),
+      M: clone(library.buckets.milonga),
+    },
+    unplayed: {},
+    metaById: library.metaById || {},
+    cache: new Map(),
+    history: [],
+  };
+
+  context.unplayed = {
+    TM: clone(context.allIds.TM),
+    TR: clone(context.allIds.TR),
+    V: clone(context.allIds.V),
+    M: clone(context.allIds.M),
+  };
+
+  return context;
+}
+
+function resolveTangoCategoryKey(context) {
+  const preferred = context.nextTangoSubtype === 'melodic' ? CATEGORY_KEYS.TM : CATEGORY_KEYS.TR;
+  const preferredPool = context.allIds[preferred] || [];
+  if (preferredPool.length > 0) {
+    return preferred;
+  }
+  const alternate = preferred === CATEGORY_KEYS.TM ? CATEGORY_KEYS.TR : CATEGORY_KEYS.TM;
+  const alternatePool = context.allIds[alternate] || [];
+  if (alternatePool.length > 0) {
+    return alternate;
+  }
+  return preferred;
+}
+
+function resolveCategoryKeyForSlot(context, slotKind) {
+  if (slotKind === 'tango') {
+    return resolveTangoCategoryKey(context);
+  }
+  if (slotKind === 'vals') {
+    return CATEGORY_KEYS.V;
+  }
+  if (slotKind === 'milonga') {
+    return CATEGORY_KEYS.M;
+  }
+  return null;
+}
+
+function pickNextTandaId(context, randomFn = Math.random) {
+  if (!context || !Array.isArray(context.sequence) || context.sequence.length === 0) {
+    return null;
+  }
+
+  const slotKind = context.sequence[context.seqIndex] || 'tango';
+  const categoryKey = resolveCategoryKeyForSlot(context, slotKind);
+  if (!categoryKey) return null;
+
+  const allIds = context.allIds[categoryKey] || [];
+  if (allIds.length === 0) {
+    return null;
+  }
+
+  if (!Array.isArray(context.unplayed[categoryKey]) || context.unplayed[categoryKey].length === 0) {
+    context.unplayed[categoryKey] = [...allIds];
+  }
+
+  let candidates = context.unplayed[categoryKey];
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    candidates = [...allIds];
+  }
+
+  const isTango = categoryKey === CATEGORY_KEYS.TM || categoryKey === CATEGORY_KEYS.TR;
+  if (isTango && context.orchestraGapSize > 0 && context.lastTangoOrchestras.length > 0) {
+    const filtered = candidates.filter(id => {
+      const orchestraKey = context.metaById[id]?.orchestraKey;
+      return orchestraKey && !context.lastTangoOrchestras.includes(orchestraKey);
+    });
+    if (filtered.length > 0) {
+      candidates = filtered;
+    }
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const pickIndex = Math.floor(randomFn() * candidates.length);
+  const pickedId = candidates[pickIndex];
+
+  context.unplayed[categoryKey] = context.unplayed[categoryKey].filter(id => id !== pickedId);
+
+  const pickedMeta = context.metaById[pickedId] || {};
+
+  if (isTango) {
+    const orchestraKey = pickedMeta.orchestraKey;
+    if (orchestraKey) {
+      context.lastTangoOrchestras.push(orchestraKey);
+      if (context.lastTangoOrchestras.length > context.orchestraGapSize) {
+        context.lastTangoOrchestras.shift();
+      }
+    }
+    context.nextTangoSubtype = context.nextTangoSubtype === 'melodic' ? 'rhythmic' : 'melodic';
+  }
+
+  context.seqIndex = (context.seqIndex + 1) % context.sequence.length;
+  context.history.push(pickedId);
+
+  return {
+    id: pickedId,
+    categoryKey,
+    meta: pickedMeta,
+  };
+}
+
 export default function TangoPlayer() {
   // 1. Refs
   const audioRef = useRef(null);
@@ -593,6 +642,10 @@ export default function TangoPlayer() {
   const isFetchingRef = useRef(false);
   const isSeekingRef = useRef(false);
   const isResettingRef = useRef(false);
+  const generatorRef = useRef(null);
+  const manualQueueRef = useRef([]);
+  const upcomingPlaylistRef = useRef([]);
+  const shuffledCortinasRef = useRef([]);
   const cancelCortinaFade = useCallback(() => {
     if (typeof window !== 'undefined' && cortinaFadeRafRef.current !== null) {
       window.cancelAnimationFrame(cortinaFadeRafRef.current);
@@ -740,6 +793,14 @@ export default function TangoPlayer() {
   const [skipMsg, setSkipMsg] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [settings, setSettings] = useState(initialSettings);
+  const [libraryState, setLibraryState] = useState({
+    buckets: null,
+    metaById: {},
+    loading: false,
+    error: null,
+    category: null,
+    version: 0,
+  });
   const [upcomingPlaylist, setUpcomingPlaylist] = useState([]);
   const [manualQueue, setManualQueue] = useState([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -759,6 +820,13 @@ export default function TangoPlayer() {
     const sanitized = Math.min(1, Math.max(0, Number(volume)));
     volumeRef.current = sanitized;
   }, [volume]);
+
+  useEffect(() => {
+    manualQueueRef.current = manualQueue;
+  }, [manualQueue]);
+  useEffect(() => {
+    upcomingPlaylistRef.current = upcomingPlaylist;
+  }, [upcomingPlaylist]);
 
   const [activePanel, setActivePanel] = useState(null);
   const [eq, setEq] = useState({ low: 0, mid: 0, high: 0 });
@@ -801,6 +869,51 @@ export default function TangoPlayer() {
       activationConstraint: { delay: 250, tolerance: 5 },
     })
   );
+  useEffect(() => {
+    shuffledCortinasRef.current = shuffledCortinas;
+  }, [shuffledCortinas]);
+  const libraryBuckets = libraryState.buckets;
+  const libraryMeta = libraryState.metaById;
+  const libraryLoading = libraryState.loading;
+  const libraryVersion = libraryState.version;
+  useEffect(() => {
+    if (libraryLoading) return;
+    if (!libraryBuckets) {
+      generatorRef.current = null;
+      return;
+    }
+    const context = buildGeneratorContext(
+      { buckets: libraryBuckets, metaById: libraryMeta, version: libraryVersion },
+      settings.activeMode,
+      MIN_SAME_ORCHESTRA_GAP
+    );
+    generatorRef.current = context;
+    if (!context) {
+      setError('No tandas available for this selection.');
+      setIsRefreshing(false);
+      return;
+    }
+    const totalAvailable =
+      (context.allIds.TM?.length || 0) +
+      (context.allIds.TR?.length || 0) +
+      (context.allIds.V?.length || 0) +
+      (context.allIds.M?.length || 0);
+    if (totalAvailable === 0) {
+      setError('No tandas available for this selection.');
+    } else {
+      setError(null);
+    }
+    isFetchingRef.current = false;
+    setSkipMsg('');
+    setIsPlaying(false);
+    setCurrentTrackIndex(0);
+    setCurrentTime(0);
+    setRecentlyPlayedIds(new Set());
+    setTandaHistory([]);
+    isResettingRef.current = true;
+    setResetCounter(c => c + 1);
+    setIsRefreshing(false);
+  }, [libraryLoading, libraryBuckets, libraryMeta, libraryVersion, settings.activeMode]);
   // 4. Memos
   const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
   const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
@@ -916,6 +1029,65 @@ export default function TangoPlayer() {
   }, [queueWithCurrent, settings.cortinas]);
   // 5. Callbacks
   const handlePause = useCallback(() => { if (audioRef.current) audioRef.current.pause(); }, []);
+  const loadLibrary = useCallback(async (category) => {
+    setIsRefreshing(true);
+    if (!category) {
+      generatorRef.current = null;
+      setLibraryState(prev => ({
+        buckets: null,
+        metaById: {},
+        loading: false,
+        error: null,
+        category: null,
+        version: prev.version + 1,
+      }));
+      setIsRefreshing(false);
+      return;
+    }
+    setLibraryState(prev => ({
+      ...prev,
+      loading: true,
+      error: null,
+      category,
+    }));
+    try {
+      const res = await fetch(`/api/tandas/library?categoryFilter=${encodeURIComponent(category)}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to load library (${res.status})`);
+      }
+      const data = await res.json();
+      setError(null);
+      setLibraryState(prev => ({
+        buckets: {
+          tangoMelodic: data.buckets?.tangoMelodic || [],
+          tangoRhythmic: data.buckets?.tangoRhythmic || [],
+          vals: data.buckets?.vals || [],
+          milonga: data.buckets?.milonga || [],
+        },
+        metaById: data.metaById || {},
+        loading: false,
+        error: null,
+        category,
+        version: prev.version + 1,
+      }));
+    } catch (err) {
+      console.error('Failed to load tanda library:', err);
+      setLibraryState(prev => ({
+        ...prev,
+        loading: false,
+        error: err?.message || 'Failed to load tanda library.',
+        version: prev.version + 1,
+      }));
+      setError(err?.message || 'Failed to load tanda library.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+  useEffect(() => {
+    loadLibrary(settings.categoryFilter);
+  }, [loadLibrary, settings.categoryFilter]);
   const fetchLikedTandas = useCallback(async () => {
     if (likedTandaIds.length === 0) {
       setLikedTandas([]);
@@ -1014,41 +1186,85 @@ export default function TangoPlayer() {
     }
 
   }, [user, localLikedIds, likedItemOrder, likedTandas, likedTandaIds, likedMixedOrder, fallbackOrder, updateLikedIds, syncLikedOrderToAuth, persistLikedOrdering]);
-  const fetchAndFillPlaylist = useCallback(async () => {
+  const fetchAndFillPlaylist = useCallback(async (minBatch = 0) => {
     if (isFetchingRef.current) return;
+    const generator = generatorRef.current;
+    if (!generator) return;
+
+    const currentLength = upcomingPlaylistRef.current.length;
+    let needed = PLAYLIST_REFILL_THRESHOLD - currentLength;
+    if (currentLength === 0) {
+      needed = Math.max(needed, PLAYLIST_REFILL_THRESHOLD);
+    }
+    needed = Math.max(needed, minBatch);
+    if (needed <= 0) return;
+
     isFetchingRef.current = true;
     setIsLoading(true);
-    const allExcludeIds = new Set([...recentlyPlayedIds, ...upcomingPlaylist.map(t => t.id)]);
-    const params = buildApiParams(settings, allExcludeIds);
-    const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}`;
     try {
-      const response = await fetch(apiUrl, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Failed to fetch playlist from server.');
-      const data = await response.json();
-      let pool = shuffledCortinas;
-      if (!pool || pool.length === 0) {
-        const raw = Array.isArray(data.availableCortinas) ? data.availableCortinas.slice() : [];
-        pool = raw.sort(() => 0.5 - Math.random());
-        setShuffledCortinas(pool);
+      const picks = [];
+      for (let i = 0; i < needed; i += 1) {
+        const pick = pickNextTandaId(generator);
+        if (!pick) break;
+        picks.push(pick);
       }
-      if (data.upcomingTandas && data.upcomingTandas.length > 0) {
+
+      if (picks.length === 0) {
+        setError('No tandas available for this selection.');
+        return;
+      }
+
+      const missingIds = picks
+        .map(p => p.id)
+        .filter(id => id && !generator.cache.has(id));
+
+      if (missingIds.length > 0) {
+        const response = await fetch('/api/tandas/by-ids', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tandaIds: missingIds }),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to load tanda details.');
+        }
+        const data = await response.json();
+        const tandas = Array.isArray(data.tandas) ? data.tandas : [];
+        tandas.forEach(tanda => {
+          if (tanda?.id) {
+            generator.cache.set(tanda.id, tanda);
+          }
+        });
+      }
+
+      const tandaBatch = picks
+        .map(p => generator.cache.get(p.id))
+        .filter(Boolean);
+
+      if (tandaBatch.length > 0) {
+        let pool = shuffledCortinasRef.current;
+        if (!Array.isArray(pool) || pool.length === 0) {
+          pool = Array.isArray(cortinas) ? [...cortinas].sort(() => Math.random() - 0.5) : [];
+          if (pool.length > 0) {
+            setShuffledCortinas(pool);
+          }
+        }
         setUpcomingPlaylist(prev => {
-          const existing = [...manualQueue, ...prev];
-          const orderedBatch = reorderWithMinGap(existing, data.upcomingTandas, MIN_SAME_TANDA_GAP, MIN_SAME_ORCHESTRA_GAP);
-          const wrappedWithCortinas = attachCortinas(existing, orderedBatch, pool);
-          return [...prev, ...wrappedWithCortinas];
+          const existingManual = manualQueueRef.current;
+          const existing = [...existingManual, ...prev];
+          const wrapped = attachCortinas(existing, tandaBatch, pool);
+          return [...prev, ...wrapped];
         });
         setError(null);
       }
-    } catch {
-      console.error("FETCH ERROR:", err);
-      setError(err.message);
+    } catch (err) {
+      console.error('QUEUE GENERATOR ERROR:', err);
+      setError(err?.message || 'Failed to build queue.');
     } finally {
       isFetchingRef.current = false;
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [settings, recentlyPlayedIds, upcomingPlaylist, shuffledCortinas, manualQueue]);
+  }, [cortinas, setShuffledCortinas]);
   const initAudioGraph = useCallback(() => {
     if (!shouldUseWebAudio || audioContextRef.current || !audioRef.current) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1117,54 +1333,23 @@ export default function TangoPlayer() {
     if (queueContainerRef.current && !isFetchingRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = queueContainerRef.current;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
-      if (isNearBottom) fetchAndFillPlaylist();
+      if (isNearBottom) fetchAndFillPlaylist(PLAYLIST_REFILL_THRESHOLD);
     }
   }, [fetchAndFillPlaylist]);
-  const handleSettingChange = useCallback(async (settingName, value) => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    setIsRefreshing(true);
-    const newSettings = { ...settings, [settingName]: value };
-    setSettings(newSettings);
-    if (settingName === 'activeMode' || settingName === 'categoryFilter') {
-      try {
-        isResettingRef.current = true; // <-- ADD THIS LINE
-        const params = buildApiParams(newSettings);
-        const apiUrl = `${API_BASE_URL}/tandas/preview?${params.toString()}&cb=${Date.now()}`;
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error('Failed to fetch new playlist.');
-        const data = await response.json();
-        let pool = shuffledCortinas;
-        if (!pool || pool.length === 0) {
-          const raw = Array.isArray(data.availableCortinas) ? data.availableCortinas.slice() : [];
-          pool = raw.sort(() => 0.5 - Math.random());
-          setShuffledCortinas(pool);
-        }
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.src = '';
-        }
-        setIsPlaying(false);
-        setCurrentTrackIndex(0);
-        setCurrentTime(0);
-        setError(null);
-        setManualQueue([]);
-        setRecentlyPlayedIds(new Set());
-        const ordered = reorderWithMinGap([], data.upcomingTandas || [], MIN_SAME_TANDA_GAP, MIN_SAME_ORCHESTRA_GAP);
-        const wrapped = attachCortinas([], ordered, pool);
-        setUpcomingPlaylist(wrapped);
-      } catch {
-        console.error("SETTING CHANGE FETCH ERROR:", err);
-        setError(err.message);
-      } finally {
-        isFetchingRef.current = false;
-        setIsRefreshing(false);
+  const handleSettingChange = useCallback((settingName, value) => {
+    if (settings?.[settingName] === value) return;
+    setSettings(prev => {
+      if (prev?.[settingName] === value) return prev;
+      return { ...prev, [settingName]: value };
+    });
+    if (settingName === 'categoryFilter') {
+      if (value !== libraryState.category) {
+        loadLibrary(value);
       }
-    } else {
-      isFetchingRef.current = false;
-      setIsRefreshing(false);
+    } else if (settingName === 'activeMode') {
+      setIsRefreshing(true);
     }
-  }, [settings, shuffledCortinas]);
+  }, [libraryState.category, loadLibrary, settings]);
   const normalizeCortinaMeta = useCallback((meta, fallbackKey = null) => {
     if (!meta && !fallbackKey) return null;
     const normalized = { ...(meta || {}) };
@@ -1693,8 +1878,12 @@ export default function TangoPlayer() {
   ]);
   const handleRefreshPlaylist = useCallback(() => {
     if (isFetchingRef.current) return;
+    const context = buildGeneratorContext(libraryState, settings.activeMode, MIN_SAME_ORCHESTRA_GAP);
+    generatorRef.current = context;
+    isResettingRef.current = true;
+    setIsRefreshing(true);
     setResetCounter(c => c + 1);
-  }, []);
+  }, [libraryState, settings.activeMode]);
   const handleSkipForward = useCallback(() => {
     if (user && !isPro) return;
     if (isCortinaPlaying) {
@@ -1969,6 +2158,15 @@ export default function TangoPlayer() {
     };
     fetchCortinas();
   }, []);
+  useEffect(() => {
+    if (!Array.isArray(cortinas) || cortinas.length === 0) return;
+    setShuffledCortinas(prev => {
+      if (Array.isArray(prev) && prev.length === cortinas.length) return prev;
+      const randomized = [...cortinas].sort(() => Math.random() - 0.5);
+      shuffledCortinasRef.current = randomized;
+      return randomized;
+    });
+  }, [cortinas]);
   useEffect(() => {
     const needsFetching = upcomingPlaylist.length === 0 || upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
     if (needsFetching && !isFetchingRef.current && !isChangingSettings) {
@@ -2284,7 +2482,12 @@ export default function TangoPlayer() {
           {/* CENTER: Player */}
           <div className={`flex flex-col transition-all duration-500 ease-in-out ${sidebarsVisible ? 'w-[40%]' : 'w-full'}`}>
             <div className="relative">
-              <h2 className="text-xl mt-4 mb-4 text-center text-gray-200">Virtual Tango DJ</h2>
+              <h2 className="text-xl mt-4 mb-4 text-center text-gray-200 flex items-center justify-center gap-2">
+                Virtual Tango DJ
+                <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#25edda] text-[#1f2126]">
+                  Beta
+                </span>
+              </h2>
               <button onClick={toggleSidebars} title={sidebarsVisible ? "Focus Mode" : "Show Panels"} className="absolute top-0 right-0 mt-2 p-2 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
                 {sidebarsVisible ? <ArrowsPointingInIcon className="h-5 w-5" /> : <ArrowsPointingOutIcon className="h-5 w-5" />}
               </button>
@@ -2331,7 +2534,9 @@ export default function TangoPlayer() {
                           )}
                         </div>
                         <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
-                        <p className="text-xs text-gray-500 truncate">Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p>
+                        <p className="text-xs text-gray-500 truncate select-none">
+                          Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}
+                        </p>
                       </>
                     );
                   })()
@@ -2486,7 +2691,12 @@ export default function TangoPlayer() {
       {/* MOBILE LAYOUT */}
       <div className="block lg:hidden w-full p-2 sm:p-4">
         <div className="p-1 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto">
-          <h2 className="text-xl mb-8 text-center">Virtual Tango DJ</h2>
+          <h2 className="text-xl mb-8 text-center flex items-center justify-center gap-2">
+            Virtual Tango DJ
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#25edda] text-[#1f2126]">
+              Beta
+            </span>
+          </h2>
           <div className="flex justify-center mb-4">
             {currentTanda && currentTanda.artwork_signed ? (
               <Image
@@ -2525,7 +2735,9 @@ export default function TangoPlayer() {
                       )}
                     </div>
                     <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
-                    <p className="text-xs text-gray-500 truncate">Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}: {currentTrackTitle}</p>
+                    <p className="text-xs text-gray-500 truncate select-none">
+                      Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}
+                    </p>
                   </>
                 );
               })()

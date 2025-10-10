@@ -9,6 +9,8 @@ export const CATEGORIES = {
 export const TANDA_SEQUENCES = {
   '2 Tangos, 1 Vals, 2 Tangos, 1 Milonga': ['Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Milonga'],
   '3 Tangos, 1 Vals, 3 Tangos, 1 Milonga': ['Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Milonga'],
+  '4 Tangos, 1 Vals, 4 Tangos, 1 Milonga': ['Tango', 'Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Tango', 'Milonga'],
+  '5 Tangos, 1 Vals, 5 Tangos, 1 Milonga': ['Tango', 'Tango', 'Tango', 'Tango', 'Tango', 'Vals', 'Tango', 'Tango', 'Tango', 'Tango', 'Tango', 'Milonga'],
 };
 
 export const JUST_MODE_OPTIONS = [
@@ -21,7 +23,7 @@ export const TANDA_ORDER_OPTIONS = Object.keys(TANDA_SEQUENCES).map(key => ({ va
 export const ORCHESTRA_TYPE_OPTIONS = Object.values(CATEGORIES).map(cat => ({ value: cat, label: cat }));
 export const TANDA_LENGTH_OPTIONS = [3, 4];
 export const FREESTYLE_FETCH_BATCH_SIZE = 6;
-export const PLAYLIST_REFILL_THRESHOLD = 5;
+export const PLAYLIST_REFILL_THRESHOLD = 6;
 export const MIN_SAME_TANDA_GAP = 15;
 export const MIN_SAME_ORCHESTRA_GAP = 7;
 
