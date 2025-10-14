@@ -13,7 +13,7 @@ export const TandaRow = ({ tanda, onEdit, onDelete, isGloballyExpanded }) => {
   return (
     <div className="bg-transparent border-b border-white/5 last:border-b-0">
       {/* Main Tanda Info Row */}
-      <div className="flex items-center p-4">
+      <div className="flex items-center p-4 cursor-pointer hover:bg-white/5" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="flex-1 grid grid-cols-13 gap-4 items-center divide-x divide-gray-700/50">
           <div className="col-span-1 flex items-center pr-4">
             <button onClick={() => setIsExpanded(!isExpanded)} className="p-1 rounded-full hover:bg-white/10">
@@ -27,10 +27,10 @@ export const TandaRow = ({ tanda, onEdit, onDelete, isGloballyExpanded }) => {
           <p className="col-span-1 text-gray-300 truncate pl-4 text-right">{tanda.likesCount ?? 0}</p>
         </div>
         <div className="flex-shrink-0 flex items-center gap-2 ml-4">
-          <button onClick={() => onEdit(tanda.id)} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors">
+          <button onClick={(e) => { e.stopPropagation(); onEdit(tanda.id); }} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors">
             <PencilIcon className="h-5 w-5" />
           </button>
-          <button onClick={() => onDelete(tanda)} className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-white/10 transition-colors">
+          <button onClick={(e) => { e.stopPropagation(); onDelete(tanda); }} className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-white/10 transition-colors">
             <TrashIcon className="h-5 w-5" />
           </button>
         </div>
