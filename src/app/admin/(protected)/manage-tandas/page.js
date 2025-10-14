@@ -16,7 +16,7 @@ const TandaRow = ({ tanda, onEdit, onDelete, isGloballyExpanded }) => {
     <div className="bg-transparent border-b border-white/5 last:border-b-0">
       {/* Main Tanda Info Row */}
       <div className="flex items-center p-4">
-        <div className="flex-1 grid grid-cols-12 gap-4 items-center divide-x divide-gray-700/50">
+        <div className="flex-1 grid grid-cols-13 gap-4 items-center divide-x divide-gray-700/50">
           <div className="col-span-1 flex items-center pr-4">
             <button onClick={() => setIsExpanded(!isExpanded)} className="p-1 rounded-full hover:bg-white/10">
               {isExpanded ? <ChevronDownIcon className="h-5 w-5 text-gray-400" /> : <ChevronRightIcon className="h-5 w-5 text-gray-400" />}
@@ -26,6 +26,7 @@ const TandaRow = ({ tanda, onEdit, onDelete, isGloballyExpanded }) => {
           <p className="col-span-3 text-gray-400 truncate pl-4">{tanda.singer || 'Instrumental'}</p>
           <p className="col-span-2 text-gray-400 truncate pl-4">{tanda.type}</p>
           <p className="col-span-2 text-gray-400 truncate pl-4">{tanda.style || 'N/A'}</p>
+          <p className="col-span-1 text-gray-300 truncate pl-4 text-right">{tanda.likesCount ?? 0}</p>
         </div>
         <div className="flex-shrink-0 flex items-center gap-2 ml-4">
           <button onClick={() => onEdit(tanda.id)} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors">
@@ -63,9 +64,18 @@ const TandaRow = ({ tanda, onEdit, onDelete, isGloballyExpanded }) => {
   );
 };
 
+const SummaryCard = ({ label, value, helper }) => (
+  <div className="p-4 rounded-2xl bg-[#30333ab] border border-white/5">
+    <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">{label}</p>
+    <p className="text-2xl font-semibold text-white">{value}</p>
+    {helper && <p className="text-xs text-gray-400 mt-1">{helper}</p>}
+  </div>
+);
+
 
 export default function ManageTandasPage() {
   const [allTandas, setAllTandas] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
@@ -74,19 +84,21 @@ export default function ManageTandasPage() {
   const [tandaToDelete, setTandaToDelete] = useState(null);
 
   const [filterType, setFilterType] = useState('all');
-  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortBy, setSortBy] = useState('orchestra');
   
   const [areAllExpanded, setAreAllExpanded] = useState(false);
 
   useEffect(() => {
     const fetchTandas = async () => {
       try {
-        const response = await fetch('/api/tandas/manage');
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/tandas/manage`;
+        const response = await fetch(apiUrl);
         if (!response.ok) {
           throw new Error('Failed to fetch data from the server.');
         }
         const data = await response.json();
-        setAllTandas(data.tandas);
+        setAllTandas(Array.isArray(data.tandas) ? data.tandas : []);
+        setSummary(data.summary || null);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -103,6 +115,14 @@ export default function ManageTandasPage() {
     }
     if (sortBy === 'orchestra') {
       tandas.sort((a, b) => a.orchestra.localeCompare(b.orchestra));
+    } else if (sortBy === 'likesDesc') {
+      tandas.sort((a, b) => (b.likesCount ?? 0) - (a.likesCount ?? 0));
+    } else if (sortBy === 'createdAt') {
+      tandas.sort((a, b) => {
+        const aDate = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
+        const bDate = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
+        return bDate - aDate;
+      });
     }
     return tandas;
   }, [allTandas, filterType, sortBy]);
@@ -121,7 +141,8 @@ export default function ManageTandasPage() {
   const confirmDelete = async () => {
     if (!tandaToDelete) return;
     try {
-      const response = await fetch(`/api/tandas/manage?id=${tandaToDelete.id}`, {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/tandas/manage?id=${tandaToDelete.id}`;
+      const response = await fetch(apiUrl, {
         method: 'DELETE',
       });
       if (!response.ok) {
@@ -156,12 +177,33 @@ export default function ManageTandasPage() {
     <div className="h-screen flex flex-col bg-[#30333a] text-white p-4 sm:p-8">
       {isConfirming && <ConfirmationModal />}
       <div className="max-w-6xl w-full mx-auto flex flex-col h-full">
-        <header className="flex items-center gap-4 mb-6 flex-shrink-0">
+        <header className="flex items-center justify-between gap-4 mb-6 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-4">
           <button onClick={() => router.push('/admin/dashboard')} className="p-2 rounded-full hover:bg-white/10">
             <ArrowLeftIcon className="h-6 w-6 text-white" />
           </button>
           <h1 className="text-3xl font-bold text-white">Manage Tandas</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/admin/upload')}
+              className="px-4 py-2 rounded-full bg-[#25edda] text-[#1f2126] font-semibold hover:bg-[#23d9c8] transition-colors"
+            >
+              + New Tanda
+            </button>
+          </div>
         </header>
+
+        {summary && (
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+            <SummaryCard label="Total Tandas" value={summary.totalTandas} helper={`Total likes ${summary.totalLikes ?? 0}`} />
+            <SummaryCard label="Unique Orchestras" value={summary.totalOrchestras} />
+            <SummaryCard label="Tango (Melodic)" value={summary.tango?.melodic ?? 0} helper={`${summary.tango?.total ?? 0} total`} />
+            <SummaryCard label="Tango (Rhythmic)" value={summary.tango?.rhythmic ?? 0} />
+            <SummaryCard label="Vals" value={summary.vals ?? 0} />
+            <SummaryCard label="Milonga" value={summary.milonga ?? 0} />
+          </section>
+        )}
 
         <div className="flex-shrink-0 flex flex-col sm:flex-row gap-4 mb-4">
           <div className="flex-1 relative">
@@ -187,15 +229,16 @@ export default function ManageTandasPage() {
               onChange={(e) => setSortBy(e.target.value)}
               className="w-full h-12 p-3 pr-10 rounded-full appearance-none bg-[#30333a] text-white focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
             >
-              <option value="createdAt">Date Created (Newest)</option>
               <option value="orchestra">Orchestra (A-Z)</option>
+              <option value="likesDesc">Most Liked</option>
+              <option value="createdAt">Date Created (Newest)</option>
             </select>
             <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute right-4 top-[3.2rem] -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 
         <div className="hidden md:flex items-center p-4 text-sm text-gray-400 font-semibold flex-shrink-0 border-white/10">
-          <div className="flex-1 grid grid-cols-12 gap-4 items-center divide-x divide-gray-700/50">
+          <div className="flex-1 grid grid-cols-13 gap-4 items-center divide-x divide-gray-700/50">
             <div className="col-span-1 flex items-center pr-4">
               <button onClick={() => setAreAllExpanded(!areAllExpanded)} className="p-1 rounded-full hover:bg-white/10" title={areAllExpanded ? "Collapse All" : "Expand All"}>
                 {areAllExpanded ? <ArrowsPointingInIcon className="h-5 w-5" /> : <ArrowsPointingOutIcon className="h-5 w-5" />}
@@ -205,6 +248,7 @@ export default function ManageTandasPage() {
             <p className="col-span-3 pl-4">SINGER</p>
             <p className="col-span-2 pl-4">TYPE</p>
             <p className="col-span-2 pl-4">STYLE</p>
+            <p className="col-span-1 pl-4 text-right">LIKES</p>
           </div>
           <div className="w-[72px] text-right pl-4">ACTIONS</div>
         </div>

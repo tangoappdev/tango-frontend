@@ -31,18 +31,71 @@ export async function GET(request) {
 
   try {
     const tandasRef = db.collection('tandas');
-    const snapshot = await tandasRef.orderBy('createdAt', 'desc').get();
+    const [tandasSnapshot, usersSnapshot] = await Promise.all([
+      tandasRef.orderBy('createdAt', 'desc').get(),
+      db.collection('users').select('likedTandaIds').get(),
+    ]);
 
-    if (snapshot.empty) {
-      return NextResponse.json({ tandas: [] }, { status: 200 });
+    if (tandasSnapshot.empty) {
+      return NextResponse.json({ tandas: [], summary: {
+        totalTandas: 0,
+        totalOrchestras: 0,
+        tango: { total: 0, rhythmic: 0, melodic: 0 },
+        vals: 0,
+        milonga: 0,
+        totalLikes: 0,
+      } }, { status: 200 });
     }
 
-    const tandas = snapshot.docs.map(doc => ({
+    const likeCounts = {};
+    usersSnapshot.forEach(userDoc => {
+      const likedIds = userDoc.data()?.likedTandaIds || [];
+      likedIds.forEach(id => {
+        if (!id) return;
+        likeCounts[id] = (likeCounts[id] || 0) + 1;
+      });
+    });
+
+    const tandas = tandasSnapshot.docs.map(doc => ({
       id: doc.id,
+      likesCount: likeCounts[doc.id] || 0,
       ...doc.data(),
     }));
 
-    return NextResponse.json({ tandas });
+    const orchestraSet = new Set();
+    const summary = {
+      totalTandas: tandas.length,
+      totalOrchestras: 0,
+      tango: { total: 0, rhythmic: 0, melodic: 0 },
+      vals: 0,
+      milonga: 0,
+      totalLikes: 0,
+    };
+
+    tandas.forEach(tanda => {
+      const orchestraKey = typeof tanda.orchestra === 'string' ? tanda.orchestra.trim().toLowerCase() : '';
+      if (orchestraKey) orchestraSet.add(orchestraKey);
+
+      const type = tanda.type || '';
+      const style = (tanda.meta?.styleCode || tanda.style || '').toString().trim().toLowerCase();
+      summary.totalLikes += tanda.likesCount ?? 0;
+
+      if (type === 'Tango') {
+        summary.tango.total += 1;
+        if (style.includes('rhythmic')) {
+          summary.tango.rhythmic += 1;
+        } else {
+          summary.tango.melodic += 1;
+        }
+      } else if (type === 'Vals') {
+        summary.vals += 1;
+      } else if (type === 'Milonga') {
+        summary.milonga += 1;
+      }
+    });
+    summary.totalOrchestras = orchestraSet.size;
+
+    return NextResponse.json({ tandas, summary });
   } catch (error) {
     console.error('Error fetching tandas for management:', error);
     return NextResponse.json(

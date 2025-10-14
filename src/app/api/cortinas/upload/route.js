@@ -35,8 +35,9 @@ export async function POST(request) {
             title: title,
             url: newFilePath,
             genre: genre,
-            // --- THIS IS THE FIX: Add the artist to the document ---
             artist: artist || '', // Save artist, or an empty string if not provided
+            startTime: 0,
+            endTime: 45,
             createdAt: new Date().toISOString(),
         };
 
