@@ -9,6 +9,8 @@ export const config = {
      * except for the /admin/login page itself.
      */
     '/admin/:path((?!login$).*)',
+    // Add API routes that need protection
+    '/api/(dashboard|tandas/manage)(/:path*)',
   ],
 };
 
