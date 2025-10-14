@@ -2,73 +2,30 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon, ExclamationTriangleIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from '@heroicons/react/24/outline';
-
-// --- TandaRow Component ---
-const TandaRow = ({ tanda, onEdit, onDelete, isGloballyExpanded }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  useEffect(() => {
-    setIsExpanded(isGloballyExpanded);
-  }, [isGloballyExpanded]);
-
-  return (
-    <div className="bg-transparent border-b border-white/5 last:border-b-0">
-      {/* Main Tanda Info Row */}
-      <div className="flex items-center p-4">
-        <div className="flex-1 grid grid-cols-13 gap-4 items-center divide-x divide-gray-700/50">
-          <div className="col-span-1 flex items-center pr-4">
-            <button onClick={() => setIsExpanded(!isExpanded)} className="p-1 rounded-full hover:bg-white/10">
-              {isExpanded ? <ChevronDownIcon className="h-5 w-5 text-gray-400" /> : <ChevronRightIcon className="h-5 w-5 text-gray-400" />}
-            </button>
-          </div>
-          <p className="col-span-4 text-white truncate pl-4">{tanda.orchestra}</p>
-          <p className="col-span-3 text-gray-400 truncate pl-4">{tanda.singer || 'Instrumental'}</p>
-          <p className="col-span-2 text-gray-400 truncate pl-4">{tanda.type}</p>
-          <p className="col-span-2 text-gray-400 truncate pl-4">{tanda.style || 'N/A'}</p>
-          <p className="col-span-1 text-gray-300 truncate pl-4 text-right">{tanda.likesCount ?? 0}</p>
-        </div>
-        <div className="flex-shrink-0 flex items-center gap-2 ml-4">
-          <button onClick={() => onEdit(tanda.id)} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors">
-            <PencilIcon className="h-5 w-5" />
-          </button>
-          <button onClick={() => onDelete(tanda)} className="p-2 text-gray-400 hover:text-red-500 rounded-full hover:bg-white/10 transition-colors">
-            <TrashIcon className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Expanded Track Details View */}
-      {isExpanded && (
-        <div className="pb-4">
-          <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-1"></div> {/* Spacer column */}
-            <div className="col-span-11 border-t border-white/10 pt-3">
-              <h4 className="text-sm font-semibold text-gray-400 mb-2">Tracks:</h4>
-              {tanda.tracks && tanda.tracks.length > 0 ? (
-                <ul className="space-y-1">
-                  {tanda.tracks.map((track, index) => (
-                    <li key={index} className="text-gray-300 text-sm truncate">
-                      {index + 1}. {track.title}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 text-sm">No tracks found for this tanda.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+import { ArrowLeftIcon, ChevronDownIcon, ExclamationTriangleIcon, ArrowsPointingOutIcon, ArrowsPointingInIcon } from '@heroicons/react/24/outline';
+import { TandaRow } from './TandaRow';
 
 const SummaryCard = ({ label, value, helper }) => (
   <div className="p-4 rounded-2xl bg-[#30333ab] border border-white/5">
     <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">{label}</p>
     <p className="text-2xl font-semibold text-white">{value}</p>
     {helper && <p className="text-xs text-gray-400 mt-1">{helper}</p>}
+  </div>
+);
+
+const ConfirmationModal = ({ onCancel, onConfirm, tandaToDelete }) => (
+  <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+    <div className="bg-[#3e424b] rounded-2xl p-8 max-w-md w-full shadow-2xl text-center">
+      <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
+      <h2 className="text-2xl font-bold text-white mb-2">Are you sure?</h2>
+      <p className="text-gray-300 mb-6">
+        This will permanently delete the tanda for <span className="font-bold text-white">{tandaToDelete?.orchestra}</span> and all its files. This action cannot be undone.
+      </p>
+      <div className="flex justify-center gap-4">
+        <button onClick={onCancel} className="px-6 py-2 rounded-full text-white bg-gray-500 hover:bg-gray-600 transition-colors">Cancel</button>
+        <button onClick={onConfirm} className="px-6 py-2 rounded-full text-white bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
+      </div>
+    </div>
   </div>
 );
 
@@ -157,25 +114,11 @@ export default function ManageTandasPage() {
     }
   };
 
-  const ConfirmationModal = () => (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="bg-[#3e424b] rounded-2xl p-8 max-w-md w-full shadow-2xl text-center">
-        <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-white mb-2">Are you sure?</h2>
-        <p className="text-gray-300 mb-6">
-          This will permanently delete the tanda for <span className="font-bold text-white">{tandaToDelete?.orchestra}</span> and all its files. This action cannot be undone.
-        </p>
-        <div className="flex justify-center gap-4">
-          <button onClick={() => setIsConfirming(false)} className="px-6 py-2 rounded-full text-white bg-gray-500 hover:bg-gray-600 transition-colors">Cancel</button>
-          <button onClick={confirmDelete} className="px-6 py-2 rounded-full text-white bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="h-screen flex flex-col bg-[#30333a] text-white p-4 sm:p-8">
-      {isConfirming && <ConfirmationModal />}
+      {isConfirming && (
+        <ConfirmationModal onCancel={() => setIsConfirming(false)} onConfirm={confirmDelete} tandaToDelete={tandaToDelete} />
+      )}
       <div className="max-w-6xl w-full mx-auto flex flex-col h-full">
         <header className="flex items-center justify-between gap-4 mb-6 flex-shrink-0 flex-wrap">
           <div className="flex items-center gap-4">
