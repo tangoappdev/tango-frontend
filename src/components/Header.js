@@ -35,7 +35,6 @@ export default function Header() {
   const { user, requireAuth, logout, me, trialActive } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
   const headerRef = useRef(null);
   const isPro = !!me?.isPro;
 
@@ -65,28 +64,12 @@ export default function Header() {
     await logout();
   };
 
-  const handleManageSubscription = async () => {
-    if (portalLoading) return;
+  const handleManageSubscription = () => {
     setUserMenuOpen(false);
     setMenuOpen(false);
-    setPortalLoading(true);
-    try {
-      const res = await fetch('/api/billing/portal', { method: 'POST' });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to open billing portal');
-      }
-      const data = await res.json();
-      if (data?.url) {
-        window.location.href = data.url;
-        return;
-      }
-      throw new Error('Billing portal URL missing');
-    } catch (error) {
-      console.error('Failed to open billing portal', error);
-      alert('Unable to open the billing portal. Please contact support.');
-      setPortalLoading(false);
-    }
+    requireAuth(() => {
+      router.push('/manage_subscription');
+    }, 'login');
   };
 
   const trialDaysLeft = useMemo(() => {
@@ -217,15 +200,12 @@ export default function Header() {
                       <div className="mb-3 text-xs text-gray-400">
                         {user.displayName || user.email}
                       </div>
-                      {isPro && (
-                        <button
-                          onClick={handleManageSubscription}
-                          disabled={portalLoading}
-                          className="mb-2 w-full rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition-colors duration-200 hover:bg-white/10 hover:text-white disabled:opacity-60"
-                        >
-                          {portalLoading ? 'Opening...' : 'Manage Subscription'}
-                        </button>
-                      )}
+                      <button
+                        onClick={handleManageSubscription}
+                        className="mb-2 w-full rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition-colors duration-200 hover:bg-white/10 hover:text-white"
+                      >
+                        Manage Subscription
+                      </button>
                       <button
                         onClick={handleSignOut}
                         className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition-colors duration-200 hover:bg-white/10 hover:text-white"
@@ -305,6 +285,14 @@ export default function Header() {
                   <p className="text-xs uppercase text-gray-500">Signed in as</p>
                   <p className="truncate">{user.displayName || user.email}</p>
                 </div>
+                <button
+                  onClick={() => {
+                    handleManageSubscription();
+                  }}
+                  className="w-full rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-gray-200 transition-colors duration-200 hover:text-white hover:bg-white/5"
+                >
+                  Manage subscription
+                </button>
                 <button
                   onClick={() => {
                     setMenuOpen(false);
