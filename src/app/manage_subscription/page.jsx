@@ -241,7 +241,7 @@ export default function ManageSubscriptionPage() {
         </div>
 
       <section className="grid gap-6 md:grid-cols-[1.75fr_minmax(0,1fr)]">
-        <div className="rounded-3xl border border-white/10 bg-[#30333a] p-6 shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
+        <div className="rounded-3xl bg-[#30333a] p-6 shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-widest text-gray-400">Current Plan</p>
@@ -349,7 +349,7 @@ export default function ManageSubscriptionPage() {
           )}
         </div>
 
-        <aside className="rounded-3xl border border-white/10 bg-[#30333a] p-6 shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
+        <aside className="rounded-3xl bg-[#30333a] p-6 shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
           <h3 className="text-xl font-semibold">Switch plans</h3>
           <p className="mt-1 text-sm text-gray-400">
             Choose the plan that fits you best. Changes take effect immediately.
@@ -393,7 +393,7 @@ export default function ManageSubscriptionPage() {
         </aside>
       </section>
 
-      <section className="rounded-3xl border border-white/10 bg-[#30333a] p-6 shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
+      <section className="rounded-3xl bg-[#30333a] p-6 shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-xl font-semibold">Billing history</h3>
