@@ -63,19 +63,6 @@ export default function Header() {
     await logout();
   };
 
-  const navItems = useMemo(
-    () =>
-      navLinks.map((link) => (
-        <NavLink
-          key={link.href}
-          {...link}
-          isActive={isActive(link.href)}
-          onClick={() => setMenuOpen(false)}
-        />
-      )),
-    [pathname]
-  );
-
   const trialDaysLeft = useMemo(() => {
     if (!trialActive) return null;
     const trialEndsAt = me?.trialEndsAt ?? 0;
@@ -141,7 +128,16 @@ export default function Header() {
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-3 md:flex">{navItems}</nav>
+        <nav className="hidden items-center gap-3 md:flex">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.href}
+              {...link}
+              isActive={isActive(link.href)}
+              onClick={() => setMenuOpen(false)}
+            />
+          ))}
+        </nav>
 
         <div className="hidden items-center gap-3 md:flex">
           {user ? (
@@ -227,7 +223,16 @@ export default function Header() {
 
       {menuOpen && (
         <div className="border-t border-white/10 bg-[#30333a] px-4 py-4 md:hidden">
-          <div className="flex flex-col gap-3">{navItems}</div>
+          <div className="flex flex-col gap-3">
+            {navLinks.map((link) => (
+              <NavLink
+                key={link.href}
+                {...link}
+                isActive={isActive(link.href)}
+                onClick={() => setMenuOpen(false)}
+              />
+            ))}
+          </div>
           <div className="mt-4 flex flex-col gap-3">
             <button
               onClick={() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Image from 'next/image';
@@ -60,7 +60,7 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
     return 'mouse';
   };
 
-  const handlePointerDown = useCallback((event) => {
+  const handlePointerDown = (event) => {
     const point = event.touches ? event.touches[0] : event;
     tapStartRef.current = { time: Date.now(), x: point.clientX, y: point.clientY };
     lastPointerTypeRef.current = resolvePointerType(event);
@@ -74,9 +74,9 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
       }
       dragTimeoutRef.current = null;
     }, TAP_THRESHOLD_MS); // Use the same threshold as tap
-  }, [listeners, tanda, resolvePointerType]);
+  };
 
-  const handlePointerUp = useCallback((event) => {
+  const handlePointerUp = (event) => {
     // If the drag timeout is still pending, it's a tap, not a drag.
     if (dragTimeoutRef.current) {
       clearTimeout(dragTimeoutRef.current);
@@ -100,14 +100,14 @@ export default function QueueItem({ tanda, onMenuOpen, onPlayNow, isDesktop, sor
     }
     tapStartRef.current = null;
 
-  }, [isDragging, onMenuOpen, tanda]);
+  };
 
-  const handlePointerCancel = useCallback((event) => {
+  const handlePointerCancel = (event) => {
     tapStartRef.current = null;
     if (event.type === 'touchcancel') {
       listeners.onTouchCancel?.(event);
     }
-  }, [listeners]);
+  };
 
   useEffect(() => {
     if (isDragging) {

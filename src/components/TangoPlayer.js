@@ -920,23 +920,6 @@ export default function TangoPlayer() {
   const queueWithCurrent = useMemo(() => (
     manualQueue.length > 0 ? [...manualQueue, ...upcomingPlaylist] : [...upcomingPlaylist]
   ), [manualQueue, upcomingPlaylist]);
-  const buildLikedCortinaKey = useCallback((cortina) => {
-    if (!cortina) return 'cortina-unknown';
-    const candidates = [
-      cortina.key,
-      cortina.id,
-      cortina.meta?.id,
-      cortina.meta?.cortina_id,
-      cortina.meta?.slug,
-    ].filter(Boolean).map(String);
-    if (candidates.length > 0) {
-      const candidate = candidates.find(value => value.startsWith('cortina-')) || candidates[0];
-      return candidate.startsWith('cortina-') ? candidate : `cortina-${candidate}`;
-    }
-    const slugSource = [cortina.title, cortina.artist, cortina.genre].filter(Boolean).join('-').toLowerCase();
-    const sanitized = slugSource.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '');
-    return sanitized ? `cortina-${sanitized}` : 'cortina-unknown';
-  }, []);
   const syncLikedOrderToAuth = useCallback((order) => {
     if (!Array.isArray(order)) {
       console.warn('[syncLikedOrderToAuth] ignoring non-array order', order);
@@ -999,7 +982,7 @@ export default function TangoPlayer() {
       }
       return null;
     }).filter(Boolean);
-  }, [likedTandas, likedCortinas, mergedOrder, buildLikedCortinaKey]);
+  }, [likedTandas, likedCortinas, mergedOrder]);
 
   const scheduledCortinas = useMemo(() => {
     if (!settings.cortinas) return [];
@@ -1184,7 +1167,7 @@ export default function TangoPlayer() {
       syncLikedOrderToAuth(rollbackOrder);
     }
 
-  }, [user, localLikedIds, likedItemOrder, likedTandas, likedTandaIds, likedMixedOrder, fallbackOrder, updateLikedIds, syncLikedOrderToAuth, persistLikedOrdering]);
+  }, [user, localLikedIds, localLikedCortinaIds, likedItemOrder, likedTandas, likedTandaIds, likedMixedOrder, fallbackOrder, updateLikedIds, syncLikedOrderToAuth, persistLikedOrdering]);
   const fetchAndFillPlaylist = useCallback(async (minBatch = 0) => {
     if (!cortinaPoolReady) return;
     if (isFetchingRef.current) return;
@@ -1874,6 +1857,7 @@ export default function TangoPlayer() {
     clearCortinaTimeout,
     handleCortinaEnded,
     startCortinaFade,
+    setEffectiveVolume,
     cancelCortinaFade,
   ]);
   const handleRefreshPlaylist = useCallback(() => {
@@ -2299,7 +2283,7 @@ export default function TangoPlayer() {
         },
       },
     ].filter(Boolean);
-  }, [menuState.visible, menuState.itemType, menuState.cortinaKey, menuState.tandaId, scheduledCortinas, handleCortinaMenuMove, handleTandaMenuAction, handlePlayNext, manualQueueIds, handleAddToQueue, user, localLikedIds, handleLikeToggle, handleMenuClose, insertCortinaMeta, normalizeCortinaMeta, localLikedCortinaIds, handleCortinaLikeToggle]);
+  }, [menuState.visible, menuState.itemType, menuState.cortinaKey, menuState.cortinaMeta, menuState.tandaId, scheduledCortinas, handleCortinaMenuMove, handleTandaMenuAction, handlePlayNext, manualQueueIds, handleAddToQueue, user, localLikedIds, handleLikeToggle, handleMenuClose, insertCortinaMeta, normalizeCortinaMeta, localLikedCortinaIds, handleCortinaLikeToggle]);
 
   if (!hasMounted) {
   return (
