@@ -109,6 +109,24 @@ export function useSubscription({ autoFetch = true } = {}) {
     [runAction]
   );
 
+  const openBillingPortal = useCallback(async () => {
+    setMutatingAction('open_billing_portal');
+    setError(null);
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.error || 'Failed to open billing portal');
+      }
+      return json;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setMutatingAction(null);
+    }
+  }, []);
+
   const refresh = useCallback(async () => runAction('refresh'), [runAction]);
 
   useEffect(() => {
@@ -149,6 +167,7 @@ export function useSubscription({ autoFetch = true } = {}) {
     resumeSubscription,
     pauseSubscription,
     resumePause,
+    openBillingPortal,
     updatePaymentMethod,
     refresh,
   };

@@ -75,6 +75,7 @@ export default function ManageSubscriptionPage() {
     resumeSubscription,
     pauseSubscription,
     resumePause,
+    openBillingPortal,
     updatePaymentMethod,
     refresh,
   } = useSubscription();
@@ -161,15 +162,27 @@ export default function ManageSubscriptionPage() {
 
   const handleUpdatePaymentMethod = useCallback(async () => {
     try {
-      const result = await updatePaymentMethod();
-      if (result?.portalUrl) {
-        window.location.href = result.portalUrl;
+      const result = await openBillingPortal();
+      if (result?.url) {
+        window.location.href = result.url;
+        return;
       }
+      throw new Error('Billing portal URL missing');
     } catch (err) {
-      console.error(err);
-      alert(err?.message || 'Unable to open billing portal.');
+      console.warn('Billing portal fallback to API', err);
+      try {
+        const fallback = await updatePaymentMethod();
+        if (fallback?.portalUrl) {
+          window.location.href = fallback.portalUrl;
+          return;
+        }
+        throw err;
+      } catch (fallbackError) {
+        console.error(fallbackError);
+        alert(fallbackError?.message || 'Unable to open the billing portal.');
+      }
     }
-  }, [updatePaymentMethod]);
+  }, [openBillingPortal, updatePaymentMethod]);
 
   const isMutating = Boolean(mutatingAction);
 
@@ -277,7 +290,9 @@ export default function ManageSubscriptionPage() {
               disabled={actionDisabled('update_payment_method')}
               className="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-gray-200 transition-colors duration-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {mutatingAction === 'update_payment_method' ? 'Opening…' : 'Update payment method'}
+              {mutatingAction === 'update_payment_method' || mutatingAction === 'open_billing_portal'
+                ? 'Opening…'
+                : 'Update payment method'}
             </button>
             {subscription?.isActive ? (
               <>
