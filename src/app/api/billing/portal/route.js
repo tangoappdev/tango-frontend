@@ -44,10 +44,19 @@ export async function POST(request) {
 
     const origin = resolveOrigin(request);
 
-    const session = await stripe.billingPortal.sessions.create({
+    const configurationId =
+      process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID?.trim() || undefined;
+
+    const sessionParams = {
       customer: customerId,
       return_url: `${origin}/pricing?portal=return`,
-    });
+    };
+
+    if (configurationId) {
+      sessionParams.configuration = configurationId;
+    }
+
+    const session = await stripe.billingPortal.sessions.create(sessionParams);
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

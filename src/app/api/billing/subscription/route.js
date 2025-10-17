@@ -537,11 +537,20 @@ export async function PATCH(request) {
       break;
       }
       case 'update_payment_method': {
+        const configurationId =
+          process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID?.trim() || undefined;
+
+        const sessionParams = {
+          customer: profile.stripeCustomerId,
+          return_url: `${origin}/manage_subscription?portal=return`,
+        };
+
+        if (configurationId) {
+          sessionParams.configuration = configurationId;
+        }
+
         portalUrl = await stripe.billingPortal.sessions
-          .create({
-            customer: profile.stripeCustomerId,
-            return_url: `${origin}/manage_subscription?portal=return`,
-          })
+          .create(sessionParams)
           .then((session) => session.url);
         break;
       }
