@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
@@ -35,7 +35,9 @@ export default function Header() {
   const { user, requireAuth, logout, me, trialActive } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
   const headerRef = useRef(null);
+  const isPro = !!me?.isPro;
 
   const isActive = (href) => {
     if (href === '/') {
@@ -63,6 +65,30 @@ export default function Header() {
     await logout();
   };
 
+  const handleManageSubscription = async () => {
+    if (portalLoading) return;
+    setUserMenuOpen(false);
+    setMenuOpen(false);
+    setPortalLoading(true);
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to open billing portal');
+      }
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error('Billing portal URL missing');
+    } catch (error) {
+      console.error('Failed to open billing portal', error);
+      alert('Unable to open the billing portal. Please contact support.');
+      setPortalLoading(false);
+    }
+  };
+
   const trialDaysLeft = useMemo(() => {
     if (!trialActive) return null;
     const trialEndsAt = me?.trialEndsAt ?? 0;
@@ -78,6 +104,7 @@ export default function Header() {
     if (trialDaysLeft <= 0) return 'Trial ends today';
     return `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left`;
   }, [trialDaysLeft]);
+  const showTrialBadge = trialBadgeText && !isPro;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -104,7 +131,7 @@ export default function Header() {
       ref={headerRef}
       className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#30333a]/95 backdrop-blur"
     >
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 md:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[85rem] items-center justify-between px-4 py-4 md:px-6 lg:px-8">
         <Link
           href="/"
           className="flex w-full md:w-auto items-center justify-center md:justify-start gap-3 text-white text-center md:text-left"
@@ -124,7 +151,6 @@ export default function Header() {
                 Beta
               </span>
             </span>
-            <span className="text-xs text-gray-400">Authentic milonga vibes, on demand</span>
           </div>
         </Link>
 
@@ -142,15 +168,23 @@ export default function Header() {
         <div className="hidden items-center gap-3 md:flex">
           {user ? (
             <>
-              <button
-                onClick={handleUpgrade}
-                className="rounded-full border border-[#25edda] px-4 py-2 text-sm font-semibold text-[#25edda] transition-colors duration-200 hover:bg-[#25edda]/10"
-              >
-                Upgrade
-              </button>
-              {trialBadgeText && (
-                <span className="text-xs font-medium text-[#25edda]">
-                  {trialBadgeText}
+              {!isPro ? (
+                <>
+                  <button
+                    onClick={handleUpgrade}
+                    className="rounded-full border border-[#25edda] px-4 py-2 text-sm font-semibold text-[#25edda] transition-colors duration-200 hover:bg-[#25edda]/10"
+                  >
+                    Upgrade
+                  </button>
+                  {showTrialBadge && (
+                    <span className="text-xs font-medium text-[#25edda]">
+                      {trialBadgeText}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="rounded-full border border-[#25edda] px-3 py-1 text-sm font-semibold uppercase tracking-wide text-[#25edda] select-none">
+                  PRO
                 </span>
               )}
               <div className="relative">
@@ -183,6 +217,15 @@ export default function Header() {
                       <div className="mb-3 text-xs text-gray-400">
                         {user.displayName || user.email}
                       </div>
+                      {isPro && (
+                        <button
+                          onClick={handleManageSubscription}
+                          disabled={portalLoading}
+                          className="mb-2 w-full rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition-colors duration-200 hover:bg-white/10 hover:text-white disabled:opacity-60"
+                        >
+                          {portalLoading ? 'Opening...' : 'Manage Subscription'}
+                        </button>
+                      )}
                       <button
                         onClick={handleSignOut}
                         className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition-colors duration-200 hover:bg-white/10 hover:text-white"
@@ -234,19 +277,27 @@ export default function Header() {
             ))}
           </div>
           <div className="mt-4 flex flex-col gap-3">
-            <button
-              onClick={() => {
-                setMenuOpen(false);
-                handleUpgrade();
-              }}
-              className="w-full rounded-full border border-[#25edda] px-4 py-2 text-sm font-semibold text-[#25edda] transition-colors duration-200 hover:bg-[#25edda]/10"
-            >
-              Upgrade
-            </button>
-            {trialBadgeText && (
-              <span className="text-center text-xs font-medium text-[#25edda]">
-                {trialBadgeText}
+            {isPro ? (
+              <span className="mx-auto inline-flex rounded-full border border-[#25edda] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#25edda]">
+                PRO
               </span>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleUpgrade();
+                  }}
+                  className="w-full rounded-full border border-[#25edda] px-4 py-2 text-sm font-semibold text-[#25edda] transition-colors duration-200 hover:bg-[#25edda]/10"
+                >
+                  Upgrade
+                </button>
+                {showTrialBadge && (
+                  <span className="text-center text-xs font-medium text-[#25edda]">
+                    {trialBadgeText}
+                  </span>
+                )}
+              </>
             )}
             {user ? (
               <>
@@ -281,3 +332,6 @@ export default function Header() {
     </header>
   );
 }
+
+
+
