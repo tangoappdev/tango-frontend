@@ -30,8 +30,13 @@ export async function GET(request) {
   } catch {}
 
 
-  const tier = profile?.tier || 'free';
+  const subscriptionStatus = profile?.subscriptionStatus || null;
   const trialEndsAt = profile?.trialEndsAt ? new Date(profile.trialEndsAt).getTime() : 0;
+  const currentPeriodEnd = profile?.currentPeriodEnd ? new Date(profile.currentPeriodEnd).getTime() : 0;
+  const isPro =
+    profile?.isPro === true ||
+    ['active', 'trialing', 'past_due'].includes(subscriptionStatus);
+  const tier = profile?.tier || (isPro ? 'pro' : 'free');
   const trialActive = trialEndsAt > Date.now();
 
   return NextResponse.json(
@@ -46,7 +51,14 @@ export async function GET(request) {
       photoURL: profile?.photoURL || '',
       tier,
       isAdmin: !!userClaims.admin,
+      isPro,
+      subscriptionStatus,
+      stripeCustomerId: profile?.stripeCustomerId || null,
+      stripeSubscriptionId: profile?.stripeSubscriptionId || null,
+      planId: profile?.planId || null,
+      currentPeriodEnd: currentPeriodEnd || null,
       trialActive,
+      trialEndsAt,
       likedTandaIds: profile?.likedTandaIds || [],
       likedCortinaIds: profile?.likedCortinaIds || [],
       likedMixedOrder: profile?.likedMixedOrder || [],

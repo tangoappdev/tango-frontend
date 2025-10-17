@@ -28,7 +28,6 @@ import {
   MIN_SAME_ORCHESTRA_GAP,
   initialSettings
 } from './tangoPlayerConstants';
-import { signOut } from 'firebase/auth';
 
 function Queue({
   isOpen, onClose, isDesktop, rightPanelTab, setRightPanelTab,
@@ -791,7 +790,6 @@ export default function TangoPlayer() {
   // 2. State
   const [tier, setTier] = useState('free');
   const [skipMsg, setSkipMsg] = useState('');
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [settings, setSettings] = useState(initialSettings);
   const [libraryState, setLibraryState] = useState({
     buckets: null,
@@ -848,6 +846,7 @@ export default function TangoPlayer() {
   const [eqNotification, setEqNotification] = useState('');
   const [hasMounted, setHasMounted] = useState(false);
   const [cortinas, setCortinas] = useState([]);
+  const [cortinaPoolReady, setCortinaPoolReady] = useState(false);
   const [isCortinaPlaying, setIsCortinaPlaying] = useState(false);
   const [currentCortina, setCurrentCortina] = useState(null);
   const [shuffledCortinas, setShuffledCortinas] = useState([]);
@@ -1187,6 +1186,7 @@ export default function TangoPlayer() {
 
   }, [user, localLikedIds, likedItemOrder, likedTandas, likedTandaIds, likedMixedOrder, fallbackOrder, updateLikedIds, syncLikedOrderToAuth, persistLikedOrdering]);
   const fetchAndFillPlaylist = useCallback(async (minBatch = 0) => {
+    if (!cortinaPoolReady) return;
     if (isFetchingRef.current) return;
     const generator = generatorRef.current;
     if (!generator) return;
@@ -1264,7 +1264,7 @@ export default function TangoPlayer() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [cortinas, setShuffledCortinas]);
+  }, [cortinas, setShuffledCortinas, cortinaPoolReady]);
   const initAudioGraph = useCallback(() => {
     if (!shouldUseWebAudio || audioContextRef.current || !audioRef.current) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1938,15 +1938,6 @@ export default function TangoPlayer() {
       if (highShelfRef.current) highShelfRef.current.gain.setTargetAtTime(newEq.high, audioCtx.currentTime, 0.01);
     }
   }, [isPro, isDesktop, user]);
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      await fetch('/api/auth/signout', { method: 'POST' }).catch(() => {});
-      setUserMenuOpen(false);
-    } catch (e) {
-      console.error('Sign out failed', e);
-    }
-  };
   const handlePanelToggle = (panelName) => {
     const isOpening = activePanel !== panelName;
     if (panelName === 'queue' && isOpening) fetchAndFillPlaylist();
@@ -2064,7 +2055,7 @@ export default function TangoPlayer() {
       }
     }
   };
-  const renderVerticalVolumeSlider = (currentVolume, setVolumeFunctionCallback) => { const volumePercentage = currentVolume * 100; const KNOB_DISPLAY_HEIGHT_PX = 12; const thumbOffsetPx = KNOB_DISPLAY_HEIGHT_PX / 2; const thumbTopPosition = `calc(${(1 - currentVolume) * 100}% - ${thumbOffsetPx}px)`; return (<div className="flex flex-col items-center justify-center h-56 w-16 bg-[url('/images/volumeback.png')] bg-contain bg-no-repeat bg-center p-1 rounded-md shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><div className="relative w-1 h-[80%] bg-[#222429] rounded-full shadow-inner cursor-pointer" onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); const clickY = e.clientY - rect.top; let newVolume = Math.max(0, Math.min(1, 1 - (clickY / rect.height))); setVolumeFunctionCallback({ target: { value: newVolume.toString() } }); }}><div className="absolute bottom-0 left-0 w-full bg-[#25edda] rounded-b-full pointer-events-none" style={{ height: `${volumePercentage}%` }} /><div className="absolute left-1/2 -translate-x-1/2 w-8 h-3 rounded-md bg-[#30333a] shadow-[3px_3px_3px_#222429,-3px_-3px_3px_#3e424b] pointer-events-none" style={{ top: thumbTopPosition }} /><input type="range" min="0" max="1" step="0.01" value={currentVolume} onChange={setVolumeFunctionCallback} className="absolute top-0 left-0 opacity-0 w-full h-full cursor-pointer" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }} aria-label="Volume" /></div></div>); };
+  const renderVerticalVolumeSlider = (currentVolume, setVolumeFunctionCallback) => { const volumePercentage = currentVolume * 100; const KNOB_DISPLAY_HEIGHT_PX = 12; const thumbOffsetPx = KNOB_DISPLAY_HEIGHT_PX / 2; const thumbTopPosition = `calc(${(1 - currentVolume) * 100}% - ${thumbOffsetPx}px)`; return (<div className="flex flex-col items-center justify-center h-64 w-16 bg-[url('/images/volumeback.png')] bg-contain bg-no-repeat bg-center p-1 rounded-md shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b]"><div className="relative w-1 h-[80%] bg-[#222429] rounded-full shadow-inner cursor-pointer" onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); const clickY = e.clientY - rect.top; let newVolume = Math.max(0, Math.min(1, 1 - (clickY / rect.height))); setVolumeFunctionCallback({ target: { value: newVolume.toString() } }); }}><div className="absolute bottom-0 left-0 w-full bg-[#25edda] rounded-b-full pointer-events-none" style={{ height: `${volumePercentage}%` }} /><div className="absolute left-1/2 -translate-x-1/2 w-8 h-3 rounded-md bg-[#30333a] shadow-[3px_3px_3px_#222429,-3px_-3px_3px_#3e424b] pointer-events-none" style={{ top: thumbTopPosition }} /><input type="range" min="0" max="1" step="0.01" value={currentVolume} onChange={setVolumeFunctionCallback} className="absolute top-0 left-0 opacity-0 w-full h-full cursor-pointer" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }} aria-label="Volume" /></div></div>); };
   const handleAudioTimeUpdate = useCallback(() => { if (audioRef.current && !isSeekingRef.current) setCurrentTime(audioRef.current.currentTime); }, []);
   const handleAudioLoadedMetadata = useCallback(() => { if (audioRef.current) setDuration(audioRef.current.duration); }, []);
   const handleAudioPlay = useCallback(() => setIsPlaying(true), []);
@@ -2142,7 +2133,8 @@ export default function TangoPlayer() {
         const response = await fetch('/api/cortinas/player');
         if (response.ok) {
           const data = await response.json();
-          setCortinas(data.cortinas);
+          const fetchedCortinas = Array.isArray(data.cortinas) ? data.cortinas : [];
+          setCortinas(fetchedCortinas);
           if (data.settings) {
             const fadeInSeconds = Math.max(0, Number(data.settings.fadeInSeconds) || 0);
             const fadeOutSeconds = Math.max(0, Number(data.settings.fadeOutSeconds) || 0);
@@ -2151,9 +2143,15 @@ export default function TangoPlayer() {
               fadeOut: fadeOutSeconds,
             };
           }
+        } else {
+          console.error('Failed to fetch cortinas:', response.status);
+          setCortinas([]);
         }
       } catch (error) {
         console.error('Failed to fetch cortinas:', error);
+        setCortinas([]);
+      } finally {
+        setCortinaPoolReady(true);
       }
     };
     fetchCortinas();
@@ -2168,11 +2166,46 @@ export default function TangoPlayer() {
     });
   }, [cortinas]);
   useEffect(() => {
+    if (!cortinaPoolReady) return;
+    const pool = (Array.isArray(shuffledCortinasRef.current) && shuffledCortinasRef.current.length > 0)
+      ? shuffledCortinasRef.current
+      : (Array.isArray(cortinas) ? [...cortinas] : []);
+    if (!Array.isArray(pool) || pool.length === 0) return;
+
+    setManualQueue(prev => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev;
+      let changed = false;
+      const updated = prev.map((tanda, idx) => {
+        if (tanda?.cortinaMeta) return tanda;
+        const meta = pool[idx % pool.length];
+        if (!meta) return tanda;
+        changed = true;
+        return { ...tanda, cortinaMeta: meta };
+      });
+      return changed ? updated : prev;
+    });
+
+    setUpcomingPlaylist(prev => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev;
+      const manualCount = manualQueueRef.current?.length || 0;
+      let changed = false;
+      const updated = prev.map((tanda, idx) => {
+        if (tanda?.cortinaMeta) return tanda;
+        const meta = pool[(manualCount + idx) % pool.length];
+        if (!meta) return tanda;
+        changed = true;
+        return { ...tanda, cortinaMeta: meta };
+      });
+      return changed ? updated : prev;
+    });
+  }, [cortinaPoolReady, cortinas]);
+  useEffect(() => {
+    if (!cortinaPoolReady) return;
     const needsFetching = upcomingPlaylist.length === 0 || upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
     if (needsFetching && !isFetchingRef.current && !isChangingSettings) {
       fetchAndFillPlaylist();
     }
-  }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist, isChangingSettings]);
+  }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist, isChangingSettings, cortinaPoolReady]);
   useEffect(() => {
     if (isCortinaPlaying) {
       return;
@@ -2341,63 +2374,8 @@ export default function TangoPlayer() {
     isPro
   };
   return (
-    <div className="w-full min-h-screen flex flex-col font-sans text-white">
-      {/* Top-right auth area */}
-<div className="fixed top-3 right-3 z-50">
-  {!user ? (
-    <div className="flex gap-2">
-      <button
-        onClick={() => requireAuth(() => {}, 'login')}
-        className="px-3 py-1.5 rounded-full text-sm border border-[#25edda] text-[#25edda] hover:bg-[#25edda] hover:text-[#30333a] transition"
-      >
-       Login
-      </button>
-      <button
-        onClick={() => requireAuth(() => {}, 'register')}
-        className="px-3 py-1.5 rounded-full text-sm text-[#25edda] hover:opacity-90 transition"
-      >
-        Sign up
-      </button>
-    </div>
-  ) : (
-    <div className="relative">
-      <button
-        onClick={() => setUserMenuOpen((s) => !s)}
-        className="w-9 h-9 rounded-full overflow-hidden bg-[#25edda]/10 border border-white/10 flex items-center justify-center"
-        title={user.displayName || user.email || 'Account'}
-      >
-        {user.photoURL ? (
-          <Image src={user.photoURL} alt="Avatar" width={36} height={36} className="object-cover" unoptimized />
-        ) : (
-          <span className="font-semibold">
-            {(user.displayName?.[0] || user.email?.[0] || '?').toUpperCase()}
-          </span>
-        )}
-      </button>
-      {userMenuOpen && (
-        <>
-          <div className="fixed inset-0 z-[-1]" onClick={() => setUserMenuOpen(false)} />
-          <div className="absolute right-0 mt-2 w-44 rounded-lg bg-[#30333a] shadow-[0_8px_24px_rgba(0,0,0,0.35)] border border-white/10">
-            <div className="px-3 py-2 text-xs text-gray-400 truncate">
-              {user.displayName || user.email}
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 rounded-b-lg"
-            >
-              Sign out
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  )}
-</div>
-{/* Header / auth bar */}
-<header className="w-full px-4 pt-3">
-  {/* your Sign in / Create account or user menu here */}
-</header>
-<main className="flex-1 flex items-center justify-center w-full">
+    <div className="w-full flex flex-col font-sans text-white">
+      <main className="flex-1 flex items-center justify-center w-full">
       {/* DESKTOP LAYOUT */}
       <div className="hidden lg:flex justify-center items-center w-full p-4">
         <div className={`w-full h-[650px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-4 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-[85rem]' : 'max-w-lg'}`}>
@@ -2481,13 +2459,7 @@ export default function TangoPlayer() {
           )}
           {/* CENTER: Player */}
           <div className={`flex flex-col transition-all duration-500 ease-in-out ${sidebarsVisible ? 'w-[40%]' : 'w-full'}`}>
-            <div className="relative">
-              <h2 className="text-xl mt-4 mb-4 text-center text-gray-200 flex items-center justify-center gap-2">
-                Virtual Tango DJ
-                <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#25edda] text-[#1f2126]">
-                  Beta
-                </span>
-              </h2>
+            <div className="relative mt-4 mb-4">
               <button onClick={toggleSidebars} title={sidebarsVisible ? "Focus Mode" : "Show Panels"} className="absolute top-0 right-0 mt-2 p-2 rounded-full text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
                 {sidebarsVisible ? <ArrowsPointingInIcon className="h-5 w-5" /> : <ArrowsPointingOutIcon className="h-5 w-5" />}
               </button>
@@ -2498,13 +2470,13 @@ export default function TangoPlayer() {
                   <Image
                     src={isCortinaPlaying && currentCortina ? currentCortina.artwork_url_signed ?? '/default-artwork.png' : currentTanda?.artwork_signed || '/default-artwork.png'}
                     alt={`Artwork for ${isCortinaPlaying ? currentCortina.title : currentTanda?.orchestra}`}
-                    width={224}
-                    height={224}
+                    width={256}
+                    height={256}
                     className="object-cover shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] rounded-lg"
                     priority
                   />
                 ) : (!currentTanda && !currentCortina) && (
-                  <div className="w-56 h-56 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>
+                  <div className="w-64 h-64 bg-[#30333a] rounded-lg shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] flex items-center justify-center text-gray-500">Artwork</div>
                 )}
                 {renderVerticalVolumeSlider(volume, handleVolumeChange)}
               </div>
@@ -2518,27 +2490,33 @@ export default function TangoPlayer() {
                   </>
                 ) : currentTanda ? (
                   (() => {
-                    const isLiked = localLikedIds.has(currentTanda.id);
-                    return (
-                      <>
-                        <div className="flex items-center justify-center gap-2">
-                          <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
-                          {user && (
-                            <button onClick={() => handleLikeToggle(currentTanda.id)} title={isLiked ? 'Remove from your liked tandas' : 'Add to liked tandas'}>
-                              {isLiked ? (
-                                <HeartIconSolid className="h-6 w-6 text-[#25edda]" />
-                              ) : (
-                                <HeartIcon className="h-6 w-6 text-gray-400 hover:text-white" />
-                              )}
-                            </button>
-                          )}
-                        </div>
+                const isLiked = localLikedIds.has(currentTanda.id);
+                return (
+                  <>
+                    <div className="ml-9 flex items-center justify-center gap-3">
+                      <div className="flex flex-col items-center text-center">
+                        <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
                         <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
                         <p className="text-xs text-gray-500 truncate select-none">
                           Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}
                         </p>
-                      </>
-                    );
+                      </div>
+                      {user && (
+                        <button
+                          onClick={() => handleLikeToggle(currentTanda.id)}
+                          title={isLiked ? 'Remove from your liked tandas' : 'Add to liked tandas'} 
+                          className="flex-shrink-0 ml-1"
+                        >
+                          {isLiked ? (
+                            <HeartIconSolid className="h-6 w-6 text-[#25edda]" />
+                          ) : (
+                            <HeartIcon className="h-6 w-6 text-gray-400 hover:text-white" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                );
                   })()
                 ) : (
                   !isLoading && !error && <span className="text-lg text-gray-500">No music loaded.</span>
@@ -2691,12 +2669,6 @@ export default function TangoPlayer() {
       {/* MOBILE LAYOUT */}
       <div className="block lg:hidden w-full p-2 sm:p-4">
         <div className="p-1 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto">
-          <h2 className="text-xl mb-8 text-center flex items-center justify-center gap-2">
-            Virtual Tango DJ
-            <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#25edda] text-[#1f2126]">
-              Beta
-            </span>
-          </h2>
           <div className="flex justify-center mb-4">
             {currentTanda && currentTanda.artwork_signed ? (
               <Image
@@ -2722,10 +2694,20 @@ export default function TangoPlayer() {
                 const isLiked = localLikedIds.has(currentTanda.id);
                 return (
                   <>
-                    <div className="flex items-center justify-center gap-2">
-                      <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
+                    <div className="ml-9 flex items-center justify-center gap-3">
+                      <div className="flex flex-col items-center text-center">
+                        <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
+                        <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
+                        <p className="text-xs text-gray-500 truncate select-none">
+                          Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}
+                        </p>
+                      </div>
                       {user && (
-                        <button onClick={() => handleLikeToggle(currentTanda.id)} title={isLiked ? 'Remove from your liked tandas' : 'Add to liked tandas'}>
+                        <button
+                          onClick={() => handleLikeToggle(currentTanda.id)}
+                          title={isLiked ? 'Remove from your liked tandas' : 'Add to liked tandas'}
+                          className="flex-shrink-0 ml-1"
+                        >
                           {isLiked ? (
                             <HeartIconSolid className="h-6 w-6 text-[#25edda]" />
                           ) : (
@@ -2734,10 +2716,6 @@ export default function TangoPlayer() {
                         </button>
                       )}
                     </div>
-                    <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
-                    <p className="text-xs text-gray-500 truncate select-none">
-                      Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}
-                    </p>
                   </>
                 );
               })()

@@ -9,9 +9,24 @@ import AuthGateModal from './AuthGateModal';
 const Ctx = createContext(null);
 export function useAuth() { return useContext(Ctx); }
 
+const createEmptyMe = () => ({
+  tier: 'anon',
+  isPro: false,
+  trialActive: false,
+  trialEndsAt: 0,
+  subscriptionStatus: null,
+  planId: null,
+  currentPeriodEnd: null,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  likedTandaIds: [],
+  likedCortinaIds: [],
+  likedMixedOrder: [],
+});
+
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [me, setMe] = useState({ tier: 'anon', isPro: false, trialActive: false, likedTandaIds: [], likedCortinaIds: [], likedMixedOrder: [] });
+  const [me, setMe] = useState(createEmptyMe);
   const [loading, setLoading] = useState(true);
   const [gateOpen, setGateOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
@@ -25,12 +40,18 @@ export default function AuthProvider({ children }) {
         tier: data?.tier ?? 'anon',
         isPro: !!data?.isPro || !!data?.trialActive,
         trialActive: !!data?.trialActive,
+        trialEndsAt: data?.trialEndsAt ?? 0,
+        subscriptionStatus: data?.subscriptionStatus ?? null,
+        planId: data?.planId ?? null,
+        currentPeriodEnd: data?.currentPeriodEnd ?? null,
+        stripeCustomerId: data?.stripeCustomerId ?? null,
+        stripeSubscriptionId: data?.stripeSubscriptionId ?? null,
         likedTandaIds: data?.likedTandaIds || [],
         likedCortinaIds: data?.likedCortinaIds || [],
         likedMixedOrder: data?.likedMixedOrder || [],
       });
     } catch {
-      setMe({ tier: 'anon', isPro: false, trialActive: false, likedTandaIds: [], likedCortinaIds: [], likedMixedOrder: [] });
+      setMe(createEmptyMe());
     }
   }, []);
 
@@ -69,7 +90,7 @@ export default function AuthProvider({ children }) {
     } catch {}
     await signOut(auth).catch(()=>{});
     setUser(null);
-    setMe({ tier: 'anon', isPro: false, trialActive: false, likedTandaIds: [], likedCortinaIds: [], likedMixedOrder: [] });
+    setMe(createEmptyMe());
   }, []);
 
   const updateLikedIds = useCallback((newIdList) => {
@@ -92,6 +113,12 @@ export default function AuthProvider({ children }) {
       tier: me.tier,
       isPro: me.isPro,
       trialActive: me.trialActive,
+      trialEndsAt: me.trialEndsAt,
+      subscriptionStatus: me.subscriptionStatus,
+      planId: me.planId,
+      currentPeriodEnd: me.currentPeriodEnd,
+      stripeCustomerId: me.stripeCustomerId,
+      stripeSubscriptionId: me.stripeSubscriptionId,
       likedTandaIds: me.likedTandaIds,
       likedCortinaIds: me.likedCortinaIds,
       likedMixedOrder: me.likedMixedOrder,
