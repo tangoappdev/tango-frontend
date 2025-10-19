@@ -32,4 +32,5 @@ export const initialSettings = {
   categoryFilter: CATEGORIES.TRADITIONAL_GOLDEN_AGE,
   tandaLength: 4,
   cortinas: true,
+  cortinaFullLength: false,
 };
