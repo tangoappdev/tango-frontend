@@ -485,7 +485,7 @@ function SettingsPanel({
             {/* 3. Tanda Sequence */}
             <div className="flex flex-col gap-4">
               <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
-              <div className="flex w-full rounded-full bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] text-xs p-0.5">
+              <div className="flex w-full h-10 items-center rounded-full bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] text-xs p-0.5">
                 {segments.map((segment, index) => {
                   const isSelected = selectedSegment === segment.value;
                   return (
@@ -2618,7 +2618,7 @@ export default function TangoPlayer() {
                       {/* 3. Tanda Sequence */}
                       <div className="flex flex-col gap-4">
                         <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
-                        <div className="flex w-full rounded-full bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] text-xs p-0.5">
+                        <div className="flex w-full h-10 items-center rounded-full bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] text-xs p-0.5">
                           {segments.map((segment, index) => {
                             const isSelected = selectedSegment === segment.value;
                             return (
