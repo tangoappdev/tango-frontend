@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -254,14 +254,15 @@ function QueueContent({
 }) {
   const fallbackCortina = { title: "Cortina", artist: "" };
   const renderSeparatorFor = (tanda) => {
-    const cortina = tanda?.cortinaMeta || fallbackCortina;
+    const cortinaMeta = tanda?.cortinaMeta;
+    const display = cortinaMeta && cortinaMeta.title ? cortinaMeta : fallbackCortina;
     return (
       <div className="flex items-center gap-2 my-0 px-2 text-center">
         <div className="flex-grow h-px bg-white/10"></div>
         <div className="flex-shrink-0 text-xs text-gray-500 italic flex items-center min-w-0 max-w-[70%]">
           <MusicalNoteIcon className="h-4 w-4 inline-block mr-1 flex-shrink-0" />
           <span className="truncate">
-            {cortina.title}{cortina.artist ? ` - ${cortina.artist}` : ''}
+            {display.title}{display.artist ? ` - ${display.artist}` : ''}
           </span>
         </div>
         <div className="flex-grow h-px bg-white/10"></div>
@@ -656,6 +657,71 @@ function buildGeneratorContext(library, activeMode, orchestraGapSize = MIN_SAME_
   return context;
 }
 
+function serializeGeneratorState(context) {
+  if (!context || typeof context !== 'object') {
+    return null;
+  }
+  const copyUnplayed = (key) => {
+    const source = Array.isArray(context.unplayed?.[key]) ? context.unplayed[key] : [];
+    return source.map((id) => (typeof id === 'string' ? id : null)).filter(Boolean);
+  };
+  return {
+    seqIndex: Number.isFinite(context.seqIndex) ? context.seqIndex : 0,
+    nextTangoSubtype: context.nextTangoSubtype === 'rhythmic' ? 'rhythmic' : 'melodic',
+    lastTangoOrchestras: Array.isArray(context.lastTangoOrchestras)
+      ? context.lastTangoOrchestras.map((id) => (typeof id === 'string' ? id : null)).filter(Boolean)
+      : [],
+    history: Array.isArray(context.history)
+      ? context.history.map((id) => (typeof id === 'string' ? id : null)).filter(Boolean)
+      : [],
+    unplayed: {
+      TM: copyUnplayed(CATEGORY_KEYS.TM),
+      TR: copyUnplayed(CATEGORY_KEYS.TR),
+      V: copyUnplayed(CATEGORY_KEYS.V),
+      M: copyUnplayed(CATEGORY_KEYS.M),
+    },
+  };
+}
+
+function hydrateGeneratorState(context, snapshot) {
+  if (!context || !snapshot || typeof snapshot !== 'object') {
+    return;
+  }
+  const sequenceLength = Array.isArray(context.sequence) ? context.sequence.length : 0;
+  if (Number.isFinite(snapshot.seqIndex) && sequenceLength > 0) {
+    const normalized = Math.max(0, Math.floor(snapshot.seqIndex)) % sequenceLength;
+    context.seqIndex = normalized;
+  }
+  if (snapshot.nextTangoSubtype === 'rhythmic' || snapshot.nextTangoSubtype === 'melodic') {
+    context.nextTangoSubtype = snapshot.nextTangoSubtype;
+  }
+  if (Array.isArray(snapshot.lastTangoOrchestras)) {
+    const filtered = snapshot.lastTangoOrchestras
+      .map((id) => (typeof id === 'string' ? id : null))
+      .filter(Boolean);
+    const gapSize = Math.max(0, context.orchestraGapSize || 0);
+    context.lastTangoOrchestras = gapSize > 0 ? filtered.slice(-gapSize) : filtered;
+  }
+  if (Array.isArray(snapshot.history)) {
+    context.history = snapshot.history
+      .map((id) => (typeof id === 'string' ? id : null))
+      .filter(Boolean);
+  }
+  if (snapshot.unplayed && typeof snapshot.unplayed === 'object') {
+    [CATEGORY_KEYS.TM, CATEGORY_KEYS.TR, CATEGORY_KEYS.V, CATEGORY_KEYS.M].forEach((key) => {
+      const available = Array.isArray(context.allIds?.[key]) ? context.allIds[key] : [];
+      const availableSet = new Set(available);
+      const source = Array.isArray(snapshot.unplayed[key]) ? snapshot.unplayed[key] : [];
+      const filtered = source
+        .map((id) => (typeof id === 'string' ? id : null))
+        .filter((id) => id && availableSet.has(id));
+      if (filtered.length > 0) {
+        context.unplayed[key] = filtered;
+      }
+    });
+  }
+}
+
 function resolveTangoCategoryKey(context) {
   const preferred = context.nextTangoSubtype === 'melodic' ? CATEGORY_KEYS.TM : CATEGORY_KEYS.TR;
   const preferredPool = context.allIds[preferred] || [];
@@ -768,6 +834,11 @@ export default function TangoPlayer() {
   const manualQueueRef = useRef([]);
   const upcomingPlaylistRef = useRef([]);
   const shuffledCortinasRef = useRef([]);
+  const queueStateHydratedRef = useRef(false);
+  const cortinaMapRef = useRef(new Map());
+  const persistQueueStateTimeoutRef = useRef(null);
+  const persistSettingsTimeoutRef = useRef(null);
+  const settingsPersistArmedRef = useRef(false);
   const cancelCortinaFade = useCallback(() => {
     if (typeof window !== 'undefined' && cortinaFadeRafRef.current !== null) {
       window.cancelAnimationFrame(cortinaFadeRafRef.current);
@@ -914,6 +985,7 @@ export default function TangoPlayer() {
   const [tier, setTier] = useState('free');
   const [skipMsg, setSkipMsg] = useState('');
   const [settings, setSettings] = useState(initialSettings);
+  const [settingsHydrated, setSettingsHydrated] = useState(false);
   const [libraryState, setLibraryState] = useState({
     buckets: null,
     metaById: {},
@@ -937,10 +1009,23 @@ export default function TangoPlayer() {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const volumeRef = useRef(1);
+  const [queueStateHydrated, setQueueStateHydrated] = useState(false);
+  // 3. Custom Hooks
+  const { user, isPro, requireAuth, likedTandaIds, likedCortinaIds, likedMixedOrder, updateLikedIds, updateLikedCortinaIds, updateLikedMixedOrder } = useAuth();
+  const [likedItemOrder, setLikedItemOrder] = useState(() => (Array.isArray(likedMixedOrder) ? likedMixedOrder : []));
+  const [localLikedIds, setLocalLikedIds] = useState(new Set());
+  const libraryBuckets = libraryState.buckets;
+  const libraryMeta = libraryState.metaById;
+  const libraryLoading = libraryState.loading;
+  const libraryVersion = libraryState.version;
   useEffect(() => {
     const sanitized = Math.min(1, Math.max(0, Number(volume)));
     volumeRef.current = sanitized;
   }, [volume]);
+
+  useEffect(() => {
+    queueStateHydratedRef.current = queueStateHydrated;
+  }, [queueStateHydrated]);
 
   useEffect(() => {
     manualQueueRef.current = manualQueue;
@@ -948,6 +1033,170 @@ export default function TangoPlayer() {
   useEffect(() => {
     upcomingPlaylistRef.current = upcomingPlaylist;
   }, [upcomingPlaylist]);
+  useEffect(() => {
+    let cancelled = false;
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const restoreState = async () => {
+      if (!user) {
+        if (!cancelled) setQueueStateHydrated(true);
+        return;
+      }
+      if (!settingsHydrated || queueStateHydrated || libraryLoading || !libraryState.category || !settings.activeMode) {
+        return;
+      }
+      let context = generatorRef.current;
+      if (!context) {
+        context = buildGeneratorContext(
+          { buckets: libraryBuckets, metaById: libraryMeta, version: libraryVersion },
+          settings.activeMode,
+          MIN_SAME_ORCHESTRA_GAP,
+        );
+        if (context) {
+          generatorRef.current = context;
+        } else {
+          setQueueStateHydrated(true);
+          return;
+        }
+      }
+      try {
+        const params = new URLSearchParams({
+          category: libraryState.category,
+          mode: settings.activeMode,
+        });
+        const response = await fetch(`/api/users/queue-state?${params.toString()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          signal: controller?.signal,
+        });
+        if (!response.ok) {
+          console.warn('[queue-state] Failed to fetch saved state', response.status);
+          return;
+        }
+        const payload = await response.json();
+        if (cancelled) return;
+        if (!payload || !payload.state) {
+          return;
+        }
+        if (
+          Number.isFinite(payload.version) &&
+          Number.isFinite(libraryState.version) &&
+          payload.version !== libraryState.version
+        ) {
+          console.info('[queue-state] Ignoring persisted state due to version mismatch');
+          return;
+        }
+
+        hydrateGeneratorState(context, payload.state);
+
+        const manualIds = Array.isArray(payload.manualIds) ? payload.manualIds : [];
+        const upcomingIds = Array.isArray(payload.upcomingIds) ? payload.upcomingIds : [];
+        const combinedIds = [...manualIds, ...upcomingIds].filter(Boolean);
+        let manualTandas = [];
+        let upcomingTandas = [];
+        const currentId = typeof payload.currentTandaId === 'string' ? payload.currentTandaId : null;
+
+        if (combinedIds.length > 0) {
+          try {
+            const res = await fetch('/api/tandas/by-ids', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tandaIds: combinedIds }),
+              signal: controller?.signal,
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (!cancelled) {
+                const tandas = Array.isArray(data?.tandas) ? data.tandas : [];
+                const map = new Map(
+                  tandas
+                    .filter((item) => item && item.id)
+                    .map((item) => [item.id, item]),
+                );
+                manualTandas = manualIds.map((id) => map.get(id)).filter(Boolean);
+                upcomingTandas = upcomingIds.map((id) => map.get(id)).filter(Boolean);
+              }
+            } else {
+              console.warn('[queue-state] Failed to fetch tanda details', res.status);
+            }
+          } catch (err) {
+            if (!cancelled) {
+              console.error('[queue-state] Error fetching tanda details', err);
+            }
+          }
+        }
+
+        if (cancelled) return;
+
+        if (currentId) {
+          const manualIndex = manualTandas.findIndex((item) => item?.id === currentId);
+          if (manualIndex > 0) {
+            const [currentItem] = manualTandas.splice(manualIndex, 1);
+            manualTandas = [currentItem, ...manualTandas];
+          } else if (manualIndex === -1) {
+            const upcomingIndex = upcomingTandas.findIndex((item) => item?.id === currentId);
+            if (upcomingIndex > -1) {
+              const [currentItem] = upcomingTandas.splice(upcomingIndex, 1);
+              manualTandas = currentItem ? [currentItem, ...manualTandas] : manualTandas;
+            }
+          }
+        }
+        const applyCortinaMeta = (tandas, prefix) => {
+          if (!Array.isArray(tandas) || tandas.length === 0) return tandas;
+          let changed = false;
+          const mapped = tandas.map((tanda, idx) => {
+            const meta = tanda?.cortinaMeta || null;
+            if (!meta) return tanda;
+            const id = meta?.id || meta?.cortina_id || meta?.key || null;
+            const normalized = registerCortinaMeta(meta, id || `${prefix}-${idx}`);
+            if (!normalized || normalized === meta) return tanda;
+            changed = true;
+            return { ...tanda, cortinaMeta: normalized };
+          });
+          return changed ? mapped : tandas;
+        };
+
+        manualTandas = applyCortinaMeta(manualTandas, 'rehydrated-manual');
+        upcomingTandas = applyCortinaMeta(upcomingTandas, 'rehydrated-upcoming');
+
+        if (manualTandas.length > 0 || upcomingTandas.length > 0) {
+          setManualQueue(manualTandas);
+          setUpcomingPlaylist(upcomingTandas);
+        } else if (manualIds.length === 0 && upcomingIds.length === 0) {
+          setManualQueue([]);
+          setUpcomingPlaylist([]);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('[queue-state] Error restoring state', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setQueueStateHydrated(true);
+        }
+      }
+    };
+
+    restoreState();
+
+    return () => {
+      cancelled = true;
+      try {
+        controller?.abort();
+      } catch {
+        /* noop */
+      }
+    };
+  }, [
+    user,
+    settingsHydrated,
+    queueStateHydrated,
+    libraryLoading,
+    libraryState.category,
+    libraryState.version,
+    settings.activeMode,
+    setManualQueue,
+    setUpcomingPlaylist,
+  ]);
 
   const [activePanel, setActivePanel] = useState(null);
   const [eq, setEq] = useState({ low: 0, mid: 0, high: 0 });
@@ -998,10 +1247,6 @@ export default function TangoPlayer() {
   const [likedCortinas, setLikedCortinas] = useState([]);
   const [localLikedCortinaIds, setLocalLikedCortinaIds] = useState(new Set());
   const [activeDragItem, setActiveDragItem] = useState(null);
-  // 3. Custom Hooks
-  const { user, isPro, requireAuth, likedTandaIds, likedCortinaIds, likedMixedOrder, updateLikedIds, updateLikedCortinaIds, updateLikedMixedOrder } = useAuth();
-  const [likedItemOrder, setLikedItemOrder] = useState(() => (Array.isArray(likedMixedOrder) ? likedMixedOrder : []));
-  const [localLikedIds, setLocalLikedIds] = useState(new Set());
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: { distance: 5 },
@@ -1014,6 +1259,98 @@ export default function TangoPlayer() {
     shuffledCortinasRef.current = shuffledCortinas;
   }, [shuffledCortinas]);
   useEffect(() => {
+    if (!user) {
+      if (persistQueueStateTimeoutRef.current) {
+        clearTimeout(persistQueueStateTimeoutRef.current);
+        persistQueueStateTimeoutRef.current = null;
+      }
+      if (persistSettingsTimeoutRef.current) {
+        clearTimeout(persistSettingsTimeoutRef.current);
+        persistSettingsTimeoutRef.current = null;
+      }
+      settingsPersistArmedRef.current = false;
+      setSettings(initialSettings);
+      setSettingsHydrated(true);
+      setQueueStateHydrated(true);
+    } else {
+      if (persistQueueStateTimeoutRef.current) {
+        clearTimeout(persistQueueStateTimeoutRef.current);
+        persistQueueStateTimeoutRef.current = null;
+      }
+      if (persistSettingsTimeoutRef.current) {
+        clearTimeout(persistSettingsTimeoutRef.current);
+        persistSettingsTimeoutRef.current = null;
+      }
+      settingsPersistArmedRef.current = false;
+      setSettingsHydrated(false);
+      setQueueStateHydrated(false);
+    }
+  }, [user]);
+  useEffect(() => {
+    let cancelled = false;
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+
+    if (!user) {
+      return () => {
+        cancelled = true;
+        try {
+          controller?.abort();
+        } catch {
+          /* noop */
+        }
+      };
+    }
+    if (settingsHydrated) {
+      return () => {
+        cancelled = true;
+        try {
+          controller?.abort();
+        } catch {
+          /* noop */
+        }
+      };
+    }
+
+    settingsPersistArmedRef.current = false;
+
+    const loadSettings = async () => {
+      try {
+        const response = await fetch('/api/users/player-settings', {
+          method: 'GET',
+          cache: 'no-store',
+          signal: controller?.signal,
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to load player settings (${response.status})`);
+        }
+        const data = await response.json();
+        if (cancelled) return;
+        if (data?.settings && typeof data.settings === 'object') {
+          setSettings(prev => ({ ...prev, ...data.settings }));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('[player-settings] Failed to load settings', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setSettingsHydrated(true);
+        }
+      }
+    };
+
+    loadSettings();
+
+    return () => {
+      cancelled = true;
+      try {
+        controller?.abort();
+      } catch {
+        /* noop */
+      }
+    };
+  }, [user, settingsHydrated]);
+  useEffect(() => {
     if (!isCortinaPlaying) {
       setCurrentCortinaFull(false);
     }
@@ -1023,10 +1360,6 @@ export default function TangoPlayer() {
       setLastFullSequence(settings.activeMode);
     }
   }, [settings.activeMode]);
-  const libraryBuckets = libraryState.buckets;
-  const libraryMeta = libraryState.metaById;
-  const libraryLoading = libraryState.loading;
-  const libraryVersion = libraryState.version;
   useEffect(() => {
     if (libraryLoading) return;
     if (!libraryBuckets) {
@@ -1136,11 +1469,121 @@ export default function TangoPlayer() {
     }).filter(Boolean);
   }, [likedTandas, likedCortinas, mergedOrder]);
 
+  const normalizeCortinaMeta = useCallback((meta, fallbackKey = null) => {
+    if (!meta && !fallbackKey) return null;
+    const normalized = { ...(meta || {}) };
+    if (!normalized.id && fallbackKey) {
+      normalized.id = fallbackKey;
+    }
+    if (!normalized.key && (normalized.id || fallbackKey)) {
+      normalized.key = `cortina-${normalized.id || fallbackKey}`;
+    }
+    const fallbackTitle =
+      normalized.title ||
+      normalized.name ||
+      normalized.trackTitle ||
+      normalized.track_name ||
+      normalized.fileName ||
+      normalized.file_name ||
+      normalized.label ||
+      normalized.slug;
+    normalized.title = (typeof fallbackTitle === 'string' && fallbackTitle.trim()) ? fallbackTitle.trim() : 'Cortina';
+    const fallbackArtist =
+      normalized.artist ||
+      normalized.performer ||
+      normalized.dj ||
+      normalized.deejay ||
+      normalized.band ||
+      normalized.orchestra ||
+      normalized.author ||
+      normalized.composer ||
+      normalized.singer;
+    normalized.artist = (typeof fallbackArtist === 'string' && fallbackArtist.trim()) ? fallbackArtist.trim() : '';
+    normalized.genre = normalized.genre || normalized.style || normalized.category || '';
+    if (!normalized.artwork_url_signed && normalized.artwork_signed) {
+      normalized.artwork_url_signed = normalized.artwork_signed;
+    }
+    if (!normalized.artwork_url_signed && normalized.artwork) {
+      normalized.artwork_url_signed = normalized.artwork;
+    }
+    normalized.playableUrl = normalized.playableUrl || normalized.url_signed || normalized.playable_url_signed || null;
+
+    const parsedStart = Number(normalized.startTime);
+    const safeStart = Number.isFinite(parsedStart) && parsedStart >= 0 ? parsedStart : 0;
+    normalized.startTime = safeStart;
+
+    const parsedEnd = Number(normalized.endTime);
+    const safeEnd = Number.isFinite(parsedEnd) && parsedEnd > safeStart ? parsedEnd : null;
+    normalized.endTime = safeEnd;
+
+    return normalized;
+  }, []);
+
+  const registerCortinaMeta = useCallback((meta, fallbackKey = null) => {
+    const normalized = normalizeCortinaMeta(meta, fallbackKey);
+    if (normalized?.id) {
+      const existing = cortinaMapRef.current.get(normalized.id);
+      const merged = existing ? { ...existing, ...normalized } : normalized;
+      cortinaMapRef.current.set(normalized.id, merged);
+      return merged;
+    }
+    return normalized;
+  }, [normalizeCortinaMeta]);
+  const enhanceQueuedTandas = useCallback((tandas, prefix, offset = 0) => {
+    if (!Array.isArray(tandas) || tandas.length === 0) return tandas;
+    const poolSource = (Array.isArray(shuffledCortinas) && shuffledCortinas.length > 0)
+      ? shuffledCortinas
+      : (Array.isArray(cortinas) ? cortinas : []);
+    let changed = false;
+    const mapped = tandas.map((tanda, idx) => {
+      if (!tanda) return tanda;
+      const currentMeta = tanda.cortinaMeta || null;
+      const metaId = currentMeta?.id || currentMeta?.cortina_id || currentMeta?.key || null;
+      let normalized = null;
+      if (metaId && cortinaMapRef.current.has(metaId)) {
+        normalized = cortinaMapRef.current.get(metaId);
+      } else if (currentMeta) {
+        normalized = registerCortinaMeta(currentMeta, metaId || `${prefix}-${idx}`);
+      }
+      if (!normalized && poolSource.length > 0 && settings.cortinas) {
+        const fallback = poolSource[(offset + idx) % poolSource.length];
+        if (fallback) {
+          normalized = registerCortinaMeta(fallback, fallback?.id || `${prefix}-pool-${idx}`);
+        }
+      }
+      if (normalized) {
+        if (!currentMeta || normalized !== currentMeta) {
+          changed = true;
+          return { ...tanda, cortinaMeta: normalized };
+        }
+      }
+      return tanda;
+    });
+    return changed ? mapped : tandas;
+  }, [registerCortinaMeta, shuffledCortinas, cortinas, settings.cortinas]);
+
   const scheduledCortinas = useMemo(() => {
     if (!settings.cortinas) return [];
     if (queueWithCurrent.length <= 1) return [];
+    const manualCount = manualQueue.length;
+    const pool = Array.isArray(shuffledCortinas) && shuffledCortinas.length > 0
+      ? shuffledCortinas
+      : (Array.isArray(cortinas) ? cortinas : []);
+
     return queueWithCurrent.slice(1).map((tanda, index) => {
-      const meta = tanda.cortinaMeta || null;
+      let meta = tanda.cortinaMeta || null;
+      const rawId = meta?.id || meta?.cortina_id || meta?.key || null;
+      if (rawId && cortinaMapRef.current.has(rawId)) {
+        meta = cortinaMapRef.current.get(rawId);
+      }
+      if ((!meta || !meta.title) && pool.length > 0) {
+        const fallback = pool[(manualCount + index) % pool.length];
+        if (fallback) {
+          meta = registerCortinaMeta(fallback, fallback?.id || fallback?.key || rawId || null);
+        }
+      } else if (meta) {
+        meta = registerCortinaMeta(meta, rawId || null);
+      }
       const title = meta?.title || 'Cortina';
       const artist = meta?.artist || 'Unknown Artist';
       const genre = meta?.genre || meta?.style || meta?.category || 'Unknown Genre';
@@ -1160,7 +1603,19 @@ export default function TangoPlayer() {
         meta,
       };
     });
-  }, [queueWithCurrent, settings.cortinas]);
+  }, [queueWithCurrent, settings.cortinas, manualQueue, shuffledCortinas, cortinas, registerCortinaMeta]);
+  useEffect(() => {
+    if (!settings.cortinas || !queueStateHydrated || !settingsHydrated) return;
+    setManualQueue(prev => {
+      const enhanced = enhanceQueuedTandas(prev, 'hydrate-manual', 0);
+      return enhanced === prev ? prev : enhanced;
+    });
+    setUpcomingPlaylist(prev => {
+      const offset = manualQueueRef.current?.length || 0;
+      const enhanced = enhanceQueuedTandas(prev, 'hydrate-upcoming', offset);
+      return enhanced === prev ? prev : enhanced;
+    });
+  }, [cortinas, shuffledCortinas, queueStateHydrated, settingsHydrated, settings.cortinas, enhanceQueuedTandas]);
   // 5. Callbacks
   const handlePause = useCallback(() => { if (audioRef.current) audioRef.current.pause(); }, []);
   const loadLibrary = useCallback(async (category) => {
@@ -1320,9 +1775,172 @@ export default function TangoPlayer() {
     }
 
   }, [user, localLikedIds, localLikedCortinaIds, likedItemOrder, likedTandas, likedTandaIds, likedMixedOrder, fallbackOrder, updateLikedIds, syncLikedOrderToAuth, persistLikedOrdering]);
+  const persistPlayerSettings = useCallback(async (nextSettings) => {
+    if (!user) return;
+    if (!nextSettings || typeof nextSettings !== 'object') return;
+    const payload = {
+      activeMode: typeof nextSettings.activeMode === 'string' ? nextSettings.activeMode : initialSettings.activeMode,
+      categoryFilter: typeof nextSettings.categoryFilter === 'string' ? nextSettings.categoryFilter : initialSettings.categoryFilter,
+      tandaLength: Number.isFinite(nextSettings.tandaLength) ? nextSettings.tandaLength : initialSettings.tandaLength,
+      cortinas: Boolean(nextSettings.cortinas),
+      cortinaFullLength: Boolean(nextSettings.cortinaFullLength),
+    };
+    try {
+      await fetch('/api/users/player-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: payload }),
+      });
+    } catch (error) {
+      console.error('[player-settings] Failed to persist settings', error);
+    }
+  }, [user]);
+  const persistQueueState = useCallback(async () => {
+    if (!user || !queueStateHydratedRef.current) return;
+    const category = libraryState.category;
+    const activeMode = settings.activeMode;
+    if (!category || !activeMode) return;
+    const generator = generatorRef.current;
+    if (!generator) return;
+    const snapshot = serializeGeneratorState(generator);
+    if (!snapshot) return;
+    const manualIds = Array.isArray(manualQueueRef.current)
+      ? manualQueueRef.current
+          .map(item => (item?.id ? String(item.id) : null))
+          .filter(Boolean)
+      : [];
+    const upcomingIds = Array.isArray(upcomingPlaylistRef.current)
+      ? upcomingPlaylistRef.current
+          .map(item => (item?.id ? String(item.id) : null))
+          .filter(Boolean)
+      : [];
+    const currentTandaId = manualIds[0] || upcomingIds[0] || null;
+    try {
+      await fetch('/api/users/queue-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category,
+          activeMode,
+          version: libraryState.version || 0,
+          state: snapshot,
+          manualIds: manualIds.slice(0, 50),
+          upcomingIds: upcomingIds.slice(0, 50),
+          currentTandaId,
+        }),
+      });
+    } catch (error) {
+      console.error('[queue-state] Failed to persist state', error);
+    }
+  }, [user, libraryState.category, libraryState.version, settings.activeMode]);
+  const dedupeTandaList = useCallback((list) => {
+    if (!Array.isArray(list) || list.length <= 1) return list;
+    const seen = new Set();
+    let changed = false;
+    const result = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const item = list[i];
+      if (!item) continue;
+      const id = item.id;
+      if (id && seen.has(id)) {
+        changed = true;
+        continue;
+      }
+      if (id) seen.add(id);
+      result.push(item);
+    }
+    if (!changed && result.length === list.length) {
+      return list;
+    }
+    return result;
+  }, []);
+  useEffect(() => {
+    if (!Array.isArray(manualQueue) || manualQueue.length <= 1) return;
+    const deduped = dedupeTandaList(manualQueue);
+    if (deduped !== manualQueue) {
+      setManualQueue(deduped);
+    }
+  }, [manualQueue, dedupeTandaList]);
+  useEffect(() => {
+    if (!Array.isArray(upcomingPlaylist) || upcomingPlaylist.length === 0) return;
+    const manualIds = new Set(
+      Array.isArray(manualQueue) ? manualQueue.map(item => item?.id).filter(Boolean) : []
+    );
+    let list = dedupeTandaList(upcomingPlaylist);
+    if (manualIds.size > 0 && Array.isArray(list) && list.length > 0) {
+      let changed = false;
+      const filtered = list.filter(item => {
+        const id = item?.id;
+        if (id && manualIds.has(id)) {
+          changed = true;
+          return false;
+        }
+        return true;
+      });
+      if (changed) {
+        list = filtered;
+      }
+    }
+    if (list !== upcomingPlaylist) {
+      setUpcomingPlaylist(list);
+    }
+  }, [upcomingPlaylist, manualQueue, dedupeTandaList]);
+  const schedulePersistQueueState = useCallback(() => {
+    if (!user || !queueStateHydratedRef.current) return;
+    if (!libraryState.category || !settings.activeMode) return;
+    if (persistQueueStateTimeoutRef.current) {
+      clearTimeout(persistQueueStateTimeoutRef.current);
+    }
+    persistQueueStateTimeoutRef.current = setTimeout(() => {
+      persistQueueStateTimeoutRef.current = null;
+      persistQueueState();
+    }, 1500);
+  }, [user, libraryState.category, settings.activeMode, persistQueueState]);
+  useEffect(() => {
+    if (!user || !settingsHydrated) {
+      settingsPersistArmedRef.current = false;
+      if (persistSettingsTimeoutRef.current) {
+        clearTimeout(persistSettingsTimeoutRef.current);
+        persistSettingsTimeoutRef.current = null;
+      }
+      return;
+    }
+    if (!settingsPersistArmedRef.current) {
+      settingsPersistArmedRef.current = true;
+      return;
+    }
+    if (persistSettingsTimeoutRef.current) {
+      clearTimeout(persistSettingsTimeoutRef.current);
+      persistSettingsTimeoutRef.current = null;
+    }
+    persistSettingsTimeoutRef.current = setTimeout(() => {
+      persistSettingsTimeoutRef.current = null;
+      persistPlayerSettings(settings);
+    }, 1000);
+    return () => {
+      if (persistSettingsTimeoutRef.current) {
+        clearTimeout(persistSettingsTimeoutRef.current);
+        persistSettingsTimeoutRef.current = null;
+      }
+    };
+  }, [settings, user, settingsHydrated, persistPlayerSettings]);
+  useEffect(() => {
+    if (!user || !queueStateHydrated) return;
+    schedulePersistQueueState();
+  }, [
+    manualQueue,
+    upcomingPlaylist,
+    user,
+    queueStateHydrated,
+    schedulePersistQueueState,
+    libraryState.version,
+    libraryState.category,
+    settings.activeMode,
+  ]);
   const fetchAndFillPlaylist = useCallback(async (minBatch = 0) => {
-    if (!cortinaPoolReady) return;
+    if (!cortinaPoolReady || !settingsHydrated) return;
     if (isFetchingRef.current) return;
+    if (!queueStateHydratedRef.current) return;
     const generator = generatorRef.current;
     if (!generator) return;
 
@@ -1387,7 +2005,15 @@ export default function TangoPlayer() {
           const existingManual = manualQueueRef.current;
           const existing = [...existingManual, ...prev];
           const wrapped = attachCortinas(existing, tandaBatch, pool);
-          return [...prev, ...wrapped];
+          const normalizedWrapped = wrapped.map((item, idx) => {
+            const meta = item?.cortinaMeta || null;
+            if (!meta) return item;
+            const id = meta?.id || meta?.cortina_id || meta?.key || `batch-${idx}`;
+            const normalizedMeta = registerCortinaMeta(meta, id);
+            if (!normalizedMeta || normalizedMeta === meta) return item;
+            return { ...item, cortinaMeta: normalizedMeta };
+          });
+          return [...prev, ...normalizedWrapped];
         });
         setError(null);
       }
@@ -1399,7 +2025,7 @@ export default function TangoPlayer() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [cortinas, setShuffledCortinas, cortinaPoolReady]);
+  }, [cortinas, setShuffledCortinas, cortinaPoolReady, settingsHydrated]);
   const initAudioGraph = useCallback(() => {
     if (!shouldUseWebAudio || audioContextRef.current || !audioRef.current) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1498,33 +2124,6 @@ export default function TangoPlayer() {
     }
     handleSettingChange('activeMode', value);
   }, [handleFullSequenceSelect, handleSettingChange, lastFullSequence]);
-  const normalizeCortinaMeta = useCallback((meta, fallbackKey = null) => {
-    if (!meta && !fallbackKey) return null;
-    const normalized = { ...(meta || {}) };
-    if (!normalized.id && fallbackKey) {
-      normalized.id = fallbackKey;
-    }
-    if (!normalized.key && (normalized.id || fallbackKey)) {
-      normalized.key = `cortina-${normalized.id || fallbackKey}`;
-    }
-    normalized.title = normalized.title || 'Cortina';
-    normalized.artist = normalized.artist || normalized.performer || '';
-    normalized.genre = normalized.genre || normalized.style || normalized.category || '';
-    if (!normalized.artwork_url_signed && normalized.artwork) {
-      normalized.artwork_url_signed = normalized.artwork;
-    }
-    normalized.playableUrl = normalized.playableUrl || normalized.url_signed || normalized.playable_url_signed || null;
-
-    const parsedStart = Number(normalized.startTime);
-    const safeStart = Number.isFinite(parsedStart) && parsedStart >= 0 ? parsedStart : 0;
-    normalized.startTime = safeStart;
-
-    const parsedEnd = Number(normalized.endTime);
-    const safeEnd = Number.isFinite(parsedEnd) && parsedEnd > safeStart ? parsedEnd : null;
-    normalized.endTime = safeEnd;
-
-    return normalized;
-  }, []);
   const fetchLikedCortinas = useCallback(async () => {
     if (!likedCortinaIds || likedCortinaIds.length === 0) {
       setLikedCortinas([]);
@@ -1539,7 +2138,7 @@ export default function TangoPlayer() {
       if (!res.ok) throw new Error('Failed to fetch liked cortinas');
       const data = await res.json();
       const entries = (data.cortinas || []).map((item) => {
-        const normalized = normalizeCortinaMeta(item, item?.id);
+        const normalized = registerCortinaMeta(item, item?.id);
         if (!normalized?.id) return null;
         return {
           id: normalized.id,
@@ -1555,7 +2154,7 @@ export default function TangoPlayer() {
     } catch (error) {
       console.error(error);
     }
-  }, [likedCortinaIds, normalizeCortinaMeta]);
+  }, [likedCortinaIds, registerCortinaMeta]);
 
   const updateCortinaMetas = useCallback((mutator) => {
     const manualCount = manualQueue.length;
@@ -1571,6 +2170,10 @@ export default function TangoPlayer() {
     } else if (nextMetas.length > metas.length) {
       nextMetas = nextMetas.slice(0, metas.length);
     }
+    nextMetas = nextMetas.map((meta, metaIndex) => {
+      if (!meta) return null;
+      return registerCortinaMeta(meta, meta?.id || meta?.key || `meta-${metaIndex}`);
+    });
     const rebuiltCombined = combined.map((tanda, idx) => {
       if (idx === 0) return { ...tanda };
       return { ...tanda, cortinaMeta: nextMetas[idx - 1] || null };
@@ -1598,10 +2201,10 @@ export default function TangoPlayer() {
       const rest = prev.filter(item => !seen.has(item.id));
       return ordered.length > 0 ? [...ordered, ...rest] : prev;
     });
-  }, [manualQueue, upcomingPlaylist, setManualQueue, setUpcomingPlaylist, setShuffledCortinas]);
+  }, [manualQueue, upcomingPlaylist, setManualQueue, setUpcomingPlaylist, setShuffledCortinas, registerCortinaMeta]);
 
   const insertCortinaMeta = useCallback((meta, position = 0, fallbackKey = null) => {
-    const normalized = normalizeCortinaMeta(meta, fallbackKey);
+    const normalized = registerCortinaMeta(meta, fallbackKey);
     if (!normalized) return;
     updateCortinaMetas((metas) => {
       if (!metas || metas.length === 0) return metas;
@@ -1610,14 +2213,14 @@ export default function TangoPlayer() {
       filtered.splice(targetIndex, 0, normalized);
       return filtered;
     });
-  }, [normalizeCortinaMeta, updateCortinaMetas]);
+  }, [registerCortinaMeta, updateCortinaMetas]);
 
   const handleCortinaLikeToggle = useCallback((meta, fallbackKey = null) => {
     if (!user) {
       requireAuth(() => handleCortinaLikeToggle(meta, fallbackKey));
       return;
     }
-    const normalized = normalizeCortinaMeta(meta, fallbackKey);
+    const normalized = registerCortinaMeta(meta, fallbackKey);
     if (!normalized?.id) return;
     const cortinaId = normalized.id;
     const wasLiked = localLikedCortinaIds.has(cortinaId);
@@ -1679,7 +2282,7 @@ export default function TangoPlayer() {
       }
     })();
 
-  }, [user, requireAuth, normalizeCortinaMeta, localLikedCortinaIds, likedItemOrder, likedCortinas, likedMixedOrder, fallbackOrder, updateLikedCortinaIds, syncLikedOrderToAuth, persistLikedOrdering]);
+  }, [user, requireAuth, registerCortinaMeta, localLikedCortinaIds, likedItemOrder, likedCortinas, likedMixedOrder, fallbackOrder, updateLikedCortinaIds, syncLikedOrderToAuth, persistLikedOrdering]);
 
   const reorderCortinas = useCallback((fromIndex, toIndex) => {
     updateCortinaMetas((metas) => {
@@ -1895,6 +2498,17 @@ export default function TangoPlayer() {
     return () => clearCortinaTimeout();
   }, [clearCortinaTimeout]);
 
+  useEffect(() => () => {
+    if (persistQueueStateTimeoutRef.current) {
+      clearTimeout(persistQueueStateTimeoutRef.current);
+      persistQueueStateTimeoutRef.current = null;
+    }
+    if (persistSettingsTimeoutRef.current) {
+      clearTimeout(persistSettingsTimeoutRef.current);
+      persistSettingsTimeoutRef.current = null;
+    }
+  }, []);
+
 
   useEffect(() => {
     isCortinaPlayingRef.current = isCortinaPlaying;
@@ -1909,7 +2523,10 @@ export default function TangoPlayer() {
         const plannedMeta = scheduledCortinas[0]?.meta;
         let resolvedCortina = null;
         if (plannedMeta?.id) {
-          resolvedCortina = cortinas.find(c => c.id === plannedMeta.id) || null;
+          resolvedCortina =
+            cortinaMapRef.current.get(plannedMeta.id) ||
+            cortinas.find(c => c.id === plannedMeta.id) ||
+            null;
         }
         if (!resolvedCortina && plannedMeta) {
           const playableUrl = plannedMeta.playableUrl || plannedMeta.url_signed || plannedMeta.playable_url_signed || null;
@@ -1922,6 +2539,20 @@ export default function TangoPlayer() {
         }
         clearCortinaTimeout();
         if (resolvedCortina?.playableUrl) {
+          const normalizedCortina = registerCortinaMeta(
+            resolvedCortina,
+            plannedMeta?.key || plannedMeta?.id || resolvedCortina?.id || null
+          );
+          if (normalizedCortina) {
+            resolvedCortina = normalizedCortina;
+          }
+          if (resolvedCortina?.id) {
+            const cached = cortinaMapRef.current.get(resolvedCortina.id);
+            if (cached) {
+              resolvedCortina = { ...cached, ...resolvedCortina };
+            }
+            insertCortinaMeta(resolvedCortina, 0, plannedMeta?.id || resolvedCortina.id);
+          }
           setCurrentCortina(resolvedCortina);
           setIsCortinaPlaying(true);
           setCurrentCortinaFull(settings.cortinaFullLength);
@@ -2028,6 +2659,8 @@ export default function TangoPlayer() {
     setEffectiveVolume,
     cancelCortinaFade,
     setCurrentCortinaFull,
+    registerCortinaMeta,
+    insertCortinaMeta,
   ]);
   const handleRefreshPlaylist = useCallback(() => {
     if (isFetchingRef.current) return;
@@ -2306,7 +2939,17 @@ export default function TangoPlayer() {
         if (response.ok) {
           const data = await response.json();
           const fetchedCortinas = Array.isArray(data.cortinas) ? data.cortinas : [];
-          setCortinas(fetchedCortinas);
+          const normalized = fetchedCortinas
+            .map((item) => registerCortinaMeta(item, item?.id || item?.key || null))
+            .filter(Boolean);
+          const nextMap = new Map();
+          normalized.forEach((entry) => {
+            if (entry?.id) {
+              nextMap.set(entry.id, entry);
+            }
+          });
+          cortinaMapRef.current = nextMap;
+          setCortinas(normalized);
           if (data.settings) {
             const fadeInSeconds = Math.max(0, Number(data.settings.fadeInSeconds) || 0);
             const fadeOutSeconds = Math.max(0, Number(data.settings.fadeOutSeconds) || 0);
@@ -2317,17 +2960,19 @@ export default function TangoPlayer() {
           }
         } else {
           console.error('Failed to fetch cortinas:', response.status);
+          cortinaMapRef.current = new Map();
           setCortinas([]);
         }
       } catch (error) {
         console.error('Failed to fetch cortinas:', error);
+        cortinaMapRef.current = new Map();
         setCortinas([]);
       } finally {
         setCortinaPoolReady(true);
       }
     };
     fetchCortinas();
-  }, []);
+  }, [registerCortinaMeta]);
   useEffect(() => {
     if (!Array.isArray(cortinas) || cortinas.length === 0) return;
     setShuffledCortinas(prev => {
@@ -2348,11 +2993,18 @@ export default function TangoPlayer() {
       if (!Array.isArray(prev) || prev.length === 0) return prev;
       let changed = false;
       const updated = prev.map((tanda, idx) => {
-        if (tanda?.cortinaMeta) return tanda;
-        const meta = pool[idx % pool.length];
-        if (!meta) return tanda;
+        const currentMeta = tanda?.cortinaMeta || null;
+        const currentId = currentMeta?.id || currentMeta?.cortina_id || currentMeta?.key || null;
+        if (currentMeta && currentMeta.title) {
+          registerCortinaMeta(currentMeta, currentId || `manual-${idx}`);
+          return tanda;
+        }
+        const source = pool[idx % pool.length];
+        if (!source) return tanda;
+        const normalized = registerCortinaMeta(source, source?.id || source?.key || currentId || `manual-${idx}`);
+        if (!normalized) return tanda;
         changed = true;
-        return { ...tanda, cortinaMeta: meta };
+        return { ...tanda, cortinaMeta: normalized };
       });
       return changed ? updated : prev;
     });
@@ -2362,22 +3014,29 @@ export default function TangoPlayer() {
       const manualCount = manualQueueRef.current?.length || 0;
       let changed = false;
       const updated = prev.map((tanda, idx) => {
-        if (tanda?.cortinaMeta) return tanda;
-        const meta = pool[(manualCount + idx) % pool.length];
-        if (!meta) return tanda;
+        const currentMeta = tanda?.cortinaMeta || null;
+        const currentId = currentMeta?.id || currentMeta?.cortina_id || currentMeta?.key || null;
+        if (currentMeta && currentMeta.title) {
+          registerCortinaMeta(currentMeta, currentId || `upcoming-${idx}`);
+          return tanda;
+        }
+        const source = pool[(manualCount + idx) % pool.length];
+        if (!source) return tanda;
+        const normalized = registerCortinaMeta(source, source?.id || source?.key || currentId || `upcoming-${idx}`);
+        if (!normalized) return tanda;
         changed = true;
-        return { ...tanda, cortinaMeta: meta };
+        return { ...tanda, cortinaMeta: normalized };
       });
       return changed ? updated : prev;
     });
-  }, [cortinaPoolReady, cortinas]);
+  }, [cortinaPoolReady, cortinas, registerCortinaMeta]);
   useEffect(() => {
-    if (!cortinaPoolReady) return;
+    if (!cortinaPoolReady || !queueStateHydrated || !settingsHydrated) return;
     const needsFetching = upcomingPlaylist.length === 0 || upcomingPlaylist.length < PLAYLIST_REFILL_THRESHOLD;
     if (needsFetching && !isFetchingRef.current && !isChangingSettings) {
       fetchAndFillPlaylist();
     }
-  }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist, isChangingSettings, cortinaPoolReady]);
+  }, [upcomingPlaylist.length, resetCounter, fetchAndFillPlaylist, isChangingSettings, cortinaPoolReady, queueStateHydrated, settingsHydrated]);
   useEffect(() => {
     if (isCortinaPlaying) {
       return;
@@ -2421,7 +3080,7 @@ export default function TangoPlayer() {
       const index = scheduledCortinas.findIndex(item => item.key === menuState.cortinaKey);
       const lastIndex = scheduledCortinas.length - 1;
       const menuItem = index > -1 ? scheduledCortinas[index] : null;
-      const resolvedMeta = normalizeCortinaMeta(menuState.cortinaMeta || menuItem?.meta || null, menuState.cortinaKey || menuItem?.key || null);
+      const resolvedMeta = registerCortinaMeta(menuState.cortinaMeta || menuItem?.meta || null, menuState.cortinaKey || menuItem?.key || null);
       const options = [];
       if (resolvedMeta) {
         options.push({
@@ -2471,7 +3130,7 @@ export default function TangoPlayer() {
         },
       },
     ].filter(Boolean);
-  }, [menuState.visible, menuState.itemType, menuState.cortinaKey, menuState.cortinaMeta, menuState.tandaId, scheduledCortinas, handleCortinaMenuMove, handleTandaMenuAction, handlePlayNext, manualQueueIds, handleAddToQueue, user, localLikedIds, handleLikeToggle, handleMenuClose, insertCortinaMeta, normalizeCortinaMeta, localLikedCortinaIds, handleCortinaLikeToggle]);
+  }, [menuState.visible, menuState.itemType, menuState.cortinaKey, menuState.cortinaMeta, menuState.tandaId, scheduledCortinas, handleCortinaMenuMove, handleTandaMenuAction, handlePlayNext, manualQueueIds, handleAddToQueue, user, localLikedIds, handleLikeToggle, handleMenuClose, insertCortinaMeta, registerCortinaMeta, localLikedCortinaIds, handleCortinaLikeToggle]);
 
   if (!hasMounted) {
   return (
