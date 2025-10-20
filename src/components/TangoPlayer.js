@@ -473,11 +473,11 @@ function SettingsPanel({
                 })}
               </div>
               {!isQuickMode && (
-                <div className="relative">
+                <div className="mt-2 relative">
                   <select
                     value={activeFullSequence}
                     onChange={(event) => onFullSequenceSelect(event.target.value)}
-                    className="w-full h-10 appearance-none mt-2 rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
+                    className="w-full h-10 appearance-none rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
                   >
                     {fullSequenceOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -485,7 +485,7 @@ function SettingsPanel({
                       </option>
                     ))}
                   </select>
-                  <ChevronDownIcon className="pointer-events-none absolute right-4 top-[calc(50%+1px)] h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                 </div>
               )}
               {/* 2. Tango Tanda Length */}
@@ -2621,7 +2621,7 @@ export default function TangoPlayer() {
                                 </option>
                               ))}
                             </select>
-                            <ChevronDownIcon className="pointer-events-none absolute right-4 top-[calc(50%+1px)] h-5 w-5 -translate-y-1/2 text-gray-400" />
+                            <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                           </div>
                         )}
                       </div>
