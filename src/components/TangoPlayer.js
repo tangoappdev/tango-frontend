@@ -420,7 +420,7 @@ function SettingsPanel({
 }) {
   const panelRef = useRef(null);
   const segments = useMemo(() => [
-    { value: 'full', label: 'TsVsMs' },
+    { value: 'full', label: 'Mix' },
     ...JUST_MODE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
   ], []);
   const fullSequenceOptions = useMemo(() => TANDA_ORDER_OPTIONS, []);
@@ -485,18 +485,14 @@ function SettingsPanel({
             {/* 3. Tanda Sequence */}
             <div className="flex flex-col gap-4">
               <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
-              <div className="flex w-full rounded-full text-xs">
+              <div className="flex w-full rounded-full bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] text-xs p-0.5">
                 {segments.map((segment, index) => {
                   const isSelected = selectedSegment === segment.value;
                   return (
                     <button
                       key={segment.value}
                       onClick={() => handleSegmentSelect(segment.value)}
-                      className={`flex-1 h-10 transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
-                        isSelected
-                          ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
-                          : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
-                      } ${index === 0 ? 'rounded-l-full' : index === segments.length - 1 ? 'rounded-r-full' : ''}`}
+              className={`flex-1 h-10 transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center rounded-full ${isSelected ? 'bg-[#30333a] text-[#25edda] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]' : 'text-gray-400 hover:bg-white/5'}`}
                     >
                       {segment.label}
                     </button>
@@ -987,7 +983,7 @@ export default function TangoPlayer() {
     return QUICK_MODE_VALUES.has(initialMode) ? defaultSequence : initialMode;
   });
   const segments = useMemo(() => [
-    { value: 'full', label: 'TsVsMs' },
+    { value: 'full', label: 'Mix' },
     ...JUST_MODE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
   ], []);
   const fullSequenceOptions = useMemo(() => TANDA_ORDER_OPTIONS, []);
@@ -2622,18 +2618,18 @@ export default function TangoPlayer() {
                       {/* 3. Tanda Sequence */}
                       <div className="flex flex-col gap-4">
                         <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
-                        <div className="flex w-full rounded-full text-xs">
+                        <div className="flex w-full rounded-full bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] text-xs p-0.5">
                           {segments.map((segment, index) => {
                             const isSelected = selectedSegment === segment.value;
                             return (
                               <button
                                 key={segment.value}
                                 onClick={() => handleSegmentSelect(segment.value)}
-                                className={`flex-1 py-2 transition-all duration-200 ease-in-out whitespace-nowrap text-center ${
+                                className={`flex-1 py-2 transition-all duration-200 ease-in-out whitespace-nowrap text-center rounded-full ${
                                   isSelected
-                                    ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
-                                    : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
-                                } ${index === 0 ? 'rounded-l-full' : index === segments.length - 1 ? 'rounded-r-full' : ''}`}
+                                    ? 'bg-[#30333a] text-[#25edda] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
+                                    : 'text-gray-400 hover:bg-white/5'
+                                }`}
                               >
                                 {segment.label}
                               </button>
