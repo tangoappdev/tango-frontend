@@ -1,3 +1,5 @@
+'use client';
+
 import Header from '@/components/Header';
 import TangoPlayer from '@/components/TangoPlayer';
 

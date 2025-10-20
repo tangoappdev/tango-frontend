@@ -29,6 +29,8 @@ import {
   initialSettings
 } from './tangoPlayerConstants';
 
+const QUICK_MODE_VALUES = new Set(JUST_MODE_OPTIONS.map((opt) => opt.value));
+
 function Queue({
   isOpen, onClose, isDesktop, rightPanelTab, setRightPanelTab,
   likedItems, handleLikedDragEnd, scheduledCortinas, sensors,
@@ -111,7 +113,7 @@ function Queue({
         <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0 lg:hidden"></div>
         <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
           {/* NEW: Tab Buttons */}
-          <div className="flex-shrink-0 p-2 border-b border-white/10">
+          <div className="flex-shrink-0 p-2">
             <div className="grid grid-cols-3">
               <button
                 onClick={() => setRightPanelTab('queue')}
@@ -136,6 +138,19 @@ function Queue({
               </button>
             </div>
           </div>
+          {rightPanelTab === 'queue' && (
+            <div className="px-3 pb-2 lg:hidden">
+              <button
+                onClick={handleRefreshPlaylist}
+                title={'Shuffle Playlist'}
+                disabled={isRefreshing}
+                className="w-full py-1 rounded-full border border-[#25edda] text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-[#25edda] hover:bg-[#25edda]/10 disabled:opacity-50"
+              >
+                <ArrowsRightLeftIcon className="h-5 w-5" />
+                Shuffle
+              </button>
+            </div>
+          )}
           {/* NEW: Conditional Content */}
           <div className="w-full h-full overflow-y-auto">
             {rightPanelTab === 'queue' && (
@@ -197,43 +212,16 @@ function Queue({
               </div>
             )}
           </div>
-          <div className="flex-shrink-0 mb-4 p-3 mt-5 w-full flex items-center gap-3">
-            <button
-              onClick={handleRefreshPlaylist}
-              title={'Shuffle Playlist'}
-              disabled={isRefreshing}
-              className="flex-1 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e] disabled:opacity-50"
-            >
-              <ArrowsRightLeftIcon className="h-5 w-5" />
-              Shuffle
-            </button>
-            <button
-              onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
-              title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
-              className={`flex-1 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
-                settings.cortinas
-                  ? 'text-[#25edda] bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-                  : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-              } hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}
-            >
-              {settings.cortinas ? 'Cortinas On' : 'Cortinas Off'}
-            </button>
-            <button
-              onClick={() => handleSettingChange('cortinaFullLength', !settings.cortinaFullLength)}
-              title={settings.cortinaFullLength ? 'Play trimmed cortinas (~45 sec)' : 'Play full cortinas'}
-              aria-pressed={settings.cortinaFullLength}
-              disabled={!settings.cortinas}
-              className={`flex-1 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
-                !settings.cortinas
-                  ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
-                : settings.cortinaFullLength
-                    ? 'text-[#25edda] bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-                  : 'text-[#25edda] bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-              } ${settings.cortinas ? 'hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]' : ''}`}
-            >
-              {settings.cortinaFullLength ? 'Full Cortina' : '45 sec Cortina'}
-            </button>
-          </div>
+          {rightPanelTab === 'queue' && (
+            <div className="px-3 pt-2 pb-4 lg:hidden">
+              <PanelFooter
+                handleRefreshPlaylist={handleRefreshPlaylist}
+                isRefreshing={isRefreshing}
+                handleSettingChange={handleSettingChange}
+                settings={settings}
+              />
+            </div>
+          )}
         </div>
     </div>
   </div>
@@ -362,50 +350,90 @@ function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqN
 }
 // --- Settings Panel Component ---
 
-function PanelFooter({ handleRefreshPlaylist, isRefreshing, handleSettingChange, settings }) {
+function PanelFooter({ handleRefreshPlaylist: _handleRefreshPlaylist, isRefreshing: _isRefreshing, handleSettingChange, settings }) {
   return (
-    <div className="flex-shrink-0 mb-2 mt-5 w-full flex items-center gap-3">
-      <button
-        onClick={handleRefreshPlaylist}
-        title={'Shuffle Playlist'}
-        disabled={isRefreshing}
-        className="flex-1 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e] disabled:opacity-50"
-      >
-        <ArrowsRightLeftIcon className="h-5 w-5" />
-        Shuffle
-      </button>
-      <button
-        onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
-        title={settings.cortinas ? "Disable Cortinas" : "Enable Cortinas"}
-        className={`flex-1 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
-          settings.cortinas
-            ? 'text-[#25edda] bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-            : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-        } hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]`}
-      >
-        {settings.cortinas ? 'Cortinas On' : 'Cortinas Off'}
-      </button>
-      <button
-        onClick={() => handleSettingChange('cortinaFullLength', !settings.cortinaFullLength)}
-        title={settings.cortinaFullLength ? 'Play trimmed cortinas (~45 sec)' : 'Play full cortinas'}
-        aria-pressed={settings.cortinaFullLength}
-        disabled={!settings.cortinas}
-        className={`flex-1 py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
-          !settings.cortinas
-            ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
-            : settings.cortinaFullLength
-              ? 'text-[#25edda] bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-              : 'text-[#25edda] bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-        } ${settings.cortinas ? 'hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]' : ''}`}
-      >
-        {settings.cortinaFullLength ? 'Full Cortina' : '45 sec Cortina'}
-      </button>
+    <div className="flex-shrink-0 mb-2 w-full flex flex-col">
+      <span className="text-sm font-medium text-gray-400">Cortinas</span>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={settings.cortinas}
+          aria-label="Toggle cortinas"
+          onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
+          className={`relative inline-flex h-6 w-16 items-center rounded-full px-1 transition-colors duration-200 ${
+            settings.cortinas ? 'bg-[#25edda]' : 'bg-gray-600'
+          }`}
+        >
+          <span className="absolute inset-0 flex items-center px-3 text-[10px] font-bold uppercase tracking-wide text-gray-900/70">
+            {settings.cortinas ? <span className="flex-1 text-left">ON</span> : <span className="flex-1 text-right">OFF</span>}
+          </span>
+          <span
+            className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#30333a] shadow-md transition-all duration-200"
+            style={{
+              left: settings.cortinas ? 'calc(100% - 1.5rem)' : '0.25rem',
+            }}
+          />
+        </button>
+        <div className="flex flex-1 gap-0">
+          <button
+            onClick={() => handleSettingChange('cortinaFullLength', false)}
+            disabled={!settings.cortinas}
+            className={`flex-1 rounded-l-full h-9 px-3 text-xs transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
+              !settings.cortinas
+                ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
+                : !settings.cortinaFullLength
+                  ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                  : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
+            } ${settings.cortinas ? 'hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]' : ''}`}
+          >
+            45 sec Cortina
+          </button>
+          <button
+            onClick={() => handleSettingChange('cortinaFullLength', true)}
+            disabled={!settings.cortinas}
+            className={`flex-1 rounded-r-full h-9 px-3 text-xs transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
+              !settings.cortinas
+                ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
+                : settings.cortinaFullLength
+                  ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                  : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
+            } ${settings.cortinas ? 'hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]' : ''}`}
+          >
+            Full Cortina
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
-
-function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, isPro }) {
+function SettingsPanel({
+  isOpen,
+  onClose,
+  user,
+  settings,
+  handleSettingChange,
+  isPro,
+  lastFullSequence,
+  activeFullSequence,
+  onFullSequenceSelect,
+}) {
   const panelRef = useRef(null);
+  const segments = useMemo(() => [
+    { value: 'full', label: 'TsVsMs' },
+    ...JUST_MODE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+  ], []);
+  const fullSequenceOptions = useMemo(() => TANDA_ORDER_OPTIONS, []);
+  const isQuickMode = QUICK_MODE_VALUES.has(settings.activeMode);
+  const selectedSegment = isQuickMode ? settings.activeMode : 'full';
+  const handleSegmentSelect = (value) => {
+    if (value === 'full') {
+      const fallback = lastFullSequence || TANDA_ORDER_OPTIONS[0]?.value || '';
+      if (fallback) onFullSequenceSelect(fallback);
+      return;
+    }
+    handleSettingChange('activeMode', value);
+  };
   return (
     <div className={`fixed inset-0 z-10 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
@@ -416,12 +444,12 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
         <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
         <div className="p-4">
           <h3 className="text-lg mb-1 text-center text-gray-300">Settings</h3>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {/* 1. Orchestra Type */}
             <div className="flex gap-2 flex-col">
               <label htmlFor="categoryFilterMobile" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label>
               <div className="relative">
-                <select id="categoryFilterMobile" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
+                <select id="categoryFilterMobile" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full h-10 appearance-none cursor-pointer rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
                   {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
                 </select>
                 <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
@@ -440,7 +468,7 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
                       key={len}
                       onClick={() => handleSettingChange('tandaLength', len)}
                       disabled={user && !isPro}
-                      className={`flex-1 py-2 text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${
+                      className={`flex-1 h-10 px-4 text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
                         isActive
                           ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
                           : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
@@ -455,34 +483,44 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
               </div>
             </div>
             {/* 3. Tanda Sequence */}
-            <div>
-              <label htmlFor="tandaOrderMobile" className="block text-sm font-medium text-gray-400 mb-2">Tanda Sequence</label>
+            <div className="flex flex-col gap-4">
+              <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
+              <div className="flex w-full rounded-full text-xs">
+                {segments.map((segment, index) => {
+                  const isSelected = selectedSegment === segment.value;
+                  return (
+                    <button
+                      key={segment.value}
+                      onClick={() => handleSegmentSelect(segment.value)}
+                      className={`flex-1 h-10 transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
+                        isSelected
+                          ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                          : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
+                      } ${index === 0 ? 'rounded-l-full' : index === segments.length - 1 ? 'rounded-r-full' : ''}`}
+                    >
+                      {segment.label}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="relative">
-                <select 
-                  id="tandaOrderMobile" 
-                  name="activeMode" 
-                  value={settings.activeMode} 
-                  onChange={(e) => handleSettingChange('activeMode', e.target.value)} 
-                  className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
+                <select
+                  value={activeFullSequence}
+                  onChange={(event) => onFullSequenceSelect(event.target.value)}
+                  disabled={isQuickMode}
+                  className={`w-full h-10 appearance-none mt-3 rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] ${isQuickMode ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
-                  {TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                  {fullSequenceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
-                <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+                <ChevronDownIcon className="pointer-events-none absolute right-4 top-[calc(50%+1px)] h-5 w-5 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
-            <div className="grid mt-2 grid-cols-3 gap-4">
-              {JUST_MODE_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => handleSettingChange('activeMode', opt.value)}
-                  className={`py-2 px-1 rounded-lg text-xs sm:text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.activeMode === opt.value ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
             {/* 4. Cortinas */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col">
               <span className="text-sm font-medium text-gray-400">Cortinas</span>
               <div className="flex items-center mb-6 gap-3">
                 <button
@@ -491,17 +529,17 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
                   aria-checked={settings.cortinas}
                   aria-label="Toggle cortinas"
                   onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
-                  className={`relative inline-flex h-8 w-16 items-center rounded-full px-1 transition-colors duration-200 ${
+                  className={`relative inline-flex h-6 w-16 items-center rounded-full px-1 transition-colors duration-200 ${
                     settings.cortinas ? 'bg-[#25edda]' : 'bg-gray-600'
                   }`}
                 >
-                  <span className="absolute inset-0 flex items-center px-3 text-[11px] font-bold uppercase tracking-wide text-gray-900/70">
+                  <span className="absolute inset-0 flex items-center px-3 text-[10px] font-bold uppercase tracking-wide text-gray-900/70">
                     {settings.cortinas ? <span className="flex-1 text-left">ON</span> : <span className="flex-1 text-right">OFF</span>}
                   </span>
                   <span
-                    className="absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#30333a] shadow-md transition-all duration-200"
+                    className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#30333a] shadow-md transition-all duration-200"
                     style={{
-                      left: settings.cortinas ? 'calc(100% - 1.75rem)' : '0.25rem',
+                      left: settings.cortinas ? 'calc(100% - 1.5rem)' : '0.25rem',
                     }}
                   />
                 </button>
@@ -509,7 +547,7 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
                   <button
                     onClick={() => handleSettingChange('cortinaFullLength', false)}
                     disabled={!settings.cortinas}
-                    className={`flex-1 rounded-l-full py-2 text-xs transition-all duration-200 ease-in-out whitespace-nowrap text-center ${
+                    className={`flex-1 rounded-l-full h-9 px-3 text-xs transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
                       !settings.cortinas
                         ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
                         : !settings.cortinaFullLength
@@ -522,7 +560,7 @@ function SettingsPanel({ isOpen, onClose, user, settings, handleSettingChange, i
                   <button
                     onClick={() => handleSettingChange('cortinaFullLength', true)}
                     disabled={!settings.cortinas}
-                    className={`flex-1 rounded-r-full py-2 text-xs transition-all duration-200 ease-in-out whitespace-nowrap text-center ${
+                    className={`flex-1 rounded-r-full h-9 px-3 text-xs transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
                       !settings.cortinas
                         ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
                         : settings.cortinaFullLength
@@ -943,6 +981,24 @@ export default function TangoPlayer() {
   const [currentCortina, setCurrentCortina] = useState(null);
   const [shuffledCortinas, setShuffledCortinas] = useState([]);
   const [currentCortinaFull, setCurrentCortinaFull] = useState(false);
+  const [lastFullSequence, setLastFullSequence] = useState(() => {
+    const defaultSequence = TANDA_ORDER_OPTIONS[0]?.value ?? '';
+    const initialMode = initialSettings.activeMode ?? defaultSequence;
+    return QUICK_MODE_VALUES.has(initialMode) ? defaultSequence : initialMode;
+  });
+  const segments = useMemo(() => [
+    { value: 'full', label: 'TsVsMs' },
+    ...JUST_MODE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
+  ], []);
+  const fullSequenceOptions = useMemo(() => TANDA_ORDER_OPTIONS, []);
+  const isQuickMode = useMemo(() => QUICK_MODE_VALUES.has(settings.activeMode), [settings.activeMode]);
+  const selectedSegment = isQuickMode ? settings.activeMode : 'full';
+  const activeFullSequence = useMemo(() => {
+    if (!settings.activeMode || isQuickMode) {
+      return lastFullSequence || TANDA_ORDER_OPTIONS[0]?.value || '';
+    }
+    return settings.activeMode;
+  }, [isQuickMode, lastFullSequence, settings.activeMode]);
   const [isChangingSettings] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('queue');
   const [likedTandas, setLikedTandas] = useState([]);
@@ -969,6 +1025,11 @@ export default function TangoPlayer() {
       setCurrentCortinaFull(false);
     }
   }, [isCortinaPlaying]);
+  useEffect(() => {
+    if (settings.activeMode && !QUICK_MODE_VALUES.has(settings.activeMode)) {
+      setLastFullSequence(settings.activeMode);
+    }
+  }, [settings.activeMode]);
   const libraryBuckets = libraryState.buckets;
   const libraryMeta = libraryState.metaById;
   const libraryLoading = libraryState.loading;
@@ -1431,6 +1492,19 @@ export default function TangoPlayer() {
       setIsRefreshing(true);
     }
   }, [libraryState.category, loadLibrary, settings]);
+  const handleFullSequenceSelect = useCallback((value) => {
+    if (!value) return;
+    handleSettingChange('activeMode', value);
+    setLastFullSequence(value);
+  }, [handleSettingChange]);
+  const handleSegmentSelect = useCallback((value) => {
+    if (value === 'full') {
+      const fallback = lastFullSequence || TANDA_ORDER_OPTIONS[0]?.value || '';
+      if (fallback) handleFullSequenceSelect(fallback);
+      return;
+    }
+    handleSettingChange('activeMode', value);
+  }, [handleFullSequenceSelect, handleSettingChange, lastFullSequence]);
   const normalizeCortinaMeta = useCallback((meta, fallbackKey = null) => {
     if (!meta && !fallbackKey) return null;
     const normalized = { ...(meta || {}) };
@@ -2546,26 +2620,40 @@ export default function TangoPlayer() {
                         </div>
                       </div>
                       {/* 3. Tanda Sequence */}
-                      <div className="flex flex-col gap-5">
-                        <div>
-                          <label htmlFor="tandaOrderDesktop" className="block text-sm font-medium text-gray-400 mb-3">Tanda Sequence</label>
-                          <div className="relative">
-                            <select id="tandaOrderDesktop" name="activeMode" value={settings.activeMode} onChange={(e) => handleSettingChange('activeMode', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
-                              {TANDA_ORDER_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                            </select>
-                            <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
-                          </div>
+                      <div className="flex flex-col gap-4">
+                        <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
+                        <div className="flex w-full rounded-full text-xs">
+                          {segments.map((segment, index) => {
+                            const isSelected = selectedSegment === segment.value;
+                            return (
+                              <button
+                                key={segment.value}
+                                onClick={() => handleSegmentSelect(segment.value)}
+                                className={`flex-1 py-2 transition-all duration-200 ease-in-out whitespace-nowrap text-center ${
+                                  isSelected
+                                    ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                                    : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
+                                } ${index === 0 ? 'rounded-l-full' : index === segments.length - 1 ? 'rounded-r-full' : ''}`}
+                              >
+                                {segment.label}
+                              </button>
+                            );
+                          })}
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
-                          {JUST_MODE_OPTIONS.map(opt => (
-                            <button
-                              key={opt.value}
-                              onClick={() => handleSettingChange('activeMode', opt.value)}
-                              className={`py-2 rounded-lg text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${settings.activeMode === opt.value ? 'text-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]' : 'text-gray-300 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'}`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
+                        <div className="relative">
+                          <select
+                            value={activeFullSequence}
+                            onChange={(event) => handleFullSequenceSelect(event.target.value)}
+                            disabled={isQuickMode}
+                            className={`w-full appearance-none rounded-full mt-2bg-[#30333a] px-4 py-3 pr-10 text-sm text-white focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] ${isQuickMode ? 'cursor-not-allowed opacity-50' : ''}`}
+                          >
+                            {fullSequenceOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDownIcon className="pointer-events-none absolute right-4 top-[calc(50%+1px)] h-5 w-5 -translate-y-1/2 text-gray-400" />
                         </div>
                       </div>
                     </div>
@@ -2720,6 +2808,19 @@ export default function TangoPlayer() {
                   </button>
                 </div>
               </div>
+              {rightPanelTab === 'queue' && (
+                <div className="mb-3">
+                  <button
+                    onClick={handleRefreshPlaylist}
+                    title={'Shuffle Playlist'}
+                    disabled={isRefreshing}
+                    className="w-full py-1 rounded-full border border-[#25edda] text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center gap-2 text-[#25edda] hover:bg-[#25edda]/10 disabled:opacity-50"
+                  >
+                    <ArrowsRightLeftIcon className="h-5 w-5" />
+                    Shuffle
+                  </button>
+                </div>
+              )}
               {/* Content Area */}
               <div className="relative flex-grow rounded-lg shadow-[inset_3px_3px_8px_#222429,inset_-3px_-3px_8px_#3e424b] overflow-hidden">
                 <div className="w-full h-full overflow-y-auto">
@@ -3012,6 +3113,9 @@ export default function TangoPlayer() {
           handleSettingChange={handleSettingChange}
           user={user}
           isPro={isPro}
+          lastFullSequence={lastFullSequence}
+          activeFullSequence={activeFullSequence}
+          onFullSequenceSelect={handleFullSequenceSelect}
         />
       )}
       <DragOverlay dropAnimation={null}>

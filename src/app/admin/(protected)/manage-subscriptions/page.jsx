@@ -269,7 +269,7 @@ export default function ManageSubscriptionsPage() {
                         {formatDate(user.lastSignInTime)}
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex flex-col gap-2 text-xs">
+                        <div className="flex flex-col gap-3 text-xs">
                           {user.stripeCustomerId ? (
                             <>
                               <Link
