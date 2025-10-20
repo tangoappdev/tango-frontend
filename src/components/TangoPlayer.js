@@ -213,7 +213,7 @@ function Queue({
             )}
           </div>
           {rightPanelTab === 'queue' && (
-            <div className="px-3 pt-2 pb-4 lg:hidden">
+            <div className="px-3 pb-4 lg:hidden">
               <PanelFooter
                 handleRefreshPlaylist={handleRefreshPlaylist}
                 isRefreshing={isRefreshing}
@@ -352,7 +352,7 @@ function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqN
 
 function PanelFooter({ handleRefreshPlaylist: _handleRefreshPlaylist, isRefreshing: _isRefreshing, handleSettingChange, settings }) {
   return (
-    <div className="flex-shrink-0 mb-2 w-full flex flex-col">
+    <div className="flex-shrink-0 mb-2 mt-2 w-full flex flex-col">
       <span className="text-sm font-medium text-gray-400">Cortinas</span>
       <div className="flex items-center gap-3">
         <button
@@ -504,7 +504,7 @@ function SettingsPanel({
                   value={activeFullSequence}
                   onChange={(event) => onFullSequenceSelect(event.target.value)}
                   disabled={isQuickMode}
-                  className={`w-full h-10 appearance-none mt-3 rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] ${isQuickMode ? 'cursor-not-allowed opacity-50' : ''}`}
+                  className={`w-full h-10 appearance-none mt-2 rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] ${isQuickMode ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
                   {fullSequenceOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -2625,7 +2625,7 @@ export default function TangoPlayer() {
                               <button
                                 key={segment.value}
                                 onClick={() => handleSegmentSelect(segment.value)}
-                                className={`flex-1 py-2 transition-all duration-200 ease-in-out whitespace-nowrap text-center rounded-full ${
+                                className={`flex-1 h-10 py-2 transition-all duration-200 ease-in-out whitespace-nowrap text-center rounded-full ${
                                   isSelected
                                     ? 'bg-[#30333a] text-[#25edda] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
                                     : 'text-gray-400 hover:bg-white/5'
