@@ -1455,7 +1455,7 @@ export default function TangoPlayer() {
       if (res.status === 429) {
         const data = await res.json().catch(() => ({}));
         const resetAt = data?.resetAt ? formatHHMMLocal(data.resetAt) : '';
-        setSkipMsg(`You?ve reached 3 tanda skips this hour. ${resetAt ? `Try again at ${resetAt}.` : 'Try again later.'}`);
+        setSkipMsg(`You've reached 3 tanda skips this hour. ${resetAt ? `Try again at ${resetAt}.` : 'Try again later.'}`);
         return;
       }
       if (res.status === 401) { setSkipMsg('Please sign in to skip tanda.'); return; }
@@ -2609,11 +2609,11 @@ export default function TangoPlayer() {
                           })}
                         </div>
                         {!isQuickMode && (
-                          <div className="relative">
+                          <div className="mt-2 relative">
                             <select
                               value={activeFullSequence}
                               onChange={(event) => handleFullSequenceSelect(event.target.value)}
-                              className="w-full appearance-none rounded-full mt-2 bg-[#30333a] px-4 py-3 pr-10 text-sm text-white focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
+                              className="w-full appearance-none rounded-full bg-[#30333a] px-4 py-3 pr-10 text-sm text-white focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
                             >
                               {fullSequenceOptions.map((option) => (
                                 <option key={option.value} value={option.value}>
@@ -2769,7 +2769,7 @@ export default function TangoPlayer() {
                 <button onClick={handleNextTandaClick} disabled={isLoading || (manualQueue.length === 0 && upcomingPlaylist.length <= 1)} className={`${primaryButtonStyle} p-3`} title="Next Tanda"><ChevronDoubleRightIcon className="h-5 w-5" /></button>
               </div>
               {skipMsg && (
-                <p className="text-xs text-yellow-300 text-center mb-3">{skipMsg}</p>
+                <p className="text-xs text-yellow-300 text-center mt-3">{skipMsg}</p>
               )}
             </div>
           </div>
