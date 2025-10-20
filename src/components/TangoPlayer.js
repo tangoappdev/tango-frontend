@@ -455,33 +455,6 @@ function SettingsPanel({
                 <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
-            {/* 2. Tanda Length */}
-            <div className="flex gap-2 flex-col items-start">
-              <span className="block text-sm font-medium text-gray-400 mb-1">
-                Tanda Length
-              </span>
-              <div className={`flex w-full ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
-                {TANDA_LENGTH_OPTIONS.map((len, index) => {
-                  const isActive = settings.tandaLength === len;
-                  return (
-                    <button
-                      key={len}
-                      onClick={() => handleSettingChange('tandaLength', len)}
-                      disabled={user && !isPro}
-                      className={`flex-1 h-10 px-4 text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
-                        isActive
-                          ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
-                          : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-                      } ${isActive ? '' : 'hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'} ${
-                        index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''
-                      }`}
-                    >
-                      {len} Tangos
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
             {/* 3. Tanda Sequence */}
             <div className="flex flex-col gap-4">
               <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
@@ -492,27 +465,51 @@ function SettingsPanel({
                     <button
                       key={segment.value}
                       onClick={() => handleSegmentSelect(segment.value)}
-              className={`flex-1 h-10 transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center rounded-full ${isSelected ? 'bg-[#30333a] text-[#25edda] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]' : 'text-gray-400 hover:bg-white/5'}`}
+              className={`flex-1 h-10 md:h-10 transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center rounded-full ${isSelected ? 'bg-[#30333a] text-[#25edda] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]' : 'text-gray-400 hover:bg-white/5'}`}
                     >
                       {segment.label}
                     </button>
                   );
                 })}
               </div>
-              <div className="relative">
-                <select
-                  value={activeFullSequence}
-                  onChange={(event) => onFullSequenceSelect(event.target.value)}
-                  disabled={isQuickMode}
-                  className={`w-full h-10 appearance-none mt-2 rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] ${isQuickMode ? 'cursor-not-allowed opacity-50' : ''}`}
-                >
-                  {fullSequenceOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDownIcon className="pointer-events-none absolute right-4 top-[calc(50%+1px)] h-5 w-5 -translate-y-1/2 text-gray-400" />
+              {!isQuickMode && (
+                <div className="relative">
+                  <select
+                    value={activeFullSequence}
+                    onChange={(event) => onFullSequenceSelect(event.target.value)}
+                    className="w-full h-10 appearance-none mt-2 rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
+                  >
+                    {fullSequenceOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDownIcon className="pointer-events-none absolute right-4 top-[calc(50%+1px)] h-5 w-5 -translate-y-1/2 text-gray-400" />
+                </div>
+              )}
+              {/* 2. Tango Tanda Length */}
+              <div className="flex flex-col gap-3">
+                <span className="text-sm font-medium text-gray-400">Tango Tanda Length</span>
+                <div className={`flex w-full ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {TANDA_LENGTH_OPTIONS.map((len, index) => {
+                    const isActive = settings.tandaLength === len;
+                    return (
+                      <button
+                        key={len}
+                        onClick={() => handleSettingChange('tandaLength', len)}
+                        disabled={user && !isPro}
+                        className={`flex-1 h-10 px-4 text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
+                          isActive
+                            ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                            : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
+                        } ${index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''}`}
+                      >
+                        {len} Tangos
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             {/* 4. Cortinas */}
@@ -2590,31 +2587,6 @@ export default function TangoPlayer() {
                           <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
                         </div>
                       </div>
-                      {/* 2. Tanda Length */}
-                      <div>
-                        <span className="block text-sm font-medium text-gray-400 mb-3">
-                          Tanda Length
-                        </span>
-                        <div className={`flex w-full gap-0 mt-1 ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
-                          {TANDA_LENGTH_OPTIONS.map((len, index) => {
-                            const isActive = settings.tandaLength === len;
-                            return (
-                              <button
-                                key={len}
-                                onClick={() => handleSettingChange('tandaLength', len)}
-                                disabled={user && !isPro}
-                                className={`flex-1 py-2 text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${
-                                  isActive
-                                    ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
-                                    : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
-                                } ${index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''}`}
-                              >
-                                {len} Tangos
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
                       {/* 3. Tanda Sequence */}
                       <div className="flex flex-col gap-4">
                         <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
@@ -2636,20 +2608,46 @@ export default function TangoPlayer() {
                             );
                           })}
                         </div>
-                        <div className="relative">
-                          <select
-                            value={activeFullSequence}
-                            onChange={(event) => handleFullSequenceSelect(event.target.value)}
-                            disabled={isQuickMode}
-                            className={`w-full appearance-none rounded-full mt-2bg-[#30333a] px-4 py-3 pr-10 text-sm text-white focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] ${isQuickMode ? 'cursor-not-allowed opacity-50' : ''}`}
-                          >
-                            {fullSequenceOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDownIcon className="pointer-events-none absolute right-4 top-[calc(50%+1px)] h-5 w-5 -translate-y-1/2 text-gray-400" />
+                        {!isQuickMode && (
+                          <div className="relative">
+                            <select
+                              value={activeFullSequence}
+                              onChange={(event) => handleFullSequenceSelect(event.target.value)}
+                              className="w-full appearance-none rounded-full mt-2 bg-[#30333a] px-4 py-3 pr-10 text-sm text-white focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
+                            >
+                              {fullSequenceOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDownIcon className="pointer-events-none absolute right-4 top-[calc(50%+1px)] h-5 w-5 -translate-y-1/2 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      {/* 2. Tango Tanda Length */}
+                      <div>
+                        <span className="block text-sm font-medium text-gray-400 mb-3">
+                          Tango Tanda Length
+                        </span>
+                        <div className={`flex w-full gap-0 mt-1 ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
+                          {TANDA_LENGTH_OPTIONS.map((len, index) => {
+                            const isActive = settings.tandaLength === len;
+                            return (
+                              <button
+                                key={len}
+                                onClick={() => handleSettingChange('tandaLength', len)}
+                                disabled={user && !isPro}
+                                className={`flex-1 py-2 text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${
+                                  isActive
+                                    ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                                    : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
+                                } ${index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''}`}
+                              >
+                                {len} Tangos
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
