@@ -10,7 +10,6 @@ import { useAuth } from '@/components/AuthProvider';
 const navLinks = [
   { href: '/', label: 'Player' },
   { href: '/pricing', label: 'Pricing' },
-  { href: '/upgrade', label: 'Upgrade' },
 ];
 
 function NavLink({ href, label, isActive, onClick }) {
@@ -36,7 +35,13 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const headerRef = useRef(null);
-  const isPro = !!me?.isPro;
+  const isTrial = !!trialActive;
+  const isPro = !!me?.isPro && !isTrial;
+  const isFree = !isPro && !isTrial;
+  const badgeLabel = isPro || isTrial ? 'Pro' : isFree ? 'Free' : null;
+  const badgeClass =
+    isPro || isTrial ? 'bg-[#25edda] text-[#1f2126]' : 'bg-white text-[#30333a]';
+  const showStatusBadge = !!badgeLabel;
 
   const isActive = (href) => {
     if (href === '/') {
@@ -47,8 +52,8 @@ export default function Header() {
 
   const handleUpgrade = () => {
     requireAuth(() => {
-      router.push('/upgrade');
-    }, 'upgrade');
+      router.push('/pricing');
+    }, 'pricing');
     setUserMenuOpen(false);
   };
 
@@ -87,7 +92,11 @@ export default function Header() {
     if (trialDaysLeft <= 0) return 'Trial ends today';
     return `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left`;
   }, [trialDaysLeft]);
-  const showTrialBadge = trialBadgeText && !isPro;
+  const trialBadgeLabel = useMemo(() => {
+    if (!isTrial) return null;
+    if (!trialBadgeText) return 'Free Trial';
+    return `Free Trial - ${trialBadgeText}`;
+  }, [isTrial, trialBadgeText]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -114,7 +123,7 @@ export default function Header() {
       ref={headerRef}
       className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#30333a]/95 backdrop-blur"
     >
-      <div className="mx-auto flex w-full max-w-[85rem] items-center justify-between px-4 py-4 md:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[85rem] items-center justify-between px-8 py-4 md:px-6 lg:px-8">
         <Link
           href="/"
           className="flex w-full md:w-auto items-center justify-center md:justify-start gap-3 text-white text-center md:text-left"
@@ -138,7 +147,9 @@ export default function Header() {
         </Link>
 
         <nav className="hidden items-center gap-3 md:flex">
-          {navLinks.map((link) => (
+          {navLinks
+            .filter((link) => link.href !== '/pricing' || !user || isTrial || isFree)
+            .map((link) => (
             <NavLink
               key={link.href}
               {...link}
@@ -148,32 +159,18 @@ export default function Header() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-5 md:flex">
           {user ? (
             <>
-              {!isPro ? (
-                <>
-                  <button
-                    onClick={handleUpgrade}
-                    className="rounded-full border border-[#25edda] px-4 py-2 text-sm font-semibold text-[#25edda] transition-colors duration-200 hover:bg-[#25edda]/10"
-                  >
-                    Upgrade
-                  </button>
-                  {showTrialBadge && (
-                    <span className="text-xs font-medium text-[#25edda]">
-                      {trialBadgeText}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span className="rounded-full border border-[#25edda] px-3 py-1 text-sm font-semibold uppercase tracking-wide text-[#25edda] select-none">
-                  PRO
+              {isTrial && trialBadgeLabel && (
+                <span className="text-xs font-semibold uppercase tracking-wide text-[#25edda]">
+                  {trialBadgeLabel}
                 </span>
               )}
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen((prev) => !prev)}
-                  className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-[#25edda]/10 text-sm font-semibold text-white"
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-[#25edda]/10 text-sm font-semibold text-white"
                   title={user.displayName || user.email || 'Account'}
                 >
                   {user.photoURL ? (
@@ -182,13 +179,22 @@ export default function Header() {
                       alt="User avatar"
                       width={40}
                       height={40}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full rounded-full object-cover"
                       unoptimized
                     />
                   ) : (
                     (user.displayName?.[0] || user.email?.[0] || '?').toUpperCase()
                   )}
                 </button>
+                {showStatusBadge && (
+                  <span
+                    className={`absolute -top-[5px] -right-[20px] rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                      badgeClass
+                    }`}
+                  >
+                    {badgeLabel}
+                  </span>
+                )}
                 {userMenuOpen && (
                   <>
                     <button
@@ -216,6 +222,14 @@ export default function Header() {
                   </>
                 )}
               </div>
+              {!isPro && (
+                <button
+                  onClick={handleUpgrade}
+                  className="rounded-full border border-[#25edda] px-4 py-1 text-sm font-semibold text-[#25edda] transition-colors duration-200 hover:bg-[#25edda]/10"
+                >
+                  Upgrade
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -235,19 +249,49 @@ export default function Header() {
           )}
         </div>
 
-        <button
-          className="rounded-full border border-white/15 p-2 text-gray-200 transition-colors duration-200 hover:text-white md:hidden"
-          onClick={() => setMenuOpen((prev) => !prev)}
-          aria-label="Toggle navigation menu"
-        >
-          {menuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
-        </button>
+        {user ? (
+          <button
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#25edda]/10 text-sm font-semibold text-white md:hidden"
+            onClick={() => setMenuOpen(prev => !prev)}
+            aria-label="Toggle navigation menu"
+          >
+            {user.photoURL ? (
+              <Image
+                src={user.photoURL}
+                alt="User avatar"
+                width={44}
+                height={44}
+                className="h-full w-full rounded-full object-cover"
+                unoptimized
+              />
+            ) : (
+              (user.displayName?.[0] || user.email?.[0] || '?').toUpperCase()
+            )}
+            {showStatusBadge && (
+              <span
+                className={`absolute -top-[4px] -right-[18px] rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badgeClass}`}
+              >
+                {badgeLabel}
+              </span>
+            )}
+          </button>
+        ) : (
+          <button
+            className="rounded-full border border-white/15 p-2 text-gray-200 transition-colors duration-200 hover:text-white md:hidden"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label="Toggle navigation menu"
+          >
+            {menuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
+          </button>
+        )}
       </div>
 
       {menuOpen && (
         <div className="border-t border-white/10 bg-[#30333a] px-4 py-4 md:hidden">
           <div className="flex flex-col gap-3">
-            {navLinks.map((link) => (
+            {navLinks
+              .filter((link) => link.href !== '/pricing' || !user || isTrial || isFree)
+              .map((link) => (
               <NavLink
                 key={link.href}
                 {...link}
@@ -257,10 +301,14 @@ export default function Header() {
             ))}
           </div>
           <div className="mt-4 flex flex-col gap-3">
-            {isPro ? (
-              <span className="mx-auto inline-flex rounded-full border border-[#25edda] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#25edda]">
-                PRO
-              </span>
+            {showStatusBadge ? (
+              <div className="mx-auto flex flex-col items-center leading-tight">
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                  (isPro || isTrial) ? 'border border-[#25edda] text-[#25edda]' : 'border border-white text-[#30333a] bg-white'
+                }`}>
+                  {badgeLabel}
+                </span>
+              </div>
             ) : (
               <>
                 <button
@@ -272,9 +320,9 @@ export default function Header() {
                 >
                   Upgrade
                 </button>
-                {showTrialBadge && (
-                  <span className="text-center text-xs font-medium text-[#25edda]">
-                    {trialBadgeText}
+                {trialBadgeLabel && (
+                  <span className="text-center text-xs font-semibold uppercase tracking-wide text-[#25edda]">
+                    {trialBadgeLabel}
                   </span>
                 )}
               </>

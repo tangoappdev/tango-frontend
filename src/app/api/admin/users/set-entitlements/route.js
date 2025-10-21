@@ -113,6 +113,15 @@ export async function POST(request) {
         }
         break;
       }
+      case 'set_free': {
+        update.manual = FieldValue.delete();
+        update.plan = 'free';
+        update.status = 'free';
+        update.tier = 'free';
+        update.isPro = false;
+        update.trialEndsAt = FieldValue.delete();
+        break;
+      }
       default:
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }

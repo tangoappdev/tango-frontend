@@ -26,7 +26,7 @@ const plans = [
   {
     id: 'pro-monthly',
     name: 'Pro Monthly',
-    price: '$9.99',
+    price: '$7.99',
     cadence: 'per month',
     description: 'Unlock every control the player offers and keep the party flowing without limits.',
     features: [
@@ -42,8 +42,8 @@ const plans = [
   {
     id: 'pro-yearly',
     name: 'Pro Yearly',
-    price: '$6.99',
-    cadence: 'per month (billed $83.88 yearly)',
+    price: '$6.65',
+    cadence: 'per month (billed $79.9 yearly)',
     description: 'Best value for resident DJs—everything in Pro with a 30% annual discount.',
     features: [
       'All Pro Monthly benefits included',

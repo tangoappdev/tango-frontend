@@ -3133,26 +3133,26 @@ export default function TangoPlayer() {
   }, [menuState.visible, menuState.itemType, menuState.cortinaKey, menuState.cortinaMeta, menuState.tandaId, scheduledCortinas, handleCortinaMenuMove, handleTandaMenuAction, handlePlayNext, manualQueueIds, handleAddToQueue, user, localLikedIds, handleLikeToggle, handleMenuClose, insertCortinaMeta, registerCortinaMeta, localLikedCortinaIds, handleCortinaLikeToggle]);
 
   if (!hasMounted) {
-  return (
-    <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
-      <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">
-        Loading Player...
-      </div>
-    </div>
-  );
-}
-  if (!currentTanda && isLoading && tandaHistory.length === 0 && resetCounter === 0) {
-  return (
-    <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
-      <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">
-        <div className="flex flex-col items-center justify-center gap-4 py-8">
-          <Image src="/VinylLoader.svg" alt="Loading..." width={96} height={96} priority />
-          <p className="text-lg font-semibold">Loading Music...</p>
+    return (
+      <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
+        <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">
+          Loading Player...
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+  if (!currentTanda && isLoading && tandaHistory.length === 0 && resetCounter === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
+        <div className="p-4 bg-[#30333a] text-white rounded-lg w-full max-w-[32rem] mx-auto text-center">
+          <div className="flex flex-col items-center justify-center gap-4 py-8">
+            <Image src="/VinylLoader.svg" alt="Loading..." width={96} height={96} priority />
+            <p className="text-lg font-semibold">Loading Music...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!currentTanda && error) {
   return (
     <div className="min-h-screen flex items-center justify-center p-2 sm:p-4">
