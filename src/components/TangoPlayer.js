@@ -2818,10 +2818,16 @@ export default function TangoPlayer() {
   }, []);
   const handleTandaMenuAction = useCallback((action) => {
     if (menuState.itemType !== 'tanda') return;
-    const tanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === menuState.tandaId);
+    let tanda = [...manualQueue, ...upcomingPlaylist].find(t => t.id === menuState.tandaId);
+    if (!tanda) {
+      const likedEntry = likedItems.find(
+        (item) => item.itemType === 'tanda' && item.tanda?.id === menuState.tandaId
+      );
+      tanda = likedEntry?.tanda || null;
+    }
     if (tanda) action(tanda);
     handleMenuClose();
-  }, [manualQueue, upcomingPlaylist, menuState.itemType, menuState.tandaId, handleMenuClose]);
+  }, [manualQueue, upcomingPlaylist, likedItems, menuState.itemType, menuState.tandaId, handleMenuClose]);
   const handleCortinaMenuMove = useCallback((targetIndex) => {
     const ids = scheduledCortinas.map(item => item.sortableId || item.key);
     const currentIndex = menuState.cortinaKey ? ids.indexOf(menuState.cortinaKey) : -1;
