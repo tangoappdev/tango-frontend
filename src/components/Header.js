@@ -8,8 +8,9 @@ import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/components/AuthProvider';
 
 const navLinks = [
-  { href: '/', label: 'Player' },
+  { href: '/player', label: 'Player' },
   { href: '/pricing', label: 'Pricing' },
+  { href: '/about', label: 'About' },
 ];
 
 function NavLink({ href, label, isActive, onClick }) {

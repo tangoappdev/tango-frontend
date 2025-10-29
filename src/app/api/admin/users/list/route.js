@@ -1,4 +1,4 @@
-﻿// src/app/api/admin/users/list/route.js
+// src/app/api/admin/users/list/route.js
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import Stripe from 'stripe';
@@ -7,11 +7,16 @@ import { getFirestore } from '@/lib/firebaseAdmin.server.js';
 import { getUserFromRequest } from '@/lib/getUserFromRequest';
 
 // ---------- Admin guard ----------
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+
 function isAdmin(decodedUser) {
   const email = (decodedUser?.email || '').toLowerCase();
   return decodedUser?.admin === true || ADMIN_EMAILS.includes(email);
 }
+
 async function requireAdmin(request) {
   const user = await getUserFromRequest(request);
   if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
@@ -33,10 +38,7 @@ function formatPriceLabel(price) {
       : null;
   const interval = price.recurring?.interval || null;
   const intervalCount = price.recurring?.interval_count || 1;
-  let cadence = '';
-  if (interval) {
-    cadence = intervalCount > 1 ? `${intervalCount} ${interval}s` : interval;
-  }
+  const cadence = interval ? (intervalCount > 1 ? `${intervalCount} ${interval}s` : interval) : '';
 
   const parts = [];
   if (price.nickname) parts.push(price.nickname);
@@ -48,6 +50,23 @@ function formatPriceLabel(price) {
   if (parts.length === 0 && productName) parts.push(productName);
 
   return parts.join(' • ') || amountText || price.id;
+}
+
+function normalizeTimestamp(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+  if (typeof value === 'object' && typeof value.toDate === 'function') {
+    try {
+      return value.toDate().toISOString();
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 // --- Main Handler ---
@@ -68,15 +87,20 @@ export async function GET(request) {
     const listUsersResult = await auth.listUsers(pageSize, pageToken);
 
     // 2. Fetch corresponding profiles from Firestore
-    const uids = listUsersResult.users.map(u => u.uid);
-    const profileDocs = uids.length ? await db.collection('users').where(admin.firestore.FieldPath.documentId(), 'in', uids).get() : [];
+    const uids = listUsersResult.users.map((u) => u.uid);
+    const profileDocs = uids.length
+      ? await db
+          .collection('users')
+          .where(admin.firestore.FieldPath.documentId(), 'in', uids)
+          .get()
+      : [];
     const profilesByUid = {};
-    profileDocs.forEach(doc => {
+    profileDocs.forEach((doc) => {
       profilesByUid[doc.id] = doc.data();
     });
 
     // 3. Merge Auth data with Firestore data
-    let mergedUsers = listUsersResult.users.map(authUser => {
+    let mergedUsers = listUsersResult.users.map((authUser) => {
       const profile = profilesByUid[authUser.uid] || {};
       const now = Date.now();
       const trialEndsAt = profile.trialEndsAt ? new Date(profile.trialEndsAt).getTime() : 0;
@@ -109,6 +133,20 @@ export async function GET(request) {
         manual: profile.manual || null,
         stripeCustomerId: profile.stripeCustomerId || null,
         stripeSubscriptionId: profile.stripeSubscriptionId || null,
+        lastActivityAt: normalizeTimestamp(profile.lastActivityAt),
+        lastActivityType: profile.lastActivityType || null,
+        lastActivityIp: profile.lastActivityIp || null,
+        lastActivityLocation:
+          profile.lastActivityLocation && typeof profile.lastActivityLocation === 'object'
+            ? {
+                city: profile.lastActivityLocation.city || null,
+                region: profile.lastActivityLocation.region || null,
+                country: profile.lastActivityLocation.country || null,
+                countryCode: profile.lastActivityLocation.countryCode || null,
+                timezone: profile.lastActivityLocation.timezone || null,
+                source: profile.lastActivityLocation.source || null,
+              }
+            : null,
         // Derived
         tier,
         isPro: inferredIsPro,
@@ -116,7 +154,7 @@ export async function GET(request) {
     });
 
     if (stripe) {
-      const planIds = [...new Set(mergedUsers.map(user => user.planId).filter(Boolean))];
+      const planIds = [...new Set(mergedUsers.map((user) => user.planId).filter(Boolean))];
       const planLabelMap = {};
       for (const planId of planIds) {
         try {
@@ -127,12 +165,12 @@ export async function GET(request) {
           planLabelMap[planId] = planId;
         }
       }
-      mergedUsers = mergedUsers.map(user => ({
+      mergedUsers = mergedUsers.map((user) => ({
         ...user,
         plan: user.planId ? planLabelMap[user.planId] || user.planId : null,
       }));
     } else {
-      mergedUsers = mergedUsers.map(user => ({
+      mergedUsers = mergedUsers.map((user) => ({
         ...user,
         plan: user.planId || null,
       }));
@@ -140,9 +178,9 @@ export async function GET(request) {
 
     // 4. Apply search filter if query exists
     if (query) {
-      mergedUsers = mergedUsers.filter(u => 
-        u.displayName?.toLowerCase().includes(query) || 
-        u.email?.toLowerCase().includes(query)
+      mergedUsers = mergedUsers.filter(
+        (u) =>
+          u.displayName?.toLowerCase().includes(query) || u.email?.toLowerCase().includes(query)
       );
     }
 
@@ -150,10 +188,8 @@ export async function GET(request) {
       users: mergedUsers,
       nextPageToken: listUsersResult.pageToken,
     });
-
   } catch (error) {
     console.error('Error listing users:', error);
     return NextResponse.json({ error: 'Failed to list users' }, { status: 500 });
   }
 }
-

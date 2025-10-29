@@ -1012,6 +1012,17 @@ export default function TangoPlayer() {
   const [queueStateHydrated, setQueueStateHydrated] = useState(false);
   // 3. Custom Hooks
   const { user, isPro, requireAuth, likedTandaIds, likedCortinaIds, likedMixedOrder, updateLikedIds, updateLikedCortinaIds, updateLikedMixedOrder } = useAuth();
+  const lastActivityLogRef = useRef(0);
+
+  const logPlayActivity = useCallback(() => {
+    if (!user) return;
+    const now = Date.now();
+    if (now - lastActivityLogRef.current < 30000) return;
+    lastActivityLogRef.current = now;
+    fetch('/api/users/activity', { method: 'POST' }).catch(error => {
+      console.error('[activity] Failed to record play activity', error);
+    });
+  }, [user]);
   const [likedItemOrder, setLikedItemOrder] = useState(() => (Array.isArray(likedMixedOrder) ? likedMixedOrder : []));
   const [localLikedIds, setLocalLikedIds] = useState(new Set());
   const libraryBuckets = libraryState.buckets;
@@ -2053,6 +2064,7 @@ export default function TangoPlayer() {
   }, [eq.low, eq.mid, eq.high, shouldUseWebAudio]);
   initAudioGraphRef.current = initAudioGraph;
   const handlePlay = useCallback(async () => {
+    logPlayActivity();
     if (shouldUseWebAudio && !audioContextRef.current) initAudioGraph();
     const audioCtx = audioContextRef.current;
     if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
@@ -2061,7 +2073,7 @@ export default function TangoPlayer() {
     } else if (!currentTanda && !isLoading) {
       fetchAndFillPlaylist();
     }
-  }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph, shouldUseWebAudio]);
+  }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph, shouldUseWebAudio, logPlayActivity]);
   const playNextTanda = useCallback(() => {
     const sourceTanda = manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0];
     if (!sourceTanda) { fetchAndFillPlaylist(); return; }

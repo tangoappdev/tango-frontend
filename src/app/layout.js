@@ -2,6 +2,7 @@
 import { Quicksand } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
+import Footer from '@/components/Footer';
 
 const quicksand = Quicksand({ subsets: ['latin'] });
 
@@ -16,7 +17,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${quicksand.className} bg-[#30333a]`}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-1">{children}</div>
+            <Footer />
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );
