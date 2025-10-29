@@ -1207,6 +1207,7 @@ export default function TangoPlayer() {
     settings.activeMode,
     setManualQueue,
     setUpcomingPlaylist,
+    registerCortinaMeta,
   ]);
 
   const [activePanel, setActivePanel] = useState(null);
@@ -2036,7 +2037,7 @@ export default function TangoPlayer() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [cortinas, setShuffledCortinas, cortinaPoolReady, settingsHydrated]);
+  }, [cortinas, setShuffledCortinas, cortinaPoolReady, settingsHydrated, registerCortinaMeta]);
   const initAudioGraph = useCallback(() => {
     if (!shouldUseWebAudio || audioContextRef.current || !audioRef.current) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;

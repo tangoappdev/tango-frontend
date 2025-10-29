@@ -87,7 +87,7 @@ export default function AboutPage() {
               Curated Tango Music, On Demand
             </h1>
             <p className="mx-auto max-w-3xl text-base leading-relaxed text-gray-300 sm:text-lg">
-              Virtual Tango DJ is a music app that automatically creates authentic tango tandas based on your preferences, giving you real dance flow whether you're practicing at home or hosting a pop-up milonga.
+              Virtual Tango DJ is a music app that automatically creates authentic tango tandas based on your preferences, giving you real dance flow whether you&apos;re practicing at home or hosting a pop-up milonga.
             </p>
           </header>
 
