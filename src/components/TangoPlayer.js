@@ -1029,6 +1029,73 @@ export default function TangoPlayer() {
   const libraryMeta = libraryState.metaById;
   const libraryLoading = libraryState.loading;
   const libraryVersion = libraryState.version;
+
+  const normalizeCortinaMeta = useCallback((meta, fallbackKey = null) => {
+    if (!meta && !fallbackKey) return null;
+    const normalized = { ...(meta || {}) };
+    if (!normalized.id && fallbackKey) {
+      normalized.id = fallbackKey;
+    }
+    if (!normalized.key && (normalized.id || fallbackKey)) {
+      normalized.key = `cortina-${normalized.id || fallbackKey}`;
+    }
+    const fallbackTitle =
+      normalized.title ||
+      normalized.name ||
+      normalized.trackTitle ||
+      normalized.track_name ||
+      normalized.fileName ||
+      normalized.file_name ||
+      normalized.label ||
+      normalized.slug;
+    normalized.title =
+      typeof fallbackTitle === 'string' && fallbackTitle.trim() ? fallbackTitle.trim() : 'Cortina';
+    const fallbackArtist =
+      normalized.artist ||
+      normalized.performer ||
+      normalized.dj ||
+      normalized.deejay ||
+      normalized.band ||
+      normalized.orchestra ||
+      normalized.author ||
+      normalized.composer ||
+      normalized.singer;
+    normalized.artist =
+      typeof fallbackArtist === 'string' && fallbackArtist.trim() ? fallbackArtist.trim() : '';
+    normalized.genre = normalized.genre || normalized.style || normalized.category || '';
+    if (!normalized.artwork_url_signed && normalized.artwork_signed) {
+      normalized.artwork_url_signed = normalized.artwork_signed;
+    }
+    if (!normalized.artwork_url_signed && normalized.artwork) {
+      normalized.artwork_url_signed = normalized.artwork;
+    }
+    normalized.playableUrl =
+      normalized.playableUrl || normalized.url_signed || normalized.playable_url_signed || null;
+
+    const parsedStart = Number(normalized.startTime);
+    const safeStart = Number.isFinite(parsedStart) && parsedStart >= 0 ? parsedStart : 0;
+    normalized.startTime = safeStart;
+
+    const parsedEnd = Number(normalized.endTime);
+    const safeEnd = Number.isFinite(parsedEnd) && parsedEnd > safeStart ? parsedEnd : null;
+    normalized.endTime = safeEnd;
+
+    return normalized;
+  }, []);
+
+  const registerCortinaMeta = useCallback(
+    (meta, fallbackKey = null) => {
+      const normalized = normalizeCortinaMeta(meta, fallbackKey);
+      if (normalized?.id) {
+        const existing = cortinaMapRef.current.get(normalized.id);
+        const merged = existing ? { ...existing, ...normalized } : normalized;
+        cortinaMapRef.current.set(normalized.id, merged);
+        return merged;
+      }
+      return normalized;
+    },
+    [normalizeCortinaMeta]
+  );
   useEffect(() => {
     const sanitized = Math.min(1, Math.max(0, Number(volume)));
     volumeRef.current = sanitized;
@@ -1481,66 +1548,6 @@ export default function TangoPlayer() {
     }).filter(Boolean);
   }, [likedTandas, likedCortinas, mergedOrder]);
 
-  const normalizeCortinaMeta = useCallback((meta, fallbackKey = null) => {
-    if (!meta && !fallbackKey) return null;
-    const normalized = { ...(meta || {}) };
-    if (!normalized.id && fallbackKey) {
-      normalized.id = fallbackKey;
-    }
-    if (!normalized.key && (normalized.id || fallbackKey)) {
-      normalized.key = `cortina-${normalized.id || fallbackKey}`;
-    }
-    const fallbackTitle =
-      normalized.title ||
-      normalized.name ||
-      normalized.trackTitle ||
-      normalized.track_name ||
-      normalized.fileName ||
-      normalized.file_name ||
-      normalized.label ||
-      normalized.slug;
-    normalized.title = (typeof fallbackTitle === 'string' && fallbackTitle.trim()) ? fallbackTitle.trim() : 'Cortina';
-    const fallbackArtist =
-      normalized.artist ||
-      normalized.performer ||
-      normalized.dj ||
-      normalized.deejay ||
-      normalized.band ||
-      normalized.orchestra ||
-      normalized.author ||
-      normalized.composer ||
-      normalized.singer;
-    normalized.artist = (typeof fallbackArtist === 'string' && fallbackArtist.trim()) ? fallbackArtist.trim() : '';
-    normalized.genre = normalized.genre || normalized.style || normalized.category || '';
-    if (!normalized.artwork_url_signed && normalized.artwork_signed) {
-      normalized.artwork_url_signed = normalized.artwork_signed;
-    }
-    if (!normalized.artwork_url_signed && normalized.artwork) {
-      normalized.artwork_url_signed = normalized.artwork;
-    }
-    normalized.playableUrl = normalized.playableUrl || normalized.url_signed || normalized.playable_url_signed || null;
-
-    const parsedStart = Number(normalized.startTime);
-    const safeStart = Number.isFinite(parsedStart) && parsedStart >= 0 ? parsedStart : 0;
-    normalized.startTime = safeStart;
-
-    const parsedEnd = Number(normalized.endTime);
-    const safeEnd = Number.isFinite(parsedEnd) && parsedEnd > safeStart ? parsedEnd : null;
-    normalized.endTime = safeEnd;
-
-    return normalized;
-  }, []);
-
-  const registerCortinaMeta = useCallback((meta, fallbackKey = null) => {
-    const normalized = normalizeCortinaMeta(meta, fallbackKey);
-    if (normalized?.id) {
-      const existing = cortinaMapRef.current.get(normalized.id);
-      const merged = existing ? { ...existing, ...normalized } : normalized;
-      cortinaMapRef.current.set(normalized.id, merged);
-      return merged;
-    }
-    return normalized;
-  }, [normalizeCortinaMeta]);
   const enhanceQueuedTandas = useCallback((tandas, prefix, offset = 0) => {
     if (!Array.isArray(tandas) || tandas.length === 0) return tandas;
     const poolSource = (Array.isArray(shuffledCortinas) && shuffledCortinas.length > 0)
