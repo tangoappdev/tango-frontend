@@ -216,6 +216,37 @@ export default function AuthProvider({ children }) {
     sendEmailVerification,
   ]);
 
+  useEffect(() => {
+    if (!needsEmailVerification || typeof window === 'undefined') return undefined;
+
+    const handleFocusCheck = () => {
+      checkEmailVerification().catch(() => {});
+    };
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        handleFocusCheck();
+      }
+    };
+
+    window.addEventListener('focus', handleFocusCheck);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocusCheck);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [needsEmailVerification, checkEmailVerification]);
+
+  useEffect(() => {
+    if (!needsEmailVerification || !sendVerificationState.success) return undefined;
+
+    const timer = setTimeout(() => {
+      checkEmailVerification().catch(() => {});
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [needsEmailVerification, sendVerificationState.success, checkEmailVerification]);
+
   return (
     <Ctx.Provider value={{
       user,
