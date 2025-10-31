@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -32,7 +32,16 @@ function NavLink({ href, label, isActive, onClick }) {
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, requireAuth, logout, me, trialActive } = useAuth();
+  const {
+    user,
+    requireAuth,
+    logout,
+    me,
+    trialActive,
+    emailVerified,
+    sendEmailVerification,
+    sendVerificationState,
+  } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const headerRef = useRef(null);
@@ -98,6 +107,16 @@ export default function Header() {
     if (!trialBadgeText) return 'Free Trial';
     return `Free Trial - ${trialBadgeText}`;
   }, [isTrial, trialBadgeText]);
+
+  const verificationSending = sendVerificationState?.sending ?? false;
+  const verificationError = sendVerificationState?.error ?? null;
+  const verificationSuccess = sendVerificationState?.success ?? false;
+  const verificationRetryAfter = sendVerificationState?.retryAfter ?? 0;
+
+  const handleSendVerificationEmail = useCallback(() => {
+    if (verificationSending) return;
+    sendEmailVerification?.();
+  }, [verificationSending, sendEmailVerification]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -207,6 +226,32 @@ export default function Header() {
                       <div className="mb-3 text-xs text-gray-400">
                         {user.displayName || user.email}
                       </div>
+                      {!emailVerified && (
+                        <div className="mb-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-xs text-amber-100">
+                          <p className="font-semibold text-amber-200">Verify your email</p>
+                          <p className="mt-1 leading-relaxed text-amber-100/80">
+                            Confirm your address to keep your account secure and receive updates.
+                          </p>
+                          <button
+                            onClick={handleSendVerificationEmail}
+                            disabled={verificationSending}
+                            className="mt-2 w-full rounded-full border border-amber-300/60 px-3 py-1.5 text-sm font-semibold text-amber-100 transition-colors duration-200 hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {verificationSending ? 'Sending…' : 'Send verification email'}
+                          </button>
+                          {verificationSuccess && (
+                            <p className="mt-2 text-[11px] text-emerald-200">
+                              Verification email sent. Check your inbox.
+                            </p>
+                          )}
+                          {verificationError && (
+                            <p className="mt-2 text-[11px] text-rose-200">
+                              {verificationError}
+                              {verificationRetryAfter > 0 ? ` Try again in ${verificationRetryAfter}s.` : ''}
+                            </p>
+                          )}
+                        </div>
+                      )}
                       <button
                         onClick={handleManageSubscription}
                         className="mb-2 w-full rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition-colors duration-200 hover:bg-white/10 hover:text-white"
@@ -334,6 +379,34 @@ export default function Header() {
                   <p className="text-xs uppercase text-gray-500">Signed in as</p>
                   <p className="truncate">{user.displayName || user.email}</p>
                 </div>
+                {!emailVerified && (
+                  <div className="rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                    <p className="font-semibold text-amber-200">Verify your email</p>
+                    <p className="mt-1 text-amber-100/80">
+                      Tap below and follow the link we send to confirm your address.
+                    </p>
+                    <button
+                      onClick={() => {
+                        handleSendVerificationEmail();
+                      }}
+                      disabled={verificationSending}
+                      className="mt-2 w-full rounded-full border border-amber-300/60 px-4 py-2 text-sm font-semibold text-amber-100 transition-colors duration-200 hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {verificationSending ? 'Sending…' : 'Send verification email'}
+                    </button>
+                    {verificationSuccess && (
+                      <p className="mt-2 text-[11px] text-emerald-200">
+                        Verification email sent. Check your inbox.
+                      </p>
+                    )}
+                    {verificationError && (
+                      <p className="mt-2 text-[11px] text-rose-200">
+                        {verificationError}
+                        {verificationRetryAfter > 0 ? ` Try again in ${verificationRetryAfter}s.` : ''}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <button
                   onClick={() => {
                     handleManageSubscription();

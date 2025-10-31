@@ -130,12 +130,11 @@ function formatDate(value) {
   }).format(date);
 }
 
-function formatLocation(location) {
+function getLocationField(location, primaryKey, fallbackKey) {
   if (!location || typeof location !== 'object') return '—';
-  const { city, region, country, countryCode } = location;
-  const parts = [city, region, country].filter(Boolean);
-  if (parts.length === 0 && countryCode) parts.push(countryCode);
-  return parts.length > 0 ? parts.join(', ') : '—';
+  const value = location[primaryKey] || (fallbackKey ? location[fallbackKey] : null);
+  if (!value) return '—';
+  return String(value);
 }
 
 async function fetchUsers({ pageToken, query }) {
@@ -509,7 +508,9 @@ export default function ManageSubscriptionsPage() {
                   <th className="px-4 py-3">Tier</th>
                   <th className="px-4 py-3">Created</th>
                   <th className="px-4 py-3">Last activity</th>
-                  <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">City</th>
+                  <th className="px-4 py-3">Region</th>
+                  <th className="px-4 py-3">Country</th>
                   <th className="px-4 py-3">Stripe</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
@@ -517,13 +518,13 @@ export default function ManageSubscriptionsPage() {
               <tbody className="divide-y divide-white/10 text-gray-100">
                 {loading && allUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-gray-400">
+                    <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
                       Loading subscription data…
                     </td>
                   </tr>
                 ) : allUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-gray-400">
+                    <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
                       No users found.
                     </td>
                   </tr>
@@ -562,24 +563,16 @@ export default function ManageSubscriptionsPage() {
                       </td>
                       <td className="px-4 py-4">{formatDate(user.createdAt)}</td>
                       <td className="px-4 py-4 text-xs text-gray-300">
-                        <div className="flex flex-col gap-1">
-                          <span>{formatDate(user.lastActivityAt || user.lastSignInTime)}</span>
-                          {user.lastActivityType && (
-                            <span className="w-fit rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300">
-                              {user.lastActivityType}
-                            </span>
-                          )}
-                        </div>
+                        {formatDate(user.lastActivityAt || user.lastSignInTime)}
                       </td>
                       <td className="px-4 py-4 text-xs text-gray-300">
-                        <div className="flex flex-col gap-1">
-                          <span>{formatLocation(user.lastActivityLocation)}</span>
-                          {user.lastActivityLocation?.timezone && (
-                            <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                              {user.lastActivityLocation.timezone}
-                            </span>
-                          )}
-                        </div>
+                        {getLocationField(user.lastActivityLocation, 'city')}
+                      </td>
+                      <td className="px-4 py-4 text-xs text-gray-300">
+                        {getLocationField(user.lastActivityLocation, 'region')}
+                      </td>
+                      <td className="px-4 py-4 text-xs text-gray-300">
+                        {getLocationField(user.lastActivityLocation, 'country', 'countryCode')}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex flex-col gap-2 text-xs">

@@ -10,6 +10,7 @@ import {
   FacebookAuthProvider
 } from 'firebase/auth';
 import { auth } from '@/lib/firebaseClient';
+import { useAuth } from '@/components/AuthProvider';
 
 async function setSessionCookie(user) {
   const idToken = await user.getIdToken();
@@ -30,15 +31,19 @@ function SignupForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get('next') || '/';
+  const { sendEmailVerification } = useAuth();
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const done = async (user) => {
+  const done = async (user, { shouldSendVerification = false } = {}) => {
     try {
       await setSessionCookie(user);
       await initUser();
+      if (shouldSendVerification && sendEmailVerification) {
+        await sendEmailVerification().catch(() => {});
+      }
     } catch {}
     router.replace(next);
   };
@@ -53,7 +58,7 @@ function SignupForm() {
 
   const signupEmail = withBusy(async () => {
     const { user } = await createUserWithEmailAndPassword(auth, email, pass);
-    await done(user);
+    await done(user, { shouldSendVerification: true });
   });
 
   const signupGoogle = withBusy(async () => {
