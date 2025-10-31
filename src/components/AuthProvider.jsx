@@ -62,28 +62,6 @@ export default function AuthProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      try {
-        if (u) {
-          const idToken = await u.getIdToken(true);
-          await fetch('/api/auth/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken }),
-          });
-        } else {
-          await fetch('/api/auth/logout', { method: 'POST' }).catch(()=>{});
-        }
-      } finally {
-        await refreshMe();
-        setLoading(false);
-      }
-    });
-    return () => unsub();
-  }, [refreshMe]);
-
   const requireAuth = useCallback((action, mode = 'login') => {
     if (auth.currentUser) { action?.(); return; }
     setInitialAuthMode(mode);
@@ -111,6 +89,37 @@ export default function AuthProvider({ children }) {
   const updateLikedMixedOrder = useCallback((newOrder) => {
     setMe(prev => ({ ...prev, likedMixedOrder: Array.isArray(newOrder) ? newOrder : [] }));
   }, []);
+
+  const refreshAuthSession = useCallback(async () => {
+    if (!auth.currentUser) return;
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      try {
+        if (u) {
+          await refreshAuthSession();
+        } else {
+          await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+        }
+      } finally {
+        await refreshMe();
+        setLoading(false);
+      }
+    });
+    return () => unsub();
+  }, [refreshAuthSession, refreshMe]);
 
   const sendEmailVerification = useCallback(async () => {
     setSendVerificationState({ sending: true, error: null, success: false, lastSentAt: null, retryAfter: 0 });
@@ -146,6 +155,20 @@ export default function AuthProvider({ children }) {
 
   const [checkingVerification, setCheckingVerification] = useState(false);
 
+  const handleVerificationSuccess = useCallback(async () => {
+    console.info('[email-verification] email verified. refreshing session/profile');
+    setUser((prev) => (prev ? { ...prev, emailVerified: true } : prev));
+    setSendVerificationState({
+      sending: false,
+      error: null,
+      success: false,
+      lastSentAt: null,
+      retryAfter: 0,
+    });
+    await refreshAuthSession();
+    await refreshMe();
+  }, [refreshAuthSession, refreshMe]);
+
   const needsEmailVerification = useMemo(() => {
     if (!user) return false;
     const providers = Array.isArray(user.providerData) ? user.providerData : [];
@@ -167,23 +190,38 @@ export default function AuthProvider({ children }) {
     }
   }, []);
 
-  const checkEmailVerification = useCallback(async () => {
+  const checkEmailVerification = useCallback(async (reason = 'manual') => {
     if (!auth.currentUser) return;
     setCheckingVerification(true);
     try {
+      console.info('[email-verification] checking verification status', { reason });
       await auth.currentUser.reload();
       const refreshed = auth.currentUser;
+      const verified = !!refreshed?.emailVerified;
+      console.info('[email-verification] reload complete', {
+        providerIds: refreshed?.providerData?.map(p => p?.providerId) || [],
+        emailVerified: verified,
+        uid: refreshed?.uid,
+      });
       setUser(refreshed ?? null);
-      if (refreshed?.emailVerified) {
-        setSendVerificationState({
-          sending: false,
-          error: null,
-          success: false,
-          lastSentAt: null,
-          retryAfter: 0,
-        });
-        await refreshAuthSession();
-        await refreshMe();
+      if (!verified) {
+        try {
+          const res = await fetch('/api/auth/status', { method: 'GET', cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            console.info('[email-verification] server status check', data);
+            if (data?.emailVerified) {
+              await handleVerificationSuccess();
+              return;
+            }
+          } else {
+            console.warn('[email-verification] server status check failed', res.status);
+          }
+        } catch (statusError) {
+          console.warn('[email-verification] status endpoint error', statusError);
+        }
+      } else {
+        await handleVerificationSuccess();
       }
     } catch (error) {
       console.error('[email-verification] reload failed', error);
@@ -227,11 +265,11 @@ export default function AuthProvider({ children }) {
     if (!needsEmailVerification || typeof window === 'undefined') return undefined;
 
     const handleFocusCheck = () => {
-      checkEmailVerification().catch(() => {});
+      checkEmailVerification('focus').catch(() => {});
     };
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        handleFocusCheck();
+        checkEmailVerification('visibility').catch(() => {});
       }
     };
 
@@ -248,7 +286,7 @@ export default function AuthProvider({ children }) {
     if (!needsEmailVerification || !sendVerificationState.success) return undefined;
 
     const timer = setTimeout(() => {
-      checkEmailVerification().catch(() => {});
+      checkEmailVerification('post-success').catch(() => {});
     }, 5000);
 
     return () => clearTimeout(timer);
@@ -308,7 +346,9 @@ export default function AuthProvider({ children }) {
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
               <button
                 type="button"
-                onClick={checkEmailVerification}
+                onClick={() => {
+                  checkEmailVerification('button').catch(() => {});
+                }}
                 disabled={checkingVerification}
                 className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-white/10 disabled:cursor-progress disabled:opacity-60"
               >
