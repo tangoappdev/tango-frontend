@@ -176,20 +176,6 @@ export default function AuthProvider({ children }) {
     return usesPasswordProvider && user.emailVerified === false;
   }, [user]);
 
-  const refreshAuthSession = useCallback(async () => {
-    if (!auth.currentUser) return;
-    try {
-      const idToken = await auth.currentUser.getIdToken(true);
-      await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken }),
-      });
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   const checkEmailVerification = useCallback(async (reason = 'manual') => {
     if (!auth.currentUser) return;
     setCheckingVerification(true);
