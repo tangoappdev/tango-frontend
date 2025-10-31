@@ -173,8 +173,15 @@ export default function AuthProvider({ children }) {
     try {
       await auth.currentUser.reload();
       const refreshed = auth.currentUser;
-      setUser(refreshed ? { ...refreshed } : null);
+      setUser(refreshed ?? null);
       if (refreshed?.emailVerified) {
+        setSendVerificationState({
+          sending: false,
+          error: null,
+          success: false,
+          lastSentAt: null,
+          retryAfter: 0,
+        });
         await refreshAuthSession();
         await refreshMe();
       }
