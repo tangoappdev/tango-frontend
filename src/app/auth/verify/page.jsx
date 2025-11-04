@@ -10,7 +10,12 @@ export default function VerifyLandingPage() {
   const { checkEmailVerification } = useAuth();
 
   useEffect(() => {
-    checkEmailVerification('verify-page-mount').catch(() => {});
+    const check = async () => {
+      console.log('[VerifyLandingPage] checking email verification on mount');
+      await checkEmailVerification('verify-page-mount').catch(() => {});
+      console.log('[VerifyLandingPage] checkEmailVerification completed');
+    };
+    check();
   }, [checkEmailVerification]);
 
   return (
