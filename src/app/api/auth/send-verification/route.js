@@ -48,7 +48,7 @@ export async function POST(request) {
 
     const actionCodeSettings = {
       url: continueUrl,
-      handleCodeInApp: false,
+      handleCodeInApp: true,
     };
 
     const verificationLink = await auth.generateEmailVerificationLink(userRecord.email, actionCodeSettings);
