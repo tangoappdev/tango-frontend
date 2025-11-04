@@ -1,13 +1,11 @@
-'use client';
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { applyActionCode } from 'firebase/auth';
 import { auth } from '@/lib/firebaseClient';
 import { useAuth } from '@/components/AuthProvider';
 
-export default function VerifyLandingPage() {
+function VerifyLandingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { checkEmailVerification } = useAuth();
@@ -28,7 +26,6 @@ export default function VerifyLandingPage() {
         await applyActionCode(auth, oobCode);
         setStatus('success');
         console.log('[VerifyLandingPage] Email verification successful via oobCode.');
-        // After successful application of the action code, refresh the auth state
         await checkEmailVerification('verify-page-oobCode-success').catch(() => {});
       } catch (error) {
         setStatus('error');
@@ -119,5 +116,13 @@ export default function VerifyLandingPage() {
         {renderContent()}
       </div>
     </main>
+  );
+}
+
+export default function VerifyLandingPage() {
+  return (
+    <Suspense fallback={<div>Loading verification...</div>}>
+      <VerifyLandingPageContent />
+    </Suspense>
   );
 }
