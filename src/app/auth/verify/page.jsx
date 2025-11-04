@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { applyActionCode } from 'firebase/auth';
 import { auth } from '@/lib/firebaseClient';
-import { useAuth } => '@/components/AuthProvider';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function VerifyLandingPage() {
   const router = useRouter();
