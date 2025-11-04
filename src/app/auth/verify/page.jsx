@@ -1,10 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function VerifyLandingPage() {
   const router = useRouter();
+  const { checkEmailVerification } = useAuth();
+
+  useEffect(() => {
+    checkEmailVerification('verify-page-mount').catch(() => {});
+  }, [checkEmailVerification]);
 
   return (
     <main className="min-h-screen bg-[#121417] px-4 py-16 text-white">
