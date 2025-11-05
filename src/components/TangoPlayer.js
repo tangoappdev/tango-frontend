@@ -1469,9 +1469,14 @@ export default function TangoPlayer() {
         }
       } finally {
         if (!cancelled) {
-          const hasPersisted = Boolean(loadedSettings && Object.keys(loadedSettings).length > 0);
-          setHasPersistedSettings(hasPersisted);
-          if (hasPersisted) {
+          const hasServerSpecificSettings =
+            Boolean(loadedSettings && Object.keys(loadedSettings).length > 0) &&
+            Object.entries(initialSettings).some(([key, value]) => {
+              if (!Object.prototype.hasOwnProperty.call(loadedSettings, key)) return false;
+              return loadedSettings[key] !== value;
+            });
+          if (hasServerSpecificSettings) {
+            setHasPersistedSettings(true);
             const storageKey = getSettingsInitStorageKey(user);
             if (storageKey && typeof window !== 'undefined') {
               try {
