@@ -13,7 +13,7 @@ import {
   PlayIcon, PauseIcon, ChevronDoubleLeftIcon, ChevronDoubleRightIcon,
   ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, AdjustmentsVerticalIcon,
   SparklesIcon, QueueListIcon, MusicalNoteIcon,
-  ArrowsPointingOutIcon, ArrowsPointingInIcon, ArrowUturnLeftIcon, ArrowsRightLeftIcon, HeartIcon
+  ArrowsPointingOutIcon, ArrowsPointingInIcon, ArrowUturnLeftIcon, ArrowsRightLeftIcon, HeartIcon, XMarkIcon
 } from '@heroicons/react/24/outline';
 import { EllipsisVerticalIcon, HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { useAuth } from '@/components/AuthProvider';
@@ -30,6 +30,16 @@ import {
 } from './tangoPlayerConstants';
 
 const QUICK_MODE_VALUES = new Set(JUST_MODE_OPTIONS.map((opt) => opt.value));
+const SETTINGS_INIT_STORAGE_PREFIX = 'vtdj-settings-init:';
+
+const getSettingsInitStorageKey = (user) => {
+  if (!user) return null;
+  const uid = user.uid || user.id || null;
+  if (uid) return `${SETTINGS_INIT_STORAGE_PREFIX}${uid}`;
+  const email = user.email || null;
+  if (email) return `${SETTINGS_INIT_STORAGE_PREFIX}${email}`;
+  return null;
+};
 
 function Queue({
   isOpen, onClose, isDesktop, rightPanelTab, setRightPanelTab,
@@ -421,6 +431,9 @@ function SettingsPanel({
   title = 'Settings',
   footerContent = null,
   disableDismiss = false,
+  variant = 'sheet',
+  onDismiss,
+  showCloseButton = false,
 }) {
   const panelRef = useRef(null);
   const segments = useMemo(() => [
@@ -438,146 +451,176 @@ function SettingsPanel({
     }
     handleSettingChange('activeMode', value);
   };
-  return (
-    <div className={`fixed inset-0 z-10 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-      <div className="absolute inset-0 bg-black/60" onClick={disableDismiss ? undefined : onClose}></div>
-      <div
-        ref={panelRef}
-        className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
-      >
-        <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
-        <div className="p-4">
-          <h3 className="text-lg mb-1 text-center text-gray-300">{title}</h3>
-          <div className="flex flex-col gap-3">
-            {/* 1. Orchestra Type */}
-            <div className="flex gap-2 flex-col">
-              <label htmlFor="categoryFilterMobile" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label>
-              <div className="relative">
-                <select id="categoryFilterMobile" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full h-10 appearance-none cursor-pointer rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
-                  {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                </select>
-                <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
-              </div>
-            </div>
-            {/* 3. Tanda Sequence */}
-            <div className="flex flex-col gap-4">
-              <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
-              <div className="flex w-full h-10 items-center rounded-full bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] text-xs p-0.5">
-                {segments.map((segment, index) => {
-                  const isSelected = selectedSegment === segment.value;
-                  return (
-                    <button
-                      key={segment.value}
-                      onClick={() => handleSegmentSelect(segment.value)}
-              className={`flex-1 h-10 md:h-10 transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center rounded-full ${isSelected ? 'bg-[#30333a] text-[#25edda] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]' : 'text-gray-400 hover:bg-white/5'}`}
-                    >
-                      {segment.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {!isQuickMode && (
-                <div className="mt-2 relative">
-                  <select
-                    value={activeFullSequence}
-                    onChange={(event) => onFullSequenceSelect(event.target.value)}
-                    className="w-full h-10 appearance-none rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
-                  >
-                    {fullSequenceOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                </div>
-              )}
-              {/* 2. Tango Tanda Length */}
-              <div className="flex flex-col gap-3">
-                <span className="text-sm font-medium text-gray-400">Tango Tanda Length</span>
-                <div className={`flex w-full ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
-                  {TANDA_LENGTH_OPTIONS.map((len, index) => {
-                    const isActive = settings.tandaLength === len;
-                    return (
-                      <button
-                        key={len}
-                        onClick={() => handleSettingChange('tandaLength', len)}
-                        disabled={user && !isPro}
-                        className={`flex-1 h-10 px-4 text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
-                          isActive
-                            ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
-                            : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
-                        } ${index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''}`}
-                      >
-                        {len} Tangos
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-            {/* 4. Cortinas */}
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-400">Cortinas</span>
-              <div className="flex items-center mb-6 gap-3">
+  const content = (
+    <>
+      <h3 className="text-lg mb-1 text-center text-gray-300">{title}</h3>
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2 flex-col">
+          <label htmlFor="categoryFilterMobile" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label>
+          <div className="relative">
+            <select id="categoryFilterMobile" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full h-10 appearance-none cursor-pointer rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
+              {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+            </select>
+            <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-4">
+          <span className="block text-sm font-medium text-gray-400">Tanda Sequence</span>
+          <div className="flex w-full h-10 items-center rounded-full bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] text-xs p-0.5">
+            {segments.map((segment) => {
+              const isSelected = selectedSegment === segment.value;
+              return (
                 <button
-                  type="button"
-                  role="switch"
-                  aria-checked={settings.cortinas}
-                  aria-label="Toggle cortinas"
-                  onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
-                  className={`relative inline-flex h-6 w-16 items-center rounded-full px-1 transition-colors duration-200 ${
-                    settings.cortinas ? 'bg-[#25edda]' : 'bg-gray-600'
-                  }`}
+                  key={segment.value}
+                  onClick={() => handleSegmentSelect(segment.value)}
+                  className={`flex-1 h-10 md:h-10 transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center rounded-full ${isSelected ? 'bg-[#30333a] text-[#25edda] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]' : 'text-gray-400 hover:bg-white/5'}`}
                 >
-                  <span className="absolute inset-0 flex items-center px-3 text-[10px] font-bold uppercase tracking-wide text-gray-900/70">
-                    {settings.cortinas ? <span className="flex-1 text-left">ON</span> : <span className="flex-1 text-right">OFF</span>}
-                  </span>
-                  <span
-                    className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#30333a] shadow-md transition-all duration-200"
-                    style={{
-                      left: settings.cortinas ? 'calc(100% - 1.5rem)' : '0.25rem',
-                    }}
-                  />
+                  {segment.label}
                 </button>
-                <div className="flex flex-1 gap-0">
+              );
+            })}
+          </div>
+          {!isQuickMode && (
+            <div className="mt-2 relative">
+              <select
+                value={activeFullSequence}
+                onChange={(event) => onFullSequenceSelect(event.target.value)}
+                className="w-full h-10 appearance-none rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]"
+              >
+                {fullSequenceOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            </div>
+          )}
+          <div className="flex flex-col gap-3">
+            <span className="text-sm font-medium text-gray-400">Tango Tanda Length</span>
+            <div className={`flex w-full ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
+              {TANDA_LENGTH_OPTIONS.map((len, index) => {
+                const isActive = settings.tandaLength === len;
+                return (
                   <button
-                    onClick={() => handleSettingChange('cortinaFullLength', false)}
-                    disabled={!settings.cortinas}
-                    className={`flex-1 rounded-l-full h-9 px-3 text-xs transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
-                      !settings.cortinas
-                        ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
-                        : !settings.cortinaFullLength
-                          ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
-                          : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-                    } ${settings.cortinas ? 'hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]' : ''}`}
+                    key={len}
+                    onClick={() => handleSettingChange('tandaLength', len)}
+                    disabled={user && !isPro}
+                    className={`flex-1 h-10 px-4 text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
+                      isActive
+                        ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                        : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
+                    } ${index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''}`}
                   >
-                    45 sec Cortina
+                    {len} Tangos
                   </button>
-                  <button
-                    onClick={() => handleSettingChange('cortinaFullLength', true)}
-                    disabled={!settings.cortinas}
-                    className={`flex-1 rounded-r-full h-9 px-3 text-xs transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
-                      !settings.cortinas
-                        ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
-                        : settings.cortinaFullLength
-                          ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
-                          : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
-                    } ${settings.cortinas ? 'hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]' : ''}`}
-                  >
-                    Full Cortina
-                  </button>
-                </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-gray-400">Cortinas</span>
+            <div className="flex items-center mb-6 gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.cortinas}
+                aria-label="Toggle cortinas"
+                onClick={() => handleSettingChange('cortinas', !settings.cortinas)}
+                className={`relative inline-flex h-6 w-16 items-center rounded-full px-1 transition-colors duration-200 ${
+                  settings.cortinas ? 'bg-[#25edda]' : 'bg-gray-600'
+                }`}
+              >
+                <span className="absolute inset-0 flex items-center px-3 text-[10px] font-bold uppercase tracking-wide text-gray-900/70">
+                  {settings.cortinas ? <span className="flex-1 text-left">ON</span> : <span className="flex-1 text-right">OFF</span>}
+                </span>
+                <span
+                  className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#30333a] shadow-md transition-all duration-200"
+                  style={{
+                    left: settings.cortinas ? 'calc(100% - 1.5rem)' : '0.25rem',
+                  }}
+                />
+              </button>
+              <div className="flex flex-1 gap-0">
+                <button
+                  onClick={() => handleSettingChange('cortinaFullLength', false)}
+                  disabled={!settings.cortinas}
+                  className={`flex-1 rounded-l-full h-9 px-3 text-xs transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
+                    !settings.cortinas
+                      ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
+                      : !settings.cortinaFullLength
+                        ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                        : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
+                  } ${settings.cortinas ? 'hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]' : ''}`}
+                >
+                  45 sec Cortina
+                </button>
+                <button
+                  onClick={() => handleSettingChange('cortinaFullLength', true)}
+                  disabled={!settings.cortinas}
+                  className={`flex-1 rounded-r-full h-9 px-3 text-xs transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
+                    !settings.cortinas
+                      ? 'bg-[#30333a] text-gray-500 border border-gray-600 opacity-40 cursor-not-allowed'
+                      : settings.cortinaFullLength
+                        ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
+                        : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d]'
+                  } ${settings.cortinas ? 'hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]' : ''}`}
+                >
+                  Full Cortina
+                </button>
               </div>
             </div>
           </div>
-          {footerContent && (
-            <div className="mt-6">
-              {footerContent}
-            </div>
-          )}
         </div>
       </div>
+      {footerContent && (
+        <div className="mt-6">
+          {footerContent}
+        </div>
+      )}
+    </>
+  );
+  const isModal = variant === 'modal';
+  const handleClose = () => {
+    if (onDismiss) {
+      onDismiss();
+    } else {
+      onClose?.();
+    }
+  };
+  return (
+    <div className={`fixed inset-0 z-10 lg:hidden transition-opacity duration-200 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+      <div className="absolute inset-0 bg-black/60" onClick={disableDismiss ? undefined : handleClose}></div>
+      {isModal ? (
+        <div className="absolute inset-0 flex items-center justify-center p-4">
+          <div
+            ref={panelRef}
+            className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#30333a] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.5)]"
+          >
+            {showCloseButton && (
+              <button
+                type="button"
+                onClick={handleClose}
+                className="absolute right-3 top-3 rounded-full p-1 text-gray-400 transition-colors duration-200 hover:text-white"
+                aria-label="Close"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            )}
+            {content}
+          </div>
+        </div>
+      ) : (
+        <div
+          ref={panelRef}
+          className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+        >
+          <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
+          <div className="p-4">
+            {content}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1425,7 +1468,18 @@ export default function TangoPlayer() {
         }
       } finally {
         if (!cancelled) {
-          setHasPersistedSettings(Boolean(loadedSettings && Object.keys(loadedSettings).length > 0));
+          const hasPersisted = Boolean(loadedSettings && Object.keys(loadedSettings).length > 0);
+          setHasPersistedSettings(hasPersisted);
+          if (hasPersisted) {
+            const storageKey = getSettingsInitStorageKey(user);
+            if (storageKey && typeof window !== 'undefined') {
+              try {
+                window.localStorage.setItem(storageKey, '1');
+              } catch {
+                /* ignore storage errors */
+              }
+            }
+          }
           setSettingsHydrated(true);
         }
       }
@@ -1453,6 +1507,21 @@ export default function TangoPlayer() {
       setCurrentCortinaFull(false);
     }
   }, [isCortinaPlaying]);
+  useEffect(() => {
+    if (!hasMounted) return;
+    if (!user) return;
+    const storageKey = getSettingsInitStorageKey(user);
+    if (!storageKey) return;
+    if (typeof window === 'undefined') return;
+    try {
+      const flag = window.localStorage.getItem(storageKey);
+      if (flag) {
+        setHasPersistedSettings(true);
+      }
+    } catch {
+      /* ignore storage read errors */
+    }
+  }, [hasMounted, user]);
   useEffect(() => {
     if (settings.activeMode && !QUICK_MODE_VALUES.has(settings.activeMode)) {
       setLastFullSequence(settings.activeMode);
@@ -2080,9 +2149,33 @@ export default function TangoPlayer() {
   const handleInitialSettingsConfirm = useCallback(async () => {
     setShowInitialSettingsPrompt(false);
     setHasPersistedSettings(true);
+    const storageKey = getSettingsInitStorageKey(user);
+    if (storageKey && typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(storageKey, '1');
+      } catch {
+        /* ignore storage write errors */
+      }
+    }
     await persistPlayerSettings(settings);
     fetchAndFillPlaylist();
-  }, [fetchAndFillPlaylist, persistPlayerSettings, settings]);
+  }, [fetchAndFillPlaylist, persistPlayerSettings, settings, user]);
+  const handleInitialSettingsSkip = useCallback(async () => {
+    setShowInitialSettingsPrompt(false);
+    setHasPersistedSettings(true);
+    const storageKey = getSettingsInitStorageKey(user);
+    if (storageKey && typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(storageKey, '1');
+      } catch {
+        /* ignore storage write errors */
+      }
+    }
+    const defaults = { ...initialSettings };
+    setSettings(() => ({ ...defaults }));
+    await persistPlayerSettings(defaults);
+    fetchAndFillPlaylist();
+  }, [fetchAndFillPlaylist, persistPlayerSettings, user]);
   const initAudioGraph = useCallback(() => {
     if (!shouldUseWebAudio || audioContextRef.current || !audioRef.current) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -3812,15 +3905,27 @@ export default function TangoPlayer() {
           activeFullSequence={activeFullSequence}
           onFullSequenceSelect={handleFullSequenceSelect}
           disableDismiss
-          title="Set your preferences"
+          variant="modal"
+          onDismiss={handleInitialSettingsSkip}
+          showCloseButton
+          title="How do you like your tandas?"
           footerContent={(
-            <button
-              type="button"
-              onClick={handleInitialSettingsConfirm}
-              className="w-full rounded-full bg-[#25edda] px-4 py-3 text-sm font-semibold text-[#132329] transition-transform duration-200 hover:scale-[1.02]"
-            >
-              Generate playlist
-            </button>
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={handleInitialSettingsConfirm}
+                className="w-full rounded-full bg-[#25edda] px-4 py-3 text-sm font-semibold text-[#132329] transition-transform duration-200 hover:scale-[1.02]"
+              >
+                Generate playlist
+              </button>
+              <button
+                type="button"
+                onClick={handleInitialSettingsSkip}
+                className="text-sm font-medium text-gray-400 transition-colors duration-200 hover:text-white"
+              >
+                Skip for now
+              </button>
+            </div>
           )}
         />
       )}
