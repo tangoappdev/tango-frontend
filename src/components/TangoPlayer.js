@@ -1518,20 +1518,27 @@ export default function TangoPlayer() {
       setSettingsInitChecked(true);
       return;
     }
-    if (!storageKey) {
-      setSettingsInitChecked(true);
-      return;
-    }
-    try {
-      const flag = window.localStorage.getItem(storageKey);
-      if (flag) {
-        setHasPersistedSettings(true);
+    const performCheck = () => {
+      if (!storageKey) {
+        setSettingsInitChecked(true);
+        return;
       }
-    } catch {
-      /* ignore storage read errors */
-    }
-    setSettingsInitChecked(true);
-  }, [hasMounted, user]);
+      try {
+        const flag = window.localStorage.getItem(storageKey);
+        if (flag) {
+          setHasPersistedSettings(true);
+        } else {
+          setHasPersistedSettings(false);
+        }
+      } catch {
+        /* ignore storage read errors */
+      } finally {
+        setSettingsInitChecked(true);
+      }
+    };
+    const timeout = window.setTimeout(performCheck, 50);
+    return () => window.clearTimeout(timeout);
+  }, [hasMounted, user, settingsHydrated]);
   useEffect(() => {
     if (settings.activeMode && !QUICK_MODE_VALUES.has(settings.activeMode)) {
       setLastFullSequence(settings.activeMode);
