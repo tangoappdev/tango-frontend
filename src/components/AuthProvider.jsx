@@ -214,7 +214,7 @@ export default function AuthProvider({ children }) {
     } finally {
       setCheckingVerification(false);
     }
-  }, [refreshAuthSession, refreshMe]);
+  }, [refreshAuthSession, refreshMe, handleVerificationSuccess]);
 
   useEffect(() => {
     if (!user) {

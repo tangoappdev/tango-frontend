@@ -94,7 +94,7 @@ function LoginForm() {
       </div>
 
       <p className="text-center text-gray-300 text-sm">
-        Don't have an account? <a className="text-[#25edda]" href={`/signup?next=${encodeURIComponent(next)}`}>Create account</a>
+        Don&apos;t have an account? <a className="text-[#25edda]" href={`/signup?next=${encodeURIComponent(next)}`}>Create account</a>
       </p>
     </div>
   );
