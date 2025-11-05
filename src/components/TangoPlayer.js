@@ -418,6 +418,9 @@ function SettingsPanel({
   lastFullSequence,
   activeFullSequence,
   onFullSequenceSelect,
+  title = 'Settings',
+  footerContent = null,
+  disableDismiss = false,
 }) {
   const panelRef = useRef(null);
   const segments = useMemo(() => [
@@ -437,14 +440,14 @@ function SettingsPanel({
   };
   return (
     <div className={`fixed inset-0 z-10 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-      <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-black/60" onClick={disableDismiss ? undefined : onClose}></div>
       <div
         ref={panelRef}
         className={`bg-[#30333a] shadow-2xl flex flex-col absolute bottom-0 left-0 right-0 w-full max-w-[28rem] mx-auto rounded-t-2xl transform transition-all duration-500 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="w-12 h-1.5 bg-gray-500 rounded-full mx-auto my-3 flex-shrink-0"></div>
         <div className="p-4">
-          <h3 className="text-lg mb-1 text-center text-gray-300">Settings</h3>
+          <h3 className="text-lg mb-1 text-center text-gray-300">{title}</h3>
           <div className="flex flex-col gap-3">
             {/* 1. Orchestra Type */}
             <div className="flex gap-2 flex-col">
@@ -567,9 +570,14 @@ function SettingsPanel({
                 </div>
               </div>
             </div>
+          </div>
+          {footerContent && (
+            <div className="mt-6">
+              {footerContent}
+            </div>
+          )}
         </div>
       </div>
-    </div>
     </div>
   );
 }
@@ -986,6 +994,8 @@ export default function TangoPlayer() {
   const [skipMsg, setSkipMsg] = useState('');
   const [settings, setSettings] = useState(initialSettings);
   const [settingsHydrated, setSettingsHydrated] = useState(false);
+  const [hasPersistedSettings, setHasPersistedSettings] = useState(false);
+  const [showInitialSettingsPrompt, setShowInitialSettingsPrompt] = useState(false);
   const [libraryState, setLibraryState] = useState({
     buckets: null,
     metaById: {},
@@ -1393,6 +1403,7 @@ export default function TangoPlayer() {
     settingsPersistArmedRef.current = false;
 
     const loadSettings = async () => {
+      let loadedSettings = null;
       try {
         const response = await fetch('/api/users/player-settings', {
           method: 'GET',
@@ -1405,6 +1416,7 @@ export default function TangoPlayer() {
         const data = await response.json();
         if (cancelled) return;
         if (data?.settings && typeof data.settings === 'object') {
+          loadedSettings = data.settings;
           setSettings(prev => ({ ...prev, ...data.settings }));
         }
       } catch (error) {
@@ -1413,6 +1425,7 @@ export default function TangoPlayer() {
         }
       } finally {
         if (!cancelled) {
+          setHasPersistedSettings(Boolean(loadedSettings && Object.keys(loadedSettings).length > 0));
           setSettingsHydrated(true);
         }
       }
@@ -1430,6 +1443,12 @@ export default function TangoPlayer() {
     };
   }, [user, settingsHydrated]);
   useEffect(() => {
+    if (!user) {
+      setHasPersistedSettings(false);
+      setShowInitialSettingsPrompt(false);
+    }
+  }, [user]);
+  useEffect(() => {
     if (!isCortinaPlaying) {
       setCurrentCortinaFull(false);
     }
@@ -1439,6 +1458,19 @@ export default function TangoPlayer() {
       setLastFullSequence(settings.activeMode);
     }
   }, [settings.activeMode]);
+  useEffect(() => {
+    if (!hasMounted) return;
+    if (!user) return;
+    if (!settingsHydrated) return;
+    if (isDesktop) return;
+    if (hasPersistedSettings) return;
+    setShowInitialSettingsPrompt(true);
+  }, [hasMounted, user, settingsHydrated, isDesktop, hasPersistedSettings]);
+  useEffect(() => {
+    if (isDesktop && showInitialSettingsPrompt) {
+      setShowInitialSettingsPrompt(false);
+    }
+  }, [isDesktop, showInitialSettingsPrompt]);
   useEffect(() => {
     if (libraryLoading) return;
     if (!libraryBuckets) {
@@ -2045,6 +2077,12 @@ export default function TangoPlayer() {
       setIsRefreshing(false);
     }
   }, [cortinas, setShuffledCortinas, cortinaPoolReady, settingsHydrated, registerCortinaMeta]);
+  const handleInitialSettingsConfirm = useCallback(async () => {
+    setShowInitialSettingsPrompt(false);
+    setHasPersistedSettings(true);
+    await persistPlayerSettings(settings);
+    fetchAndFillPlaylist();
+  }, [fetchAndFillPlaylist, persistPlayerSettings, settings]);
   const initAudioGraph = useCallback(() => {
     if (!shouldUseWebAudio || audioContextRef.current || !audioRef.current) return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -3760,6 +3798,30 @@ export default function TangoPlayer() {
           }}
           onClose={handleMenuClose}
           options={menuOptions}
+        />
+      )}
+      {hasMounted && showInitialSettingsPrompt && !isDesktop && (
+        <SettingsPanel
+          isOpen
+          onClose={() => {}}
+          settings={settings}
+          handleSettingChange={handleSettingChange}
+          user={user}
+          isPro={isPro}
+          lastFullSequence={lastFullSequence}
+          activeFullSequence={activeFullSequence}
+          onFullSequenceSelect={handleFullSequenceSelect}
+          disableDismiss
+          title="Set your preferences"
+          footerContent={(
+            <button
+              type="button"
+              onClick={handleInitialSettingsConfirm}
+              className="w-full rounded-full bg-[#25edda] px-4 py-3 text-sm font-semibold text-[#132329] transition-transform duration-200 hover:scale-[1.02]"
+            >
+              Generate playlist
+            </button>
+          )}
         />
       )}
       {hasMounted && !isDesktop && (

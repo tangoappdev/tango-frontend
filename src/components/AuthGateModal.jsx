@@ -163,7 +163,7 @@ export default function AuthGateModal({ open, initialMode, onClose, afterAuth })
           <XMarkIcon className="h-6 w-6" />
         </button>
         <h2 className="text-xl font-semibold text-white text-center">
-          {mode === 'login' ? 'Login' : 'Sign up'}
+          {mode === 'login' ? 'Login' : 'Create account'}
         </h2>
 
         <div className="border-t border-white/10 pt-4">
@@ -234,7 +234,7 @@ export default function AuthGateModal({ open, initialMode, onClose, afterAuth })
               setSignupStep(1);
             }}
           >
-            {mode === 'login' ? 'Sign up' : 'Sign in'}
+            {mode === 'login' ? 'Create account' : 'Sign in'}
           </button>
         </p>
       </div>

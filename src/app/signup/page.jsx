@@ -52,7 +52,7 @@ function SignupForm() {
     setErr('');
     setBusy(true);
     try { await fn(); }
-    catch (e) { setErr(e?.message || 'Sign up failed'); }
+    catch (e) { setErr(e?.message || 'Create account failed'); }
     finally { setBusy(false); }
   };
 
@@ -81,7 +81,7 @@ function SignupForm() {
 
   return (
     <div className="w-full max-w-md p-8 space-y-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57]">
-      <h1 className="text-2xl text-[#25edda] text-center">Sign up</h1>
+      <h1 className="text-2xl text-[#25edda] text-center">Create account</h1>
 
       <div className="space-y-2">
         <button onClick={signupGoogle} disabled={busy}

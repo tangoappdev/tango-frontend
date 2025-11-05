@@ -1,6 +1,7 @@
 // src/components/SignUpStepTwoModal.jsx
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { auth } from '@/lib/firebaseClient';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -56,7 +57,7 @@ export default function SignUpStepTwoModal({ email, onClose, afterAuth }) {
         >
           <XMarkIcon className="h-6 w-6" />
         </button>
-        <h2 className="text-xl font-semibold text-white text-center">Complete Sign Up</h2>
+        <h2 className="text-xl font-semibold text-white text-center">Complete Account Creation</h2>
         <p className="text-center text-sm text-gray-400 -mt-2">{email}</p>
         
         <div className="mb-10 space-y-3 pt-2">
@@ -101,8 +102,18 @@ export default function SignUpStepTwoModal({ email, onClose, afterAuth }) {
           disabled={busy || password !== confirmPassword || !password}
           className="w-full rounded-full py-2 border border-[#25edda] text-[#25edda] hover:bg-[#25edda] hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {busy ? 'Signing up...' : 'Sign Up'}
+          {busy ? 'Creating account...' : 'Create Account'}
         </button>
+
+        <p className="text-xs text-gray-400 text-center leading-relaxed">
+          <span className="block">
+            By clicking <span className="font-semibold text-white">Create Account</span>, you agree to
+          </span>
+          <span className="block mt-0.5">
+            our <Link href="/terms" className="text-[#25edda] hover:underline">Terms of Service</Link> and{' '}
+            <Link href="/privacy" className="text-[#25edda] hover:underline">Privacy Policy</Link>.
+          </span>
+        </p>
       </div>
     </div>
   );

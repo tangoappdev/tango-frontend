@@ -1,12 +1,9 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRightIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   MusicalNoteIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
@@ -43,46 +40,35 @@ function SellingPoint({ icon: Icon, title, description }) {
 }
 
 export default function HomePage() {
-  const heroSlides = useMemo(
-    () => [
-      {
-        src: '/vtdj-mockup.png',
-        alt: 'Virtual Tango DJ player interface displayed on laptop and phone screens.',
-      },
-      {
+  const heroMainImage = {
+    src: '/vtdj-mockup.png',
+    alt: 'Virtual Tango DJ player interface displayed on laptop and phone screens.',
+  };
+
+  const productHighlights = [
+    {
+      title: 'Dial-in every tanda',
+      description:
+        'Adjust tanda length, orchestra focus, mood, and cortina style in seconds. The detailed settings screen keeps the flow under your control without slowing you down.',
+      image: {
         src: '/phone%20settings2.png',
         alt: 'Virtual Tango DJ mobile settings screen highlighting customization options.',
+        width: 657,
+        height: 1147,
       },
-      {
+    },
+    {
+      title: 'Stay ahead of the floor',
+      description:
+        'Preview upcoming tandas, reshuffle on the fly, and pin favorites. The live playlist view shows exactly what dancers will hear next so there are no surprises.',
+      image: {
         src: '/phone%20queue2.png',
         alt: 'Virtual Tango DJ mobile queue management screen.',
+        width: 657,
+        height: 1159,
       },
-      {
-        src: '/phone%20player2.png',
-        alt: 'Virtual Tango DJ mobile player view showing currently playing tanda.',
-      },
-    ],
-    []
-  );
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const totalSlides = heroSlides.length;
-
-  const goToSlide = useCallback(
-    (index) => {
-      if (!totalSlides) return;
-      const nextIndex = (index + totalSlides) % totalSlides;
-      setCurrentSlide(nextIndex);
     },
-    [totalSlides]
-  );
-
-  const handlePrevious = useCallback(() => {
-    goToSlide(currentSlide - 1);
-  }, [currentSlide, goToSlide]);
-
-  const handleNext = useCallback(() => {
-    goToSlide(currentSlide + 1);
-  }, [currentSlide, goToSlide]);
+  ];
 
   return (
     <>
@@ -91,7 +77,7 @@ export default function HomePage() {
         className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-[#1f2126] px-6 py-16 text-center text-white sm:px-8"
         style={{ minHeight: 'calc(100vh - var(--app-header-height, 5rem))' }}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(37,237,218,0.08),_transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[#30333a]" />
         <section className="relative z-10 flex w-full max-w-6xl flex-col items-center gap-12 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex w-full max-w-2xl flex-col items-center gap-10 text-center lg:items-start lg:text-left">
             <p className="inline-flex rounded-full border border-[#25edda]/30 bg-[#25edda]/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-[#25edda]">
@@ -121,61 +107,16 @@ export default function HomePage() {
           </div>
           <div className="relative flex w-full max-w-2xl justify-center lg:justify-end">
             <div className="relative mx-auto w-full max-w-xl overflow-hidden rounded-[2.5rem]">
-              <div
-                className="flex transition-transform duration-500 ease-in-out"
-                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-              >
-                {heroSlides.map((slide, index) => (
-                  <div key={slide.src} className="relative aspect-[16/10] w-full shrink-0">
-                    <Image
-                      src={slide.src}
-                      alt={slide.alt}
-                      fill
-                      priority={index === 0}
-                      className="object-contain"
-                      sizes="(min-width: 1280px) 560px, (min-width: 768px) 420px, 90vw"
-                    />
-                  </div>
-                ))}
+              <div className="relative aspect-[16/10] w-full">
+                <Image
+                  src={heroMainImage.src}
+                  alt={heroMainImage.alt}
+                  fill
+                  priority
+                  className="object-contain"
+                  sizes="(min-width: 1280px) 560px, (min-width: 768px) 420px, 90vw"
+                />
               </div>
-
-              {totalSlides > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handlePrevious}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-[#1f2126]/70 p-2 text-white transition hover:bg-[#1f2126]/90 focus:outline-none focus:ring-2 focus:ring-[#25edda]"
-                    aria-label="Previous slide"
-                  >
-                    <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-[#1f2126]/70 p-2 text-white transition hover:bg-[#1f2126]/90 focus:outline-none focus:ring-2 focus:ring-[#25edda]"
-                    aria-label="Next slide"
-                  >
-                    <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
-                  </button>
-
-                  <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-                    {heroSlides.map((slide, index) => {
-                      const isActive = index === currentSlide;
-                      return (
-                        <button
-                          key={`${slide.src}-indicator`}
-                          type="button"
-                          onClick={() => goToSlide(index)}
-                          className={`h-2.5 w-2.5 rounded-full transition ${
-                            isActive ? 'bg-[#25edda]' : 'bg-white/40 hover:bg-white/70'
-                          }`}
-                          aria-label={`Go to slide ${index + 1}`}
-                        />
-                      );
-                    })}
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </section>
@@ -183,6 +124,39 @@ export default function HomePage() {
         <section className="relative z-10 mt-16 grid w-full max-w-6xl gap-6 sm:grid-cols-3">
           {sellingPoints.map((point) => (
             <SellingPoint key={point.title} {...point} />
+          ))}
+        </section>
+
+        <section className="relative z-10 mt-24 flex w-full max-w-6xl flex-col gap-16 rounded-[2.5rem] bg-[#30333a] px-8 py-16">
+          {productHighlights.map((feature, index) => (
+            <div
+              key={feature.title}
+              className={`flex flex-col-reverse items-center gap-12 lg:flex-row ${
+                index % 2 !== 0 ? 'lg:flex-row-reverse' : ''
+              }`}
+            >
+              <div className="w-full max-w-xl lg:w-1/2">
+                <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-[2rem] bg-white/5 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur">
+                  <Image
+                    src={feature.image.src}
+                    alt={feature.image.alt}
+                    width={feature.image.width}
+                    height={feature.image.height}
+                    className="w-full h-auto"
+                    priority={index === 0}
+                  />
+                </div>
+              </div>
+              <div className="w-full max-w-xl text-left lg:w-1/2">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#25edda]/70">
+                  {index === 0 ? 'Control Panel' : 'Live Playlist'}
+                </p>
+                <h2 className="mt-3 text-2xl font-semibold text-white lg:text-3xl">{feature.title}</h2>
+                <p className="mt-4 text-base leading-relaxed text-gray-300 lg:text-lg">
+                  {feature.description}
+                </p>
+              </div>
+            </div>
           ))}
         </section>
       </main>

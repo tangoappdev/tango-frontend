@@ -32,7 +32,7 @@ export default function VerifyLandingPage() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/player')}
             className="rounded-full bg-[#25edda] px-6 py-2 text-sm font-semibold text-[#15232a] transition-transform duration-200 hover:scale-[1.02]"
           >
             Go to Virtual Tango DJ

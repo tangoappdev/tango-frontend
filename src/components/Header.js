@@ -74,6 +74,13 @@ export default function Header() {
     setUserMenuOpen(false);
   };
 
+  const handleCreateAccount = () => {
+    requireAuth(() => {
+      router.push('/player');
+    }, 'register');
+    setUserMenuOpen(false);
+  };
+
   const handleSignOut = async () => {
     setUserMenuOpen(false);
     await logout();
@@ -280,16 +287,16 @@ export default function Header() {
           ) : (
             <>
               <button
-                onClick={handleUpgrade}
-                className="rounded-full border border-[#25edda] px-4 py-2 text-sm font-semibold text-[#25edda] transition-colors duration-200 hover:bg-[#25edda]/10"
-              >
-                Upgrade
-              </button>
-              <button
                 onClick={handleSignIn}
                 className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-gray-200 transition-colors duration-200 hover:text-white hover:bg-white/5"
               >
                 Sign in
+              </button>
+              <button
+                onClick={handleCreateAccount}
+                className="rounded-full border border-[#25edda] bg-[#30333a] px-4 py-2 text-sm font-semibold text-[#25edda] transition duration-200 transform hover:bg-[#25edda] hover:text-[#30333a] hover:scale-[1.03]"
+              >
+                Create account
               </button>
             </>
           )}
@@ -426,15 +433,26 @@ export default function Header() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  handleSignIn();
-                }}
-                className="w-full rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-gray-200 transition-colors duration-200 hover:text-white hover:bg-white/5"
-              >
-                Sign in
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleSignIn();
+                  }}
+                  className="w-full rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-gray-200 transition-colors duration-200 hover:text-white hover:bg-white/5"
+                >
+                  Sign in
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleCreateAccount();
+                  }}
+                  className="w-full rounded-full border border-[#25edda] bg-[#30333a] px-4 py-2 text-sm font-semibold text-[#25edda] transition duration-200 transform hover:bg-[#25edda] hover:text-[#30333a] hover:scale-[1.03]"
+                >
+                  Create account
+                </button>
+              </>
             )}
           </div>
         </div>
