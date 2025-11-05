@@ -99,7 +99,7 @@ function Queue({
   const containerClasses = `
     lg:relative lg:transition-all lg:duration-500 lg:ease-in-out
     ${isOpen ? 'lg:w-100 lg:ml-4' : 'lg:w-0 lg:ml-0'}
-    fixed inset-0 z-10
+    fixed inset-0 z-60
     ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
     lg:opacity-100 lg:pointer-events-auto
   `;
@@ -321,7 +321,7 @@ function EqPanel({ isOpen, onClose, user, eq, handleEqChange, handleResetEq, eqN
   const panelRef = useRef(null);
   const disabled = user && !isPro;
   return (
-    <div className={`fixed inset-0 z-10 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-60 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={onClose}></div>
       <div
         ref={panelRef}

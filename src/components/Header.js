@@ -164,13 +164,7 @@ export default function Header() {
             priority
           />
           <div className="flex flex-col leading-tight">
-            <span className="text-base font-semibold tracking-wide uppercase text-[#25edda] flex items-center gap-2 md:hidden">
-              VTDJ
-              <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#25edda] text-[#1f2126]">
-                Beta
-              </span>
-            </span>
-            <span className="hidden text-base font-semibold tracking-wide uppercase text-[#25edda] items-center gap-2 md:flex">
+            <span className="text-base font-semibold tracking-wide uppercase text-[#25edda] flex items-center gap-2">
               Virtual Tango DJ
               <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#25edda] text-[#1f2126]">
                 Beta
@@ -321,6 +315,7 @@ export default function Header() {
                 width={44}
                 height={44}
                 className="h-full w-full rounded-full object-cover"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 unoptimized
               />
             ) : (
