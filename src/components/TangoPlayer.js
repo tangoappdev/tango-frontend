@@ -589,7 +589,7 @@ function SettingsPanel({
     }
   };
   return (
-    <div className={`fixed inset-0 z-10 lg:hidden transition-opacity duration-200 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-200 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={disableDismiss ? undefined : handleClose}></div>
       {isModal ? (
         <div className="absolute inset-0 flex items-center justify-center p-4">
@@ -1038,6 +1038,7 @@ export default function TangoPlayer() {
   const [settings, setSettings] = useState(initialSettings);
   const [settingsHydrated, setSettingsHydrated] = useState(false);
   const [hasPersistedSettings, setHasPersistedSettings] = useState(false);
+  const [settingsInitChecked, setSettingsInitChecked] = useState(false);
   const [showInitialSettingsPrompt, setShowInitialSettingsPrompt] = useState(false);
   const [libraryState, setLibraryState] = useState({
     buckets: null,
@@ -1499,6 +1500,7 @@ export default function TangoPlayer() {
   useEffect(() => {
     if (!user) {
       setHasPersistedSettings(false);
+      setSettingsInitChecked(false);
       setShowInitialSettingsPrompt(false);
     }
   }, [user]);
@@ -1510,9 +1512,16 @@ export default function TangoPlayer() {
   useEffect(() => {
     if (!hasMounted) return;
     if (!user) return;
+    setSettingsInitChecked(false);
     const storageKey = getSettingsInitStorageKey(user);
-    if (!storageKey) return;
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {
+      setSettingsInitChecked(true);
+      return;
+    }
+    if (!storageKey) {
+      setSettingsInitChecked(true);
+      return;
+    }
     try {
       const flag = window.localStorage.getItem(storageKey);
       if (flag) {
@@ -1521,6 +1530,7 @@ export default function TangoPlayer() {
     } catch {
       /* ignore storage read errors */
     }
+    setSettingsInitChecked(true);
   }, [hasMounted, user]);
   useEffect(() => {
     if (settings.activeMode && !QUICK_MODE_VALUES.has(settings.activeMode)) {
@@ -1532,9 +1542,15 @@ export default function TangoPlayer() {
     if (!user) return;
     if (!settingsHydrated) return;
     if (isDesktop) return;
+    if (!settingsInitChecked) return;
     if (hasPersistedSettings) return;
     setShowInitialSettingsPrompt(true);
-  }, [hasMounted, user, settingsHydrated, isDesktop, hasPersistedSettings]);
+  }, [hasMounted, user, settingsHydrated, isDesktop, hasPersistedSettings, settingsInitChecked]);
+  useEffect(() => {
+    if (hasPersistedSettings) {
+      setShowInitialSettingsPrompt(false);
+    }
+  }, [hasPersistedSettings]);
   useEffect(() => {
     if (isDesktop && showInitialSettingsPrompt) {
       setShowInitialSettingsPrompt(false);
