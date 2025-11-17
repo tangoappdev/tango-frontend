@@ -304,7 +304,7 @@ export default function Header() {
 
         {user ? (
           <button
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#25edda]/10 text-sm font-semibold text-white md:hidden"
+            className="relative flex h-11 w-11 min-w-[2.75rem] min-h-[2.75rem] items-center justify-center rounded-full border border-white/10 bg-[#25edda]/10 text-sm font-semibold text-white md:hidden"
             onClick={() => setMenuOpen(prev => !prev)}
             aria-label="Toggle navigation menu"
           >
@@ -315,7 +315,7 @@ export default function Header() {
                 width={44}
                 height={44}
                 className="h-full w-full rounded-full object-cover"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ width: '100%', height: '100%', minWidth: '100%', minHeight: '100%', objectFit: 'cover' }}
                 unoptimized
               />
             ) : (

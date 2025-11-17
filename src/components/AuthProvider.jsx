@@ -22,6 +22,7 @@ const createEmptyMe = () => ({
   likedTandaIds: [],
   likedCortinaIds: [],
   likedMixedOrder: [],
+  advancedAccess: false,
 });
 
 export default function AuthProvider({ children }) {
@@ -56,6 +57,7 @@ export default function AuthProvider({ children }) {
         likedTandaIds: data?.likedTandaIds || [],
         likedCortinaIds: data?.likedCortinaIds || [],
         likedMixedOrder: data?.likedMixedOrder || [],
+        advancedAccess: !!data?.advancedAccess,
       });
     } catch {
       setMe(createEmptyMe());
@@ -278,6 +280,10 @@ export default function AuthProvider({ children }) {
     return () => clearTimeout(timer);
   }, [needsEmailVerification, sendVerificationState.success, checkEmailVerification]);
 
+  const hasAdvancedAccess = useMemo(() => {
+    return (me.advancedAccess === true) || (me.isPro && !me.trialActive);
+  }, [me.advancedAccess, me.isPro, me.trialActive]);
+
   return (
     <Ctx.Provider value={{
       user,
@@ -295,6 +301,8 @@ export default function AuthProvider({ children }) {
       likedTandaIds: me.likedTandaIds,
       likedCortinaIds: me.likedCortinaIds,
       likedMixedOrder: me.likedMixedOrder,
+      advancedAccess: me.advancedAccess,
+      hasAdvancedAccess,
       requireAuth,
       refreshMe,
       logout,

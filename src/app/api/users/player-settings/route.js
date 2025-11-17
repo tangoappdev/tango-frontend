@@ -4,7 +4,7 @@ import { getUserFromRequest } from '@/lib/getUserFromRequest';
 import { initialSettings } from '@/components/tangoPlayerConstants';
 
 const ALLOWED_BOOLEAN_KEYS = new Set(['cortinas', 'cortinaFullLength']);
-const ALLOWED_STRING_KEYS = new Set(['activeMode', 'categoryFilter']);
+const ALLOWED_STRING_KEYS = new Set(['activeMode', 'categoryFilter', 'tandaMood']);
 const ALLOWED_NUMBER_KEYS = new Set(['tandaLength']);
 
 function sanitizeSettings(raw) {
@@ -27,7 +27,14 @@ function sanitizeSettings(raw) {
     if (Object.prototype.hasOwnProperty.call(raw, key)) {
       const value = raw[key];
       if (typeof value === 'string' && value.trim()) {
-        sanitized[key] = value.trim();
+        const normalized = value.trim();
+        if (
+          key === 'tandaMood' &&
+          !['balanced', 'rhythmic', 'melodic'].includes(normalized)
+        ) {
+          return;
+        }
+        sanitized[key] = normalized;
       }
     }
   });
@@ -105,4 +112,3 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
-

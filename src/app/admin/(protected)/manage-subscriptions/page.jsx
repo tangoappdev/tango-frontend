@@ -21,7 +21,7 @@ function TierBadge({ tier }) {
   );
 }
 
-function RowActions({ onAction, busy }) {
+function RowActions({ onAction, busy, canToggleAdvanced = false, hasAdvancedAccess = false }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -96,6 +96,23 @@ function RowActions({ onAction, busy }) {
               Clear Manual Override
             </button>
             <div className="my-1 h-px bg-white/10" />
+            {canToggleAdvanced && (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    handleSelect(hasAdvancedAccess ? 'revoke_advanced_access' : 'grant_advanced_access')
+                  }
+                  className={`px-3 py-2 text-left transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    hasAdvancedAccess ? 'text-rose-200' : 'text-[#25edda]'
+                  }`}
+                >
+                  {hasAdvancedAccess ? 'Revoke feature access' : 'Grant feature access'}
+                </button>
+                <div className="my-1 h-px bg-white/10" />
+              </>
+            )}
             <button
               type="button"
               disabled={busy}
@@ -506,6 +523,7 @@ export default function ManageSubscriptionsPage() {
                   <th className="px-4 py-3">User</th>
                   <th className="px-4 py-3">Plan</th>
                   <th className="px-4 py-3">Tier</th>
+                  <th className="px-4 py-3">Feature Access</th>
                   <th className="px-4 py-3">Created</th>
                   <th className="px-4 py-3">Last activity</th>
                   <th className="px-4 py-3">City</th>
@@ -518,13 +536,13 @@ export default function ManageSubscriptionsPage() {
               <tbody className="divide-y divide-white/10 text-gray-100">
                 {loading && allUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
+                    <td colSpan={11} className="px-4 py-10 text-center text-gray-400">
                       Loading subscription data…
                     </td>
                   </tr>
                 ) : allUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-4 py-10 text-center text-gray-400">
+                    <td colSpan={11} className="px-4 py-10 text-center text-gray-400">
                       No users found.
                     </td>
                   </tr>
@@ -560,6 +578,44 @@ export default function ManageSubscriptionsPage() {
                       </td>
                       <td className="px-4 py-4">
                         <TierBadge tier={user.tier} />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-col gap-2 text-xs">
+                          <span
+                            className={`font-semibold ${
+                              user.tier === 'pro' || user.advancedAccess ? 'text-emerald-300' : 'text-gray-400'
+                            }`}
+                          >
+                            {user.tier === 'pro'
+                              ? 'Auto (Pro plan)'
+                              : user.advancedAccess
+                                ? 'Manual access'
+                                : 'No access'}
+                          </span>
+                          {user.tier !== 'pro' && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleUserAction(user.uid, {
+                                  action: user.advancedAccess ? 'revoke_advanced_access' : 'grant_advanced_access',
+                                })
+                              }
+                              disabled={actionBusyUid === user.uid}
+                              className={`w-fit rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                                user.advancedAccess
+                                  ? 'border-rose-300 text-rose-200 hover:bg-rose-500/10'
+                                  : 'border-[#25edda] text-[#25edda] hover:bg-[#25edda]/10'
+                              }`}
+                            >
+                              {user.advancedAccess ? 'Revoke Access' : 'Grant Access'}
+                            </button>
+                          )}
+                          {user.tier === 'trial' && (
+                            <span className="text-[11px] text-amber-300">
+                              Upgrade to Pro to enable automatically.
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-4">{formatDate(user.createdAt)}</td>
                       <td className="px-4 py-4 text-xs text-gray-300">
@@ -605,6 +661,8 @@ export default function ManageSubscriptionsPage() {
                       <td className="px-4 py-4 text-right">
                         <RowActions
                           busy={actionBusyUid === user.uid}
+                          canToggleAdvanced={user.tier !== 'pro'}
+                          hasAdvancedAccess={Boolean(user.advancedAccess)}
                           onAction={(payload) => handleUserAction(user.uid, payload)}
                         />
                       </td>
@@ -640,3 +698,4 @@ export default function ManageSubscriptionsPage() {
     </div>
   );
 }
+

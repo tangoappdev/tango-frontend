@@ -39,6 +39,8 @@ export async function GET(request) {
   const tier = profile?.tier || (isPro ? 'pro' : 'free');
   const trialActive = trialEndsAt > Date.now();
 
+  const advancedAccess = !!profile?.advancedAccess;
+
   return NextResponse.json(
     {
       isAuthenticated: true,
@@ -62,6 +64,7 @@ export async function GET(request) {
       likedTandaIds: profile?.likedTandaIds || [],
       likedCortinaIds: profile?.likedCortinaIds || [],
       likedMixedOrder: profile?.likedMixedOrder || [],
+      advancedAccess,
     },
     { status: 200, headers: { 'cache-control': 'no-store' } }
   );

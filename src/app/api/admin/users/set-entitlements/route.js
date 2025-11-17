@@ -122,6 +122,14 @@ export async function POST(request) {
         update.trialEndsAt = FieldValue.delete();
         break;
       }
+      case 'grant_advanced_access': {
+        update.advancedAccess = true;
+        break;
+      }
+      case 'revoke_advanced_access': {
+        update.advancedAccess = false;
+        break;
+      }
       default:
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }

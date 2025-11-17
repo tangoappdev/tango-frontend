@@ -150,6 +150,7 @@ export async function GET(request) {
         // Derived
         tier,
         isPro: inferredIsPro,
+        advancedAccess: !!profile.advancedAccess,
       };
     });
 

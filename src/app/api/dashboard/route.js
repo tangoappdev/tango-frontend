@@ -38,11 +38,13 @@ export async function GET(request) {
         totalTracks: 0,
         tracksByType: { Tango: 0, Vals: 0, Milonga: 0 },
         orchestraStats: {},
+        tangoMoodBreakdown: { rhythmic: 0, melodic: 0 },
       });
     }
 
     let totalTandas = 0;
     const tandasByType = { Tango: 0, Vals: 0, Milonga: 0 };
+    const tangoMoodBreakdown = { rhythmic: 0, melodic: 0 };
     let totalTracks = 0;
     const tracksByType = { Tango: 0, Vals: 0, Milonga: 0 };
     const orchestraStats = {};
@@ -51,15 +53,17 @@ export async function GET(request) {
       const tanda = doc.data();
       totalTandas++;
 
-      if (tanda.type && tandasByType.hasOwnProperty(tanda.type)) {
-        tandasByType[tanda.type]++;
+      const type = tanda.type || '';
+
+      if (type && tandasByType.hasOwnProperty(type)) {
+        tandasByType[type]++;
       }
 
       if (tanda.tracks && Array.isArray(tanda.tracks)) {
         const trackCount = tanda.tracks.length;
         totalTracks += trackCount;
-        if (tanda.type && tracksByType.hasOwnProperty(tanda.type)) {
-          tracksByType[tanda.type] += trackCount;
+        if (type && tracksByType.hasOwnProperty(type)) {
+          tracksByType[type] += trackCount;
         }
       }
 
@@ -71,8 +75,17 @@ export async function GET(request) {
           };
         }
         orchestraStats[tanda.orchestra].total++;
-        if (tanda.type && orchestraStats[tanda.orchestra].byType.hasOwnProperty(tanda.type)) {
-          orchestraStats[tanda.orchestra].byType[tanda.type]++;
+        if (type && orchestraStats[tanda.orchestra].byType.hasOwnProperty(type)) {
+          orchestraStats[tanda.orchestra].byType[type]++;
+        }
+      }
+
+      if (type === 'Tango') {
+        const style = (tanda.meta?.styleCode || tanda.style || '').toString().trim().toLowerCase();
+        if (style.includes('rhythmic')) {
+          tangoMoodBreakdown.rhythmic += 1;
+        } else {
+          tangoMoodBreakdown.melodic += 1;
         }
       }
     });
@@ -83,6 +96,7 @@ export async function GET(request) {
       totalTracks,
       tracksByType,
       orchestraStats,
+      tangoMoodBreakdown,
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);

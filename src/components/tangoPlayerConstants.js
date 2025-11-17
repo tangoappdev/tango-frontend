@@ -22,6 +22,11 @@ export const JUST_MODE_OPTIONS = [
 export const TANDA_ORDER_OPTIONS = Object.keys(TANDA_SEQUENCES).map(key => ({ value: key, label: key }));
 export const ORCHESTRA_TYPE_OPTIONS = Object.values(CATEGORIES).map(cat => ({ value: cat, label: cat }));
 export const TANDA_LENGTH_OPTIONS = [3, 4];
+export const TANDA_MOOD_OPTIONS = [
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'rhythmic', label: 'Rhythmic' },
+  { value: 'melodic', label: 'Melodic' },
+];
 export const FREESTYLE_FETCH_BATCH_SIZE = 6;
 export const PLAYLIST_REFILL_THRESHOLD = 6;
 export const MIN_SAME_TANDA_GAP = 15;
@@ -33,4 +38,5 @@ export const initialSettings = {
   tandaLength: 4,
   cortinas: true,
   cortinaFullLength: false,
+  tandaMood: 'balanced',
 };

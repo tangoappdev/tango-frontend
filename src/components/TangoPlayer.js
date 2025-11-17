@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -24,6 +25,7 @@ import {
   TANDA_ORDER_OPTIONS,
   ORCHESTRA_TYPE_OPTIONS,
   TANDA_LENGTH_OPTIONS,
+  TANDA_MOOD_OPTIONS,
   PLAYLIST_REFILL_THRESHOLD,
   MIN_SAME_ORCHESTRA_GAP,
   initialSettings
@@ -31,6 +33,7 @@ import {
 
 const QUICK_MODE_VALUES = new Set(JUST_MODE_OPTIONS.map((opt) => opt.value));
 const SETTINGS_INIT_STORAGE_PREFIX = 'vtdj-settings-init:';
+const SETTINGS_MOOD_STORAGE_PREFIX = 'vtdj-settings-mood:';
 
 const getSettingsInitStorageKey = (user) => {
   if (!user) return null;
@@ -38,6 +41,15 @@ const getSettingsInitStorageKey = (user) => {
   if (uid) return `${SETTINGS_INIT_STORAGE_PREFIX}${uid}`;
   const email = user.email || null;
   if (email) return `${SETTINGS_INIT_STORAGE_PREFIX}${email}`;
+  return null;
+};
+
+const getSettingsMoodStorageKey = (user) => {
+  if (!user) return null;
+  const uid = user.uid || user.id || null;
+  if (uid) return `${SETTINGS_MOOD_STORAGE_PREFIX}${uid}`;
+  const email = user.email || null;
+  if (email) return `${SETTINGS_MOOD_STORAGE_PREFIX}${email}`;
   return null;
 };
 
@@ -434,6 +446,12 @@ function SettingsPanel({
   variant = 'sheet',
   onDismiss,
   showCloseButton = false,
+  canEditTandaMood = true,
+  lockedMoodTooltipVisible = false,
+  onLockedMoodInteract = null,
+  canEditTandaLength = true,
+  lockedLengthTooltipVisible = false,
+  onLockedLengthInteract = null,
 }) {
   const panelRef = useRef(null);
   const segments = useMemo(() => [
@@ -451,17 +469,47 @@ function SettingsPanel({
     }
     handleSettingChange('activeMode', value);
   };
+  const moodDisabled = !canEditTandaMood;
+  const lengthDisabled = !canEditTandaLength;
   const content = (
     <>
       <h3 className="text-lg mb-1 text-center text-gray-300">{title}</h3>
       <div className="flex flex-col gap-3">
-        <div className="flex gap-2 flex-col">
-          <label htmlFor="categoryFilterMobile" className="block text-sm font-medium text-gray-400 mb-1">Orchestra Type</label>
-          <div className="relative">
-            <select id="categoryFilterMobile" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full h-10 appearance-none cursor-pointer rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
-              {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
-            </select>
-            <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-3">
+          <div className="flex-1 flex flex-col gap-2">
+            <label htmlFor="categoryFilterMobile" className="block text-sm font-medium text-gray-400">Orchestra Type</label>
+            <div className="relative">
+              <select id="categoryFilterMobile" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full h-10 appearance-none cursor-pointer rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
+                {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+              </select>
+              <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col gap-2">
+            <label htmlFor="tandaMoodMobile" className="block text-sm font-medium text-gray-400">Tanda Mood</label>
+            <div className="relative">
+              <select
+                id="tandaMoodMobile"
+                name="tandaMood"
+                value={settings.tandaMood}
+                onChange={(e) => handleSettingChange('tandaMood', e.target.value)}
+                aria-disabled={moodDisabled}
+                title={moodDisabled ? 'Pro only' : undefined}
+                onClick={() => {
+                  if (moodDisabled) onLockedMoodInteract?.();
+                }}
+                onFocus={() => {
+                  if (moodDisabled) onLockedMoodInteract?.();
+                }}
+                className={`w-full h-10 appearance-none cursor-pointer rounded-full bg-[#30333a] text-white px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] ${moodDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {TANDA_MOOD_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+              </select>
+              <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+            </div>
+            {moodDisabled && lockedMoodTooltipVisible && (
+              <p className="text-[11px] text-amber-300">Pro only.</p>
+            )}
           </div>
         </div>
         <div className="flex flex-col gap-4">
@@ -498,25 +546,32 @@ function SettingsPanel({
           )}
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium text-gray-400">Tango Tanda Length</span>
-            <div className={`flex w-full ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className={`flex w-full ${lengthDisabled ? 'opacity-50' : ''}`}>
               {TANDA_LENGTH_OPTIONS.map((len, index) => {
                 const isActive = settings.tandaLength === len;
                 return (
                   <button
                     key={len}
-                    onClick={() => handleSettingChange('tandaLength', len)}
-                    disabled={user && !isPro}
+                    onClick={() => {
+                      if (lengthDisabled) onLockedLengthInteract?.();
+                      handleSettingChange('tandaLength', len);
+                    }}
+                    aria-disabled={lengthDisabled}
+                    title={lengthDisabled ? 'Pro only' : undefined}
                     className={`flex-1 h-10 px-4 text-sm transition-all duration-200 ease-in-out whitespace-nowrap flex items-center justify-center ${
                       isActive
                         ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
                         : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
-                    } ${index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''}`}
+                    } ${lengthDisabled ? 'cursor-not-allowed' : ''} ${index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''}`}
                   >
                     {len} Tangos
                   </button>
                 );
               })}
             </div>
+            {lengthDisabled && lockedLengthTooltipVisible && (
+              <p className="text-[11px] text-amber-300">Pro only.</p>
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-medium text-gray-400">Cortinas</span>
@@ -670,7 +725,7 @@ function getSequenceSlots(activeMode) {
   return [];
 }
 
-function buildGeneratorContext(library, activeMode, orchestraGapSize = MIN_SAME_ORCHESTRA_GAP) {
+function buildGeneratorContext(library, activeMode, tandaMood = 'balanced', orchestraGapSize = MIN_SAME_ORCHESTRA_GAP) {
   if (!library || !Array.isArray(library.buckets?.tangoMelodic)) {
     return null;
   }
@@ -680,12 +735,14 @@ function buildGeneratorContext(library, activeMode, orchestraGapSize = MIN_SAME_
 
   const clone = (arr) => (Array.isArray(arr) ? [...arr] : []);
 
+  const normalizedMood = ['melodic', 'rhythmic'].includes(tandaMood) ? tandaMood : 'balanced';
   const context = {
     sequence,
     seqIndex: 0,
-    nextTangoSubtype: 'melodic',
+    nextTangoSubtype: normalizedMood === 'rhythmic' ? 'rhythmic' : 'melodic',
     lastTangoOrchestras: [],
     orchestraGapSize: Math.max(0, orchestraGapSize || 0),
+    tandaMood: normalizedMood,
     allIds: {
       TM: clone(library.buckets.tangoMelodic),
       TR: clone(library.buckets.tangoRhythmic),
@@ -774,6 +831,21 @@ function hydrateGeneratorState(context, snapshot) {
 }
 
 function resolveTangoCategoryKey(context) {
+  const mood = context.tandaMood || 'balanced';
+  if (mood === 'melodic') {
+    const melodicPool = context.allIds[CATEGORY_KEYS.TM] || [];
+    if (melodicPool.length > 0) return CATEGORY_KEYS.TM;
+    const rhythmicPool = context.allIds[CATEGORY_KEYS.TR] || [];
+    if (rhythmicPool.length > 0) return CATEGORY_KEYS.TR;
+    return CATEGORY_KEYS.TM;
+  }
+  if (mood === 'rhythmic') {
+    const rhythmicPool = context.allIds[CATEGORY_KEYS.TR] || [];
+    if (rhythmicPool.length > 0) return CATEGORY_KEYS.TR;
+    const melodicPool = context.allIds[CATEGORY_KEYS.TM] || [];
+    if (melodicPool.length > 0) return CATEGORY_KEYS.TM;
+    return CATEGORY_KEYS.TR;
+  }
   const preferred = context.nextTangoSubtype === 'melodic' ? CATEGORY_KEYS.TM : CATEGORY_KEYS.TR;
   const preferredPool = context.allIds[preferred] || [];
   if (preferredPool.length > 0) {
@@ -853,7 +925,9 @@ function pickNextTandaId(context, randomFn = Math.random) {
         context.lastTangoOrchestras.shift();
       }
     }
-    context.nextTangoSubtype = context.nextTangoSubtype === 'melodic' ? 'rhythmic' : 'melodic';
+    if ((context.tandaMood || 'balanced') === 'balanced') {
+      context.nextTangoSubtype = context.nextTangoSubtype === 'melodic' ? 'rhythmic' : 'melodic';
+    }
   }
 
   context.seqIndex = (context.seqIndex + 1) % context.sequence.length;
@@ -1064,10 +1138,52 @@ export default function TangoPlayer() {
   const [volume, setVolume] = useState(1);
   const volumeRef = useRef(1);
   const [queueStateHydrated, setQueueStateHydrated] = useState(false);
+  const [lockedMoodTooltip, setLockedMoodTooltip] = useState({ desktop: false, mobile: false });
+  const [lockedLengthTooltip, setLockedLengthTooltip] = useState({ desktop: false, mobile: false });
   // 3. Custom Hooks
-  const { user, isPro, requireAuth, likedTandaIds, likedCortinaIds, likedMixedOrder, updateLikedIds, updateLikedCortinaIds, updateLikedMixedOrder } = useAuth();
+  const lockedMoodTooltipTimers = useRef({ desktop: null, mobile: null });
+  const lockedLengthTooltipTimers = useRef({ desktop: null, mobile: null });
+  const { user, isPro, trialActive, hasAdvancedAccess, requireAuth, likedTandaIds, likedCortinaIds, likedMixedOrder, updateLikedIds, updateLikedCortinaIds, updateLikedMixedOrder } = useAuth();
   const lastActivityLogRef = useRef(0);
+  const canEditTandaMood = hasAdvancedAccess;
+  const canEditTandaLength = !user || isPro;
 
+  const triggerLockedMoodTooltip = useCallback((target) => {
+    if (canEditTandaMood) return;
+    setLockedMoodTooltip((prev) => ({ ...prev, [target]: true }));
+    const timerRef = lockedMoodTooltipTimers.current[target];
+    if (timerRef) {
+      clearTimeout(timerRef);
+    }
+    lockedMoodTooltipTimers.current[target] = setTimeout(() => {
+      setLockedMoodTooltip((prev) => ({ ...prev, [target]: false }));
+      lockedMoodTooltipTimers.current[target] = null;
+    }, 2000);
+  }, [canEditTandaMood]);
+
+  const triggerLockedLengthTooltip = useCallback((target) => {
+    if (canEditTandaLength) return;
+    setLockedLengthTooltip((prev) => ({ ...prev, [target]: true }));
+    const timerRef = lockedLengthTooltipTimers.current[target];
+    if (timerRef) {
+      clearTimeout(timerRef);
+    }
+    lockedLengthTooltipTimers.current[target] = setTimeout(() => {
+      setLockedLengthTooltip((prev) => ({ ...prev, [target]: false }));
+      lockedLengthTooltipTimers.current[target] = null;
+    }, 2000);
+  }, [canEditTandaLength]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(lockedMoodTooltipTimers.current).forEach((timer) => {
+        if (timer) clearTimeout(timer);
+      });
+      Object.values(lockedLengthTooltipTimers.current).forEach((timer) => {
+        if (timer) clearTimeout(timer);
+      });
+    };
+  }, []);
   const logPlayActivity = useCallback(() => {
     if (!user) return;
     const now = Date.now();
@@ -1181,6 +1297,7 @@ export default function TangoPlayer() {
         context = buildGeneratorContext(
           { buckets: libraryBuckets, metaById: libraryMeta, version: libraryVersion },
           settings.activeMode,
+          settings.tandaMood,
           MIN_SAME_ORCHESTRA_GAP,
         );
         if (context) {
@@ -1326,6 +1443,7 @@ export default function TangoPlayer() {
     libraryState.category,
     libraryState.version,
     settings.activeMode,
+    settings.tandaMood,
     setManualQueue,
     setUpcomingPlaylist,
     registerCortinaMeta,
@@ -1448,6 +1566,15 @@ export default function TangoPlayer() {
 
     const loadSettings = async () => {
       let loadedSettings = null;
+      const moodStorageKey = getSettingsMoodStorageKey(user);
+      let storedMood = null;
+      if (moodStorageKey && typeof window !== 'undefined') {
+        try {
+          storedMood = window.localStorage.getItem(moodStorageKey);
+        } catch {
+          storedMood = null;
+        }
+      }
       try {
         const response = await fetch('/api/users/player-settings', {
           method: 'GET',
@@ -1460,8 +1587,13 @@ export default function TangoPlayer() {
         const data = await response.json();
         if (cancelled) return;
         if (data?.settings && typeof data.settings === 'object') {
-          loadedSettings = data.settings;
-          setSettings(prev => ({ ...prev, ...data.settings }));
+          loadedSettings = { ...data.settings };
+          if (!loadedSettings.tandaMood && storedMood) {
+            loadedSettings.tandaMood = storedMood;
+          }
+          setSettings(prev => ({ ...prev, ...loadedSettings }));
+        } else if (storedMood) {
+          setSettings(prev => ({ ...prev, tandaMood: storedMood }));
         }
       } catch (error) {
         if (!cancelled) {
@@ -1478,11 +1610,21 @@ export default function TangoPlayer() {
           if (hasServerSpecificSettings) {
             setHasPersistedSettings(true);
             const storageKey = getSettingsInitStorageKey(user);
-            if (storageKey && typeof window !== 'undefined') {
-              try {
-                window.localStorage.setItem(storageKey, '1');
-              } catch {
-                /* ignore storage errors */
+            const moodStorageKey = getSettingsMoodStorageKey(user);
+            if (typeof window !== 'undefined') {
+              if (storageKey) {
+                try {
+                  window.localStorage.setItem(storageKey, '1');
+                } catch {
+                  /* ignore storage errors */
+                }
+              }
+              if (moodStorageKey && loadedSettings.tandaMood) {
+                try {
+                  window.localStorage.setItem(moodStorageKey, loadedSettings.tandaMood);
+                } catch {
+                  /* ignore storage errors */
+                }
               }
             }
           }
@@ -1514,6 +1656,11 @@ export default function TangoPlayer() {
       setCurrentCortinaFull(false);
     }
   }, [isCortinaPlaying]);
+  useEffect(() => {
+    if (!canEditTandaMood && settings.tandaMood !== 'balanced') {
+      setSettings((prev) => ({ ...prev, tandaMood: 'balanced' }));
+    }
+  }, [canEditTandaMood, settings.tandaMood]);
   useEffect(() => {
     if (!hasMounted) return;
     if (!user) return;
@@ -1577,6 +1724,7 @@ export default function TangoPlayer() {
     const context = buildGeneratorContext(
       { buckets: libraryBuckets, metaById: libraryMeta, version: libraryVersion },
       settings.activeMode,
+      settings.tandaMood,
       MIN_SAME_ORCHESTRA_GAP
     );
     generatorRef.current = context;
@@ -1605,7 +1753,7 @@ export default function TangoPlayer() {
     isResettingRef.current = true;
     setResetCounter(c => c + 1);
     setIsRefreshing(false);
-  }, [libraryLoading, libraryBuckets, libraryMeta, libraryVersion, settings.activeMode]);
+  }, [libraryLoading, libraryBuckets, libraryMeta, libraryVersion, settings.activeMode, settings.tandaMood]);
   // 4. Memos
   const currentTanda = useMemo(() => manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0] || null, [manualQueue, upcomingPlaylist]);
   const manualQueueIds = useMemo(() => manualQueue.map(t => t.id), [manualQueue]);
@@ -1932,6 +2080,9 @@ export default function TangoPlayer() {
       tandaLength: Number.isFinite(nextSettings.tandaLength) ? nextSettings.tandaLength : initialSettings.tandaLength,
       cortinas: Boolean(nextSettings.cortinas),
       cortinaFullLength: Boolean(nextSettings.cortinaFullLength),
+      tandaMood: ['balanced', 'rhythmic', 'melodic'].includes(nextSettings.tandaMood)
+        ? nextSettings.tandaMood
+        : initialSettings.tandaMood,
     };
     try {
       await fetch('/api/users/player-settings', {
@@ -1943,6 +2094,53 @@ export default function TangoPlayer() {
       console.error('[player-settings] Failed to persist settings', error);
     }
   }, [user]);
+
+  const lastSuccessfulSettingsRef = useRef(initialSettings);
+  const revertToLastSuccessfulSettings = useCallback((message) => {
+    const lastGood = lastSuccessfulSettingsRef.current || initialSettings;
+    const isAlreadyLastGood =
+      settings.activeMode === lastGood.activeMode &&
+      settings.categoryFilter === lastGood.categoryFilter &&
+      settings.tandaLength === lastGood.tandaLength &&
+      settings.cortinas === lastGood.cortinas &&
+      settings.cortinaFullLength === lastGood.cortinaFullLength &&
+      settings.tandaMood === lastGood.tandaMood;
+
+    setError(message ?? 'No tandas available for this selection.');
+
+    if (isAlreadyLastGood) {
+      setIsRefreshing(false);
+      return false;
+    }
+
+    setSettings(lastGood);
+    if (!QUICK_MODE_VALUES.has(lastGood.activeMode)) {
+      setLastFullSequence(lastGood.activeMode);
+    }
+
+    if (libraryState.category !== lastGood.categoryFilter) {
+      loadLibrary(lastGood.categoryFilter);
+    }
+
+    setManualQueue([]);
+    setUpcomingPlaylist([]);
+    generatorRef.current = null;
+    setQueueStateHydrated(false);
+    setIsRefreshing(false);
+    return true;
+  }, [
+    libraryState.category,
+    loadLibrary,
+    settings.activeMode,
+    settings.categoryFilter,
+    settings.cortinas,
+    settings.cortinaFullLength,
+    settings.tandaLength,
+    settings.tandaMood,
+    setManualQueue,
+    setUpcomingPlaylist,
+  ]);
+
   const persistQueueState = useCallback(async () => {
     if (!user || !queueStateHydratedRef.current) return;
     const category = libraryState.category;
@@ -1980,7 +2178,7 @@ export default function TangoPlayer() {
     } catch (error) {
       console.error('[queue-state] Failed to persist state', error);
     }
-  }, [user, libraryState.category, libraryState.version, settings.activeMode]);
+  }, [user, libraryState.category, libraryState.version, settings.activeMode, settings.tandaMood]);
   const dedupeTandaList = useCallback((list) => {
     if (!Array.isArray(list) || list.length <= 1) return list;
     const seen = new Set();
@@ -2009,30 +2207,6 @@ export default function TangoPlayer() {
       setManualQueue(deduped);
     }
   }, [manualQueue, dedupeTandaList]);
-  useEffect(() => {
-    if (!Array.isArray(upcomingPlaylist) || upcomingPlaylist.length === 0) return;
-    const manualIds = new Set(
-      Array.isArray(manualQueue) ? manualQueue.map(item => item?.id).filter(Boolean) : []
-    );
-    let list = dedupeTandaList(upcomingPlaylist);
-    if (manualIds.size > 0 && Array.isArray(list) && list.length > 0) {
-      let changed = false;
-      const filtered = list.filter(item => {
-        const id = item?.id;
-        if (id && manualIds.has(id)) {
-          changed = true;
-          return false;
-        }
-        return true;
-      });
-      if (changed) {
-        list = filtered;
-      }
-    }
-    if (list !== upcomingPlaylist) {
-      setUpcomingPlaylist(list);
-    }
-  }, [upcomingPlaylist, manualQueue, dedupeTandaList]);
   const schedulePersistQueueState = useCallback(() => {
     if (!user || !queueStateHydratedRef.current) return;
     if (!libraryState.category || !settings.activeMode) return;
@@ -2043,7 +2217,7 @@ export default function TangoPlayer() {
       persistQueueStateTimeoutRef.current = null;
       persistQueueState();
     }, 1500);
-  }, [user, libraryState.category, settings.activeMode, persistQueueState]);
+  }, [user, libraryState.category, settings.activeMode, settings.tandaMood, persistQueueState]);
   useEffect(() => {
     if (!user || !settingsHydrated) {
       settingsPersistArmedRef.current = false;
@@ -2084,6 +2258,7 @@ export default function TangoPlayer() {
     libraryState.version,
     libraryState.category,
     settings.activeMode,
+    settings.tandaMood,
   ]);
   const fetchAndFillPlaylist = useCallback(async (minBatch = 0) => {
     if (!cortinaPoolReady || !settingsHydrated) return;
@@ -2111,7 +2286,11 @@ export default function TangoPlayer() {
       }
 
       if (picks.length === 0) {
-        setError('No tandas available for this selection.');
+        const message = 'No tandas available for this selection. Reverting to last working settings.';
+        const reverted = revertToLastSuccessfulSettings(message);
+        if (!reverted) {
+          setError(message);
+        }
         return;
       }
 
@@ -2142,6 +2321,15 @@ export default function TangoPlayer() {
         .filter(Boolean);
 
       if (tandaBatch.length > 0) {
+        lastSuccessfulSettingsRef.current = { ...settings };
+        const moodStorageKey = getSettingsMoodStorageKey(user);
+        if (moodStorageKey && typeof window !== 'undefined') {
+          try {
+            window.localStorage.setItem(moodStorageKey, settings.tandaMood || initialSettings.tandaMood);
+          } catch {
+            /* ignore */
+          }
+        }
         let pool = shuffledCortinasRef.current;
         if (!Array.isArray(pool) || pool.length === 0) {
           pool = Array.isArray(cortinas) ? [...cortinas].sort(() => Math.random() - 0.5) : [];
@@ -2173,16 +2361,26 @@ export default function TangoPlayer() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [cortinas, setShuffledCortinas, cortinaPoolReady, settingsHydrated, registerCortinaMeta]);
+  }, [cortinas, setShuffledCortinas, cortinaPoolReady, settingsHydrated, registerCortinaMeta, revertToLastSuccessfulSettings, settings, user]);
   const handleInitialSettingsConfirm = useCallback(async () => {
     setShowInitialSettingsPrompt(false);
     setHasPersistedSettings(true);
     const storageKey = getSettingsInitStorageKey(user);
-    if (storageKey && typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem(storageKey, '1');
-      } catch {
-        /* ignore storage write errors */
+    const moodStorageKey = getSettingsMoodStorageKey(user);
+    if (typeof window !== 'undefined') {
+      if (storageKey) {
+        try {
+          window.localStorage.setItem(storageKey, '1');
+        } catch {
+          /* ignore storage write errors */
+        }
+      }
+      if (moodStorageKey) {
+        try {
+          window.localStorage.setItem(moodStorageKey, settings.tandaMood || initialSettings.tandaMood);
+        } catch {
+          /* ignore storage write errors */
+        }
       }
     }
     await persistPlayerSettings(settings);
@@ -2192,11 +2390,21 @@ export default function TangoPlayer() {
     setShowInitialSettingsPrompt(false);
     setHasPersistedSettings(true);
     const storageKey = getSettingsInitStorageKey(user);
-    if (storageKey && typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem(storageKey, '1');
-      } catch {
-        /* ignore storage write errors */
+    const moodStorageKey = getSettingsMoodStorageKey(user);
+    if (typeof window !== 'undefined') {
+      if (storageKey) {
+        try {
+          window.localStorage.setItem(storageKey, '1');
+        } catch {
+          /* ignore storage write errors */
+        }
+      }
+      if (moodStorageKey) {
+        try {
+          window.localStorage.setItem(moodStorageKey, initialSettings.tandaMood);
+        } catch {
+          /* ignore storage write errors */
+        }
       }
     }
     const defaults = { ...initialSettings };
@@ -2277,6 +2485,12 @@ export default function TangoPlayer() {
     }
   }, [fetchAndFillPlaylist]);
   const handleSettingChange = useCallback((settingName, value) => {
+    if (settingName === 'tandaMood' && !canEditTandaMood) {
+      return;
+    }
+    if (settingName === 'tandaLength' && !canEditTandaLength) {
+      return;
+    }
     if (settings?.[settingName] === value) return;
     setSettings(prev => {
       if (prev?.[settingName] === value) return prev;
@@ -2288,8 +2502,10 @@ export default function TangoPlayer() {
       }
     } else if (settingName === 'activeMode') {
       setIsRefreshing(true);
+    } else if (settingName === 'tandaMood') {
+      setIsRefreshing(true);
     }
-  }, [libraryState.category, loadLibrary, settings]);
+  }, [libraryState.category, loadLibrary, settings, canEditTandaMood, canEditTandaLength]);
   const handleFullSequenceSelect = useCallback((value) => {
     if (!value) return;
     handleSettingChange('activeMode', value);
@@ -2843,12 +3059,12 @@ export default function TangoPlayer() {
   ]);
   const handleRefreshPlaylist = useCallback(() => {
     if (isFetchingRef.current) return;
-    const context = buildGeneratorContext(libraryState, settings.activeMode, MIN_SAME_ORCHESTRA_GAP);
+    const context = buildGeneratorContext(libraryState, settings.activeMode, settings.tandaMood, MIN_SAME_ORCHESTRA_GAP);
     generatorRef.current = context;
     isResettingRef.current = true;
     setIsRefreshing(true);
     setResetCounter(c => c + 1);
-  }, [libraryState, settings.activeMode]);
+  }, [libraryState, settings.activeMode, settings.tandaMood]);
   const handleSkipForward = useCallback(() => {
     if (user && !isPro) return;
     if (isCortinaPlaying) {
@@ -3354,6 +3570,7 @@ export default function TangoPlayer() {
   );
 }
   const currentTrackTitle = currentTanda?.tracks_signed?.[currentTrackIndex]?.title || '...';
+  const shouldBlurTrackTitle = Boolean(user && !isPro);
   const displayTandaLength = currentTanda ? ((currentTanda.type === 'Tango') ? settings.tandaLength : 3) : '?';
   const displayTotalTracks = currentTanda?.tracks_signed?.length || 0;
   const baseButtonClasses = "rounded-full text-gray-300 transition-all duration-200 ease-in-out shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[inset_5px_5px_10px_#131417,inset_-5px_-5px_10px_#4d525d] hover:text-[#25edda]";
@@ -3421,14 +3638,38 @@ export default function TangoPlayer() {
                       <span>Settings</span>
                     </h3>
                     <div className="flex flex-col gap-4">
-                      {/* 1. Orchestra Type */}
-                      <div>
-                        <label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-3">Orchestra Type</label>
-                        <div className="relative">
-                          <select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
-                            {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                          </select>
-                          <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+                      {/* 1. Orchestra Type & Mood */}
+                      <div className="flex flex-col gap-4 xl:flex-row xl:gap-3">
+                        <div className="flex-1">
+                          <label htmlFor="categoryFilterDesktop" className="block text-sm font-medium text-gray-400 mb-3">Orchestra Type</label>
+                          <div className="relative">
+                            <select id="categoryFilterDesktop" name="categoryFilter" value={settings.categoryFilter} onChange={(e) => handleSettingChange('categoryFilter', e.target.value)} className="w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]">
+                              {ORCHESTRA_TYPE_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                            </select>
+                            <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <label htmlFor="tandaMoodDesktop" className="block text-sm font-medium text-gray-400 mb-3">Tanda Mood</label>
+                          <div className="relative">
+                            <select
+                              id="tandaMoodDesktop"
+                              name="tandaMood"
+                              value={settings.tandaMood}
+                              onChange={(e) => handleSettingChange('tandaMood', e.target.value)}
+                              aria-disabled={!canEditTandaMood}
+                              title={!canEditTandaMood ? 'Pro only' : undefined}
+                              onClick={() => { if (!canEditTandaMood) triggerLockedMoodTooltip('desktop'); }}
+                              onFocus={() => { if (!canEditTandaMood) triggerLockedMoodTooltip('desktop'); }}
+                              className={`w-full appearance-none cursor-pointer rounded-full bg-[#30333a] text-white p-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#25edda] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] ${!canEditTandaMood ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              {TANDA_MOOD_OPTIONS.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                            </select>
+                            <ChevronDownIcon className="h-5 w-5 text-gray-400 absolute top-1/2 right-4 -translate-y-1/2 pointer-events-none" />
+                          </div>
+                          {!canEditTandaMood && lockedMoodTooltip.desktop && (
+                            <p className="mt-2 text-xs text-amber-300">Pro only.</p>
+                          )}
                         </div>
                       </div>
                       {/* 3. Tanda Sequence */}
@@ -3474,25 +3715,34 @@ export default function TangoPlayer() {
                         <span className="block text-sm font-medium text-gray-400 mb-3">
                           Tango Tanda Length
                         </span>
-                        <div className={`flex w-full gap-0 mt-1 ${user && !isPro ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <div className={`flex w-full gap-0 mt-1 ${!canEditTandaLength ? 'opacity-50' : ''}`}>
                           {TANDA_LENGTH_OPTIONS.map((len, index) => {
                             const isActive = settings.tandaLength === len;
                             return (
                               <button
                                 key={len}
-                                onClick={() => handleSettingChange('tandaLength', len)}
-                                disabled={user && !isPro}
+                                onClick={() => {
+                                  if (!canEditTandaLength) {
+                                    triggerLockedLengthTooltip('desktop');
+                                  }
+                                  handleSettingChange('tandaLength', len);
+                                }}
+                                aria-disabled={!canEditTandaLength}
+                                title={!canEditTandaLength ? 'Pro only' : undefined}
                                 className={`flex-1 py-2 text-sm transition-all duration-200 ease-in-out whitespace-nowrap text-center ${
                                   isActive
                                     ? 'text-[#25edda] bg-[#30333a] shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]'
                                     : 'text-gray-400 bg-[#30333a] shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] hover:shadow-[inset_2px_2px_4px_#1f2126,inset_-2px_-2px_4px_#41454e]'
-                                } ${index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''}`}
+                                } ${!canEditTandaLength ? 'cursor-not-allowed' : ''} ${index === 0 ? 'rounded-l-full' : index === TANDA_LENGTH_OPTIONS.length - 1 ? 'rounded-r-full' : ''}`}
                               >
                                 {len} Tangos
                               </button>
                             );
                           })}
                         </div>
+                        {!canEditTandaLength && lockedLengthTooltip.desktop && (
+                          <p className="mt-2 text-xs text-amber-300">Pro only.</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -3540,8 +3790,15 @@ export default function TangoPlayer() {
                       <div className="flex flex-col items-center text-center">
                         <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
                         <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
-                        <p className="text-xs text-gray-500 truncate select-none">
+                        <p className="text-xs text-gray-500 select-none">
                           Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}
+                          <span className="mx-1 text-gray-600">·</span>
+                      <span
+                        className={`text-gray-300 ${shouldBlurTrackTitle ? 'blur-[2.5px] select-none' : ''}`}
+                        title={shouldBlurTrackTitle ? 'Pro only' : undefined}
+                      >
+                        {currentTrackTitle}
+                      </span>
                         </p>
                       </div>
                       {user && (
@@ -3612,6 +3869,14 @@ export default function TangoPlayer() {
                 <button onClick={handleSkipForward} title={isPro ? 'Next Track' : 'Pro only ? Upgrade'} disabled={!currentTanda || (user && !isPro)} className={`${regularButtonStyle} p-3`}><ChevronRightIcon className="h-5 w-5" /></button>
                 <button onClick={handleNextTandaClick} disabled={isLoading || (manualQueue.length === 0 && upcomingPlaylist.length <= 1)} className={`${primaryButtonStyle} p-3`} title="Next Tanda"><ChevronDoubleRightIcon className="h-5 w-5" /></button>
               </div>
+              {user && !isPro && (
+                <p className="text-xs text-center text-gray-400 mt-5">
+                  Pro only?{' '}
+                  <Link href="/pricing" className="font-semibold text-[#25edda] hover:text-[#23d9c8] underline-offset-2 hover:underline">
+                    Upgrade
+                  </Link>
+                </p>
+              )}
               {skipMsg && (
                 <p className="text-xs text-yellow-300 text-center mt-3">{skipMsg}</p>
               )}
@@ -3770,10 +4035,17 @@ export default function TangoPlayer() {
                       <div className="flex flex-col items-center text-center">
                         <p className="text-xl truncate font-semibold text-gray-100">{currentTanda.orchestra || 'Unknown Orchestra'}</p>
                         <p className="text-base text-gray-400">{currentTanda.singer || 'Instrumental'} - {currentTanda.type || 'Unknown'}</p>
-                        <p className="text-xs text-gray-500 truncate select-none">
-                          Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}
-                        </p>
-                      </div>
+                      <p className="text-xs text-gray-500 select-none">
+                        Track {currentTrackIndex + 1} / {Math.min(displayTotalTracks, displayTandaLength)}
+                        <span className="mx-1 text-gray-600">·</span>
+                        <span
+                          className={`text-gray-300 ${shouldBlurTrackTitle ? 'blur-[2.5px] select-none' : ''}`}
+                          title={shouldBlurTrackTitle ? 'Pro only' : undefined}
+                        >
+                          {currentTrackTitle}
+                        </span>
+                      </p>
+                    </div>
                       {user && (
                         <button
                           onClick={() => handleLikeToggle(currentTanda.id)}
@@ -3833,7 +4105,7 @@ export default function TangoPlayer() {
             </div>
             <span className="text-xs w-10 text-left tabular-nums">{formatTime(duration)}</span>
           </div>  
-                    <div className="flex justify-center items-center space-x-3 sm:space-x-4 mb-4">
+          <div className="flex justify-center items-center space-x-3 sm:space-x-4 mb-4">
             <button
               onClick={handleRewind}
               title="Previous Tanda"
@@ -3875,6 +4147,14 @@ export default function TangoPlayer() {
               <ChevronDoubleRightIcon className="h-5 w-5" />
             </button>
           </div>
+          {user && !isPro && (
+            <p className="text-xs text-center text-gray-400">
+              Pro only?{' '}
+              <Link href="/pricing" className="font-semibold text-[#25edda] hover:text-[#23d9c8] underline-offset-2 hover:underline">
+                Upgrade
+              </Link>
+            </p>
+          )}
           {skipMsg && (
             <p className="text-xs text-yellow-300 text-center mb-2">{skipMsg}</p>
           )}
@@ -3937,6 +4217,12 @@ export default function TangoPlayer() {
           onDismiss={handleInitialSettingsSkip}
           showCloseButton
           title="How do you like your tandas?"
+          canEditTandaMood={canEditTandaMood}
+          lockedMoodTooltipVisible={lockedMoodTooltip.mobile}
+          onLockedMoodInteract={() => triggerLockedMoodTooltip('mobile')}
+          canEditTandaLength={canEditTandaLength}
+          lockedLengthTooltipVisible={lockedLengthTooltip.mobile}
+          onLockedLengthInteract={() => triggerLockedLengthTooltip('mobile')}
           footerContent={(
             <div className="flex flex-col items-center gap-3">
               <button
@@ -3990,6 +4276,12 @@ export default function TangoPlayer() {
           lastFullSequence={lastFullSequence}
           activeFullSequence={activeFullSequence}
           onFullSequenceSelect={handleFullSequenceSelect}
+          canEditTandaMood={canEditTandaMood}
+          lockedMoodTooltipVisible={lockedMoodTooltip.mobile}
+          onLockedMoodInteract={() => triggerLockedMoodTooltip('mobile')}
+          canEditTandaLength={canEditTandaLength}
+          lockedLengthTooltipVisible={lockedLengthTooltip.mobile}
+          onLockedLengthInteract={() => triggerLockedLengthTooltip('mobile')}
         />
       )}
       <DragOverlay dropAnimation={null}>

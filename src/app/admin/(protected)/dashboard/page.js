@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebaseClient';
@@ -29,13 +29,36 @@ const StatCard = ({ title, value, breakdown, isLoading }) => {
         )}
       </div>
       {isExpanded && breakdown && (
-        <div className="mt-4 pt-4 border-t border-white/10 space-y-1 text-sm">
-          {Object.entries(breakdown).map(([key, val]) => (
-            <div key={key} className="flex justify-between text-gray-300">
-              <span>{key}</span>
-              <span className="font-semibold">{val}</span>
-            </div>
-          ))}
+        <div className="mt-4 pt-4 border-t border-white/10 space-y-2 text-sm">
+          {Object.entries(breakdown).map(([key, val]) => {
+            const isObject = val && typeof val === 'object' && !Array.isArray(val);
+            const displayValue =
+              isObject && Object.prototype.hasOwnProperty.call(val, 'value')
+                ? val.value
+                : val ?? 0;
+            const subBreakdown =
+              isObject && Object.prototype.hasOwnProperty.call(val, 'subBreakdown')
+                ? val.subBreakdown
+                : null;
+            return (
+              <div key={key}>
+                <div className="flex justify-between text-gray-300">
+                  <span>{key}</span>
+                  <span className="font-semibold">{displayValue}</span>
+                </div>
+                {subBreakdown && (
+                  <div className="mt-1 space-y-1 pl-4 text-xs text-gray-400">
+                    {Object.entries(subBreakdown).map(([subKey, subValue]) => (
+                      <div key={`${key}-${subKey}`} className="flex justify-between">
+                        <span>{subKey}</span>
+                        <span className="font-semibold text-gray-300">{subValue}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -113,6 +136,21 @@ export default function AdminDashboard() {
     fetchStats();
   }, []);
 
+  const totalTandasBreakdown = useMemo(() => {
+    if (!stats?.tandasByType) return null;
+    const base = { ...stats.tandasByType };
+    if (stats?.tangoMoodBreakdown) {
+      base.Tango = {
+        value: stats.tandasByType?.Tango ?? 0,
+        subBreakdown: {
+          Rhythmic: stats.tangoMoodBreakdown?.rhythmic ?? 0,
+          Melodic: stats.tangoMoodBreakdown?.melodic ?? 0,
+        },
+      };
+    }
+    return base;
+  }, [stats]);
+
 
   // ANCHOR: admin-dashboard-logout (REPLACE)
 const handleLogout = async () => {
@@ -176,7 +214,7 @@ const handleLogout = async () => {
                     <StatCard 
                         title="Total Tandas" 
                         value={stats?.totalTandas} 
-                        breakdown={stats?.tandasByType}
+                        breakdown={totalTandasBreakdown}
                         isLoading={isLoading}
                     />
                     <StatCard 
