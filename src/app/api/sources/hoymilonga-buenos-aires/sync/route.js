@@ -92,6 +92,18 @@ function detectEventType(text) {
   return /pr[áa]ctica/i.test(text) ? 'practica' : 'milonga';
 }
 
+function extractImageUrls(imageField) {
+  if (!imageField) return [];
+  if (Array.isArray(imageField)) {
+    return imageField.map((item) => toFullUrl(String(item))).filter(Boolean);
+  }
+  if (typeof imageField === 'string') {
+    const url = toFullUrl(imageField);
+    return url ? [url] : [];
+  }
+  return [];
+}
+
 async function deleteExistingSourceEvents(db) {
   const collection = db.collection('external_events');
   let totalDeleted = 0;
@@ -149,6 +161,7 @@ export async function POST(request) {
         const venue = normalizeWhitespace(location.name || '');
         const sourceUrl = toFullUrl(entry.url) || SOURCE_URL;
         const eventType = detectEventType(`${title} ${description}`);
+        const imageUrls = extractImageUrls(entry.image);
 
         events.push({
           source: SOURCE_ID,
@@ -160,6 +173,8 @@ export async function POST(request) {
           venue: venue || null,
           address: address || null,
           descriptionRaw: description || null,
+          imageUrl: imageUrls[0] || null,
+          imageUrls,
           tagsRaw: [],
           links: [],
           scrapedAt: new Date().toISOString(),

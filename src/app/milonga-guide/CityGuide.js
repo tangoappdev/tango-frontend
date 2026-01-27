@@ -132,29 +132,49 @@ export default async function CityGuide({ citySlug }) {
           <h2 className="text-lg font-semibold text-white">Recurring year-round events</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {recurringEvents.map((event) => (
-              <article key={event.id} className="rounded-2xl border border-white/5 bg-[#30333a] p-5">
-                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                  {event.dayOfWeek && (
-                    <span className="rounded-full border border-white/10 px-3 py-1 text-gray-300">
-                      {event.dayOfWeek}
-                    </span>
+              <article key={event.id} className="rounded-2xl border border-white/5 bg-[#30333a]">
+                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
+                  {(event.imageUrl || event.citySlug === 'new-york') && (
+                    <div className="h-[114px] w-[114px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                      {event.imageUrl ? (
+                        <img
+                          src={event.imageUrl}
+                          alt={`${event.title} logo`}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2a2d33] via-[#30333a] to-[#1f2126] text-[11px] font-semibold uppercase tracking-[0.2em] text-[#25edda]/80">
+                          NY
+                        </div>
+                      )}
+                    </div>
                   )}
-                  {formatTimeRange(event) && (
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-gray-200">
-                      {formatTimeRange(event)}
-                    </span>
-                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                      {event.dayOfWeek && (
+                        <span className="rounded-full border border-white/10 px-3 py-1 text-gray-300">
+                          {event.dayOfWeek}
+                        </span>
+                      )}
+                      {formatTimeRange(event) && (
+                        <span className="rounded-full bg-white/10 px-3 py-1 text-gray-200">
+                          {formatTimeRange(event)}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="mt-3 text-base font-semibold text-white">{event.title}</h3>
+                    {event.venue && (
+                      <p className="mt-2 text-sm font-medium text-gray-200">{event.venue}</p>
+                    )}
+                    {event.address && (
+                      <p className="mt-1 text-sm text-gray-300">{event.address}</p>
+                    )}
+                    {event.frequencyRaw && (
+                      <p className="mt-2 text-xs text-gray-400">{event.frequencyRaw}</p>
+                    )}
+                  </div>
                 </div>
-                <h3 className="mt-3 text-base font-semibold text-white">{event.title}</h3>
-                {event.venue && (
-                  <p className="mt-2 text-sm font-medium text-gray-200">{event.venue}</p>
-                )}
-                {event.address && (
-                  <p className="mt-1 text-sm text-gray-300">{event.address}</p>
-                )}
-                {event.frequencyRaw && (
-                  <p className="mt-2 text-xs text-gray-400">{event.frequencyRaw}</p>
-                )}
               </article>
             ))}
           </div>
