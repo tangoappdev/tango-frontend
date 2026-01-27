@@ -4,19 +4,19 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebaseClient';
-import { ArrowRightIcon, PlusCircleIcon, CogIcon, ArrowLeftStartOnRectangleIcon, MusicalNoteIcon, ChevronDownIcon, ChevronRightIcon, SpeakerWaveIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, PlusCircleIcon, CogIcon, ArrowLeftStartOnRectangleIcon, MusicalNoteIcon, ChevronDownIcon, ChevronRightIcon, SpeakerWaveIcon, UsersIcon, CreditCardIcon } from '@heroicons/react/24/outline';
 
 // --- Statistics Components ---
 
-const StatCard = ({ title, value, breakdown, isLoading }) => {
+const StatCard = ({ title, value, breakdown, isLoading, className = '' }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (isLoading) {
-    return <div className="bg-[#30333a] p-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57] animate-pulse h-[171px]"></div>;
+    return <div className={`bg-[#30333a] p-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57] animate-pulse ${className}`}></div>;
   }
 
   return (
-    <div className="bg-[#30333a] p-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57]">
+    <div className={`bg-[#30333a] p-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57] ${className}`}>
       <div className="flex justify-between items-center">
         <div>
           <p className="text-gray-400 text-sm">{title}</p>
@@ -65,18 +65,18 @@ const StatCard = ({ title, value, breakdown, isLoading }) => {
   );
 };
 
-const OrchestraStats = ({ stats, isLoading }) => {
+const OrchestraStats = ({ stats, isLoading, className = '' }) => {
     const [expandedOrchestra, setExpandedOrchestra] = useState(null);
 
     if (isLoading) {
-        return <div className="bg-[#30333a] p-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57] animate-pulse h-full"></div>
+        return <div className={`bg-[#30333a] p-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57] animate-pulse h-full ${className}`}></div>
     }
 
     const sortedOrchestras = Object.entries(stats).sort(([, a], [, b]) => b.total - a.total);
     const totalOrchestras = sortedOrchestras.length;
 
     return (
-        <div className="bg-[#30333a] p-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57] flex flex-col h-full">
+        <div className={`bg-[#30333a] p-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57] flex flex-col h-full ${className}`}>
             <div className="flex-shrink-0">
                 <p className="text-gray-400 text-sm">Total Orchestras</p>
                 <p className="text-3xl font-bold text-white">{totalOrchestras}</p>
@@ -174,15 +174,15 @@ const handleLogout = async () => {
   const NavCard = ({ title, description, href, icon: Icon }) => (
     <button
       onClick={() => router.push(href)}
-      className="bg-[#30333a] p-6 rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57] hover:shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e] transition-all duration-200 ease-in-out text-left w-full group"
+      className="bg-[#30333a] px-4 py-3 rounded-xl hover:bg-[#363a42] transition-colors duration-150 ease-in-out text-left w-full group"
     >
       <div className="flex justify-between items-start">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Icon className="h-8 w-8 text-[#25edda]" />
-            <h2 className="text-xl font-bold text-white">{title}</h2>
+          <div className="flex items-center gap-3">
+            <Icon className="h-6 w-6 text-[#25edda]" />
+            <h2 className="text-sm font-normal text-white">{title}</h2>
           </div>
-          <p className="text-gray-400">{description}</p>
+          {description && <p className="text-gray-400 mt-1">{description}</p>}
         </div>
         <ArrowRightIcon className="h-6 w-6 text-gray-500 group-hover:text-[#25edda] group-hover:translate-x-1 transition-transform" />
       </div>
@@ -203,64 +203,47 @@ const handleLogout = async () => {
           </button>
         </header>
 
-        <section className="mb-10">
-            <div className="flex flex-col h-[434px] md:flex-row gap-6 md:items-stretch">
-                {/* Left Column */}
-                <div className="md:w-1/2" >
-                    <OrchestraStats stats={stats?.orchestraStats || {}} isLoading={isLoading} />
-                </div>
-                {/* Right Column */}
-                <div className="md:w-1/2 flex flex-col gap-6">
-                    <StatCard 
-                        title="Total Tandas" 
-                        value={stats?.totalTandas} 
-                        breakdown={totalTandasBreakdown}
-                        isLoading={isLoading}
-                    />
-                    <StatCard 
-                        title="Total Tracks" 
-                        value={stats?.totalTracks} 
-                        breakdown={stats?.tracksByType}
-                        isLoading={isLoading}
-                    />
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-[172px_40%_1fr] gap-6">
+          <div className="flex flex-col gap-6">
+            <StatCard
+              title="Total Tracks"
+              value={stats?.totalTracks}
+              breakdown={stats?.tracksByType}
+              isLoading={isLoading}
+              className="w-full"
+            />
+            <StatCard
+              title="Total Tandas"
+              value={stats?.totalTandas}
+              breakdown={totalTandasBreakdown}
+              isLoading={isLoading}
+              className="w-full"
+            />
+          </div>
+          <OrchestraStats
+            stats={stats?.orchestraStats || {}}
+            isLoading={isLoading}
+            className="min-h-[220px] md:h-[490px] self-start"
+          />
+          <div className="bg-[#30333a] rounded-2xl shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57] p-6 h-full flex flex-col">
+            <div className="flex flex-col flex-1 justify-between">
+              <NavCard title="Manage Users" href="/admin/users" icon={UsersIcon} />
+              <NavCard
+                title="Manage Subscriptions"
+                href="/admin/manage-subscriptions"
+                icon={CreditCardIcon}
+              />
+              <NavCard title="Create New Tanda" href="/admin/upload" icon={PlusCircleIcon} />
+              <NavCard title="Manage Tandas" href="/admin/manage-tandas" icon={CogIcon} />
+              <NavCard title="Track Library" href="/admin/track-library" icon={MusicalNoteIcon} />
+              <NavCard
+                title="Manage Cortinas"
+                href="/admin/manage-cortinas"
+                icon={SpeakerWaveIcon}
+              />
             </div>
-        </section>
-
-        <main className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* --- NEW: Manage Users --- */}
-          <NavCard
-            title="Manage Users"
-            description="View users, tiers (free/trial/pro), and manually grant/revoke Pro."
-            href="/admin/users"
-            icon={UsersIcon}
-          />
-          <NavCard
-            title="Create New Tanda"
-            description="Upload artwork and audio files for a new Tanda."
-            href="/admin/upload"
-            icon={PlusCircleIcon}
-          />
-          <NavCard
-            title="Manage Tandas"
-            description="Edit, view, or delete existing Tandas in the database."
-            href="/admin/manage-tandas"
-            icon={CogIcon}
-          />
-          <NavCard
-            title="Track Library"
-            description="View all individual songs to find duplicates and manage files."
-            href="/admin/track-library"
-            icon={MusicalNoteIcon}
-          />
-          {/* --- UPDATED: Changed the Cortina card --- */}
-          <NavCard
-            title="Manage Cortinas"
-            description="View, create, or delete musical interludes."
-            href="/admin/manage-cortinas"
-            icon={SpeakerWaveIcon}
-          />
-        </main>
+          </div>
+        </div>
       </div>
     </div>
   );

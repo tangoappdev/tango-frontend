@@ -69,6 +69,14 @@ function normalizeTimestamp(value) {
   return null;
 }
 
+function chunkArray(items, size) {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
 // --- Main Handler ---
 export async function GET(request) {
   const gate = await requireAdmin(request);
@@ -88,16 +96,20 @@ export async function GET(request) {
 
     // 2. Fetch corresponding profiles from Firestore
     const uids = listUsersResult.users.map((u) => u.uid);
-    const profileDocs = uids.length
-      ? await db
-          .collection('users')
-          .where(admin.firestore.FieldPath.documentId(), 'in', uids)
-          .get()
-      : [];
     const profilesByUid = {};
-    profileDocs.forEach((doc) => {
-      profilesByUid[doc.id] = doc.data();
-    });
+    if (uids.length) {
+      // Firestore "in" queries support max 10 values; batch to avoid 500s.
+      const uidChunks = chunkArray(uids, 10);
+      for (const uidChunk of uidChunks) {
+        const snapshot = await db
+          .collection('users')
+          .where(admin.firestore.FieldPath.documentId(), 'in', uidChunk)
+          .get();
+        snapshot.forEach((doc) => {
+          profilesByUid[doc.id] = doc.data();
+        });
+      }
+    }
 
     // 3. Merge Auth data with Firestore data
     let mergedUsers = listUsersResult.users.map((authUser) => {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeftIcon, MagnifyingGlassIcon, ArrowPathIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 
@@ -19,6 +20,14 @@ function TierBadge({ tier }) {
       {tier || 'free'}
     </span>
   );
+}
+
+function initials(name = '', email = '') {
+  if (name) {
+    const parts = name.trim().split(/\s+/).slice(0, 2);
+    return parts.map((part) => part[0]?.toUpperCase()).join('');
+  }
+  return (email?.[0] || '?').toUpperCase();
 }
 
 function RowActions({ onAction, busy, canToggleAdvanced = false, hasAdvancedAccess = false }) {
@@ -550,11 +559,28 @@ export default function ManageSubscriptionsPage() {
                   currentUsers.map((user) => (
                     <tr key={user.uid}>
                       <td className="px-4 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-white">
-                            {user.displayName || 'Unnamed'}
-                          </span>
-                          <span className="text-xs text-gray-400">{user.email || '—'}</span>
+                        <div className="flex items-center gap-3">
+                          {user.photoURL ? (
+                            <Image
+                              src={user.photoURL}
+                              alt=""
+                              width={36}
+                              height={36}
+                              className="h-9 w-9 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#30333a]">
+                              <span className="text-xs text-gray-300">
+                                {initials(user.displayName, user.email)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <span className="font-medium text-white">
+                              {user.displayName || 'Unnamed'}
+                            </span>
+                            <span className="text-xs text-gray-400">{user.email || '--'}</span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-4">
@@ -592,29 +618,6 @@ export default function ManageSubscriptionsPage() {
                                 ? 'Manual access'
                                 : 'No access'}
                           </span>
-                          {user.tier !== 'pro' && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleUserAction(user.uid, {
-                                  action: user.advancedAccess ? 'revoke_advanced_access' : 'grant_advanced_access',
-                                })
-                              }
-                              disabled={actionBusyUid === user.uid}
-                              className={`w-fit rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                                user.advancedAccess
-                                  ? 'border-rose-300 text-rose-200 hover:bg-rose-500/10'
-                                  : 'border-[#25edda] text-[#25edda] hover:bg-[#25edda]/10'
-                              }`}
-                            >
-                              {user.advancedAccess ? 'Revoke Access' : 'Grant Access'}
-                            </button>
-                          )}
-                          {user.tier === 'trial' && (
-                            <span className="text-[11px] text-amber-300">
-                              Upgrade to Pro to enable automatically.
-                            </span>
-                          )}
                         </div>
                       </td>
                       <td className="px-4 py-4">{formatDate(user.createdAt)}</td>
