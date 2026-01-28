@@ -79,7 +79,7 @@ export default function DayTabs({ groupedEvents }) {
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-7 gap-2">
         {days.map((day) => (
           <button
             key={day.key}
@@ -92,7 +92,8 @@ export default function DayTabs({ groupedEvents }) {
             }`}
           >
             <span className="block text-[11px] font-semibold uppercase tracking-wide">
-              {day.label.weekday}
+              <span className="sm:hidden">{day.label.weekday.slice(0, 1)}</span>
+              <span className="hidden sm:inline">{day.label.weekday}</span>
             </span>
             <span className="mt-1 block text-lg font-semibold leading-none">{day.label.day}</span>
           </button>
@@ -108,7 +109,7 @@ export default function DayTabs({ groupedEvents }) {
                 key={event.id}
                 className="overflow-hidden rounded-2xl border border-white/5 bg-[#30333a]"
               >
-                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
+                <div className="flex flex-row items-start gap-4 p-5">
                   {(event.imageUrl || event.citySlug === 'new-york') && (
                     <div className="h-[114px] w-[114px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
                       {event.imageUrl ? (

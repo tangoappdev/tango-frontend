@@ -133,7 +133,7 @@ export default async function CityGuide({ citySlug }) {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {recurringEvents.map((event) => (
               <article key={event.id} className="rounded-2xl border border-white/5 bg-[#30333a]">
-                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
+                <div className="flex flex-row items-start gap-4 p-5">
                   {(event.imageUrl || event.citySlug === 'new-york') && (
                     <div className="h-[114px] w-[114px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
                       {event.imageUrl ? (
