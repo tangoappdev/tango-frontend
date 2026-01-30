@@ -6,6 +6,16 @@ export const dynamic = 'force-dynamic';
 const SYNC_PATHS = [
   '/api/sources/newyorktango/sync',
   '/api/sources/hoymilonga-buenos-aires/sync',
+  '/api/sources/hoymilonga-berlin/sync',
+  '/api/sources/hoymilonga-sao-paulo/sync',
+  '/api/sources/hoymilonga-athens/sync',
+  '/api/sources/hoymilonga-turkiye/sync',
+  '/api/sources/hoymilonga-england/sync',
+  '/api/sources/hoymilonga-miami/sync',
+  '/api/sources/tangomango-san-francisco/sync',
+  '/api/sources/tango-argentin-paris/sync',
+  '/api/sources/milongueandoroma/sync',
+  '/api/sources/austin-tango/sync',
 ];
 
 async function callSync(origin, token, path) {

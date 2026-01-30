@@ -1,7 +1,7 @@
 import { getFirestore } from '@/lib/firebaseAdmin.server';
 import DayTabs from './DayTabs';
 
-const DAYS_AHEAD = 45;
+const DAYS_AHEAD = 28;
 const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function parseTimeRange(text) {
@@ -134,7 +134,10 @@ export default async function CityGuide({ citySlug }) {
             {recurringEvents.map((event) => (
               <article key={event.id} className="rounded-2xl border border-white/5 bg-[#30333a]">
                 <div className="flex flex-row items-start gap-4 p-5">
-                  {(event.imageUrl || event.citySlug === 'new-york') && (
+                  {(event.imageUrl ||
+                    event.citySlug === 'new-york' ||
+                    event.citySlug === 'san-francisco' ||
+                    event.citySlug === 'paris') && (
                     <div className="h-[114px] w-[114px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
                       {event.imageUrl ? (
                         <img
@@ -144,8 +147,8 @@ export default async function CityGuide({ citySlug }) {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2a2d33] via-[#30333a] to-[#1f2126] text-[11px] font-semibold uppercase tracking-[0.2em] text-[#25edda]/80">
-                          NY
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2a2d33] via-[#30333a] to-[#1f2126] px-2 text-center text-[11px] font-semibold uppercase leading-tight tracking-[0.18em] text-[#25edda]/80">
+                          {event.title}
                         </div>
                       )}
                     </div>

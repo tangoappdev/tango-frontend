@@ -1,34 +1,21 @@
 import Header from '@/components/Header';
-import Link from 'next/link';
 import CityGuide from './CityGuide';
+import CitySelect from './CitySelect';
 
 const CITIES = [
   { slug: 'new-york', label: 'New York' },
   { slug: 'buenos-aires', label: 'Buenos Aires' },
+  { slug: 'san-francisco', label: 'San Francisco & No. California' },
+  { slug: 'berlin', label: 'Berlin' },
+  { slug: 'sao-paulo', label: 'Sao Paulo' },
+  { slug: 'athens', label: 'Athens' },
+  { slug: 'turkiye', label: 'Turkiye' },
+  { slug: 'england', label: 'England' },
+  { slug: 'miami', label: 'Miami' },
+  { slug: 'paris', label: 'Paris' },
+  { slug: 'rome', label: 'Rome' },
+  { slug: 'austin', label: 'Austin' },
 ];
-
-function CityTabs({ activeSlug }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {CITIES.map((city) => {
-        const isActive = city.slug === activeSlug;
-        return (
-          <Link
-            key={city.slug}
-            href={`/milonga-guide/${city.slug}`}
-            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
-              isActive
-                ? 'bg-[#25edda] text-[#1f2126]'
-                : 'border border-white/15 text-gray-200 hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            {city.label}
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
 
 export default async function MilongaGuideIndexPage() {
   const defaultCity = 'new-york';
@@ -47,7 +34,7 @@ export default async function MilongaGuideIndexPage() {
               Curated listings from trusted tango guides. Events update daily and are grouped by date.
             </p>
             <div className="mt-6">
-              <CityTabs activeSlug={defaultCity} />
+              <CitySelect activeSlug={defaultCity} cities={CITIES} />
             </div>
           </header>
 

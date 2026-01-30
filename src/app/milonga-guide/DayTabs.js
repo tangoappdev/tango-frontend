@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 function formatTabLabel(date) {
   return {
@@ -49,6 +49,7 @@ function formatEventType(value) {
 }
 
 export default function DayTabs({ groupedEvents }) {
+  const [weekOffset, setWeekOffset] = useState(0);
   const eventsByDate = useMemo(() => {
     const map = new Map();
     groupedEvents.forEach(([date, events]) => {
@@ -60,9 +61,11 @@ export default function DayTabs({ groupedEvents }) {
   const days = useMemo(() => {
     const list = [];
     const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() + weekOffset * 7);
     for (let i = 0; i < 7; i += 1) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
       const key = buildDateKey(d);
       list.push({
         key,
@@ -72,14 +75,32 @@ export default function DayTabs({ groupedEvents }) {
       });
     }
     return list;
-  }, [eventsByDate]);
+  }, [eventsByDate, weekOffset]);
 
   const [activeKey, setActiveKey] = useState(days[0]?.key);
+
+  useEffect(() => {
+    setActiveKey(days[0]?.key);
+  }, [days]);
   const activeDay = days.find((day) => day.key === activeKey) || days[0];
 
   return (
     <div>
-      <div className="grid grid-cols-7 gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setWeekOffset((prev) => Math.max(0, prev - 1))}
+          disabled={weekOffset === 0}
+          className={`h-10 w-10 rounded-full border border-white/10 text-lg text-gray-200 transition ${
+            weekOffset === 0
+              ? 'cursor-not-allowed opacity-40'
+              : 'hover:border-white/30 hover:bg-white/5'
+          }`}
+          aria-label="Previous week"
+        >
+          &#x2190;
+        </button>
+        <div className="grid flex-1 grid-cols-7 gap-2">
         {days.map((day) => (
           <button
             key={day.key}
@@ -98,6 +119,20 @@ export default function DayTabs({ groupedEvents }) {
             <span className="mt-1 block text-lg font-semibold leading-none">{day.label.day}</span>
           </button>
         ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setWeekOffset((prev) => Math.min(3, prev + 1))}
+          disabled={weekOffset === 3}
+          className={`h-10 w-10 rounded-full border border-white/10 text-lg text-gray-200 transition ${
+            weekOffset === 3
+              ? 'cursor-not-allowed opacity-40'
+              : 'hover:border-white/30 hover:bg-white/5'
+          }`}
+          aria-label="Next week"
+        >
+          &#x2192;
+        </button>
       </div>
 
       <div className="mt-6">
@@ -110,7 +145,10 @@ export default function DayTabs({ groupedEvents }) {
                 className="overflow-hidden rounded-2xl border border-white/5 bg-[#30333a]"
               >
                 <div className="flex flex-row items-start gap-4 p-5">
-                  {(event.imageUrl || event.citySlug === 'new-york') && (
+                  {(event.imageUrl ||
+                    event.citySlug === 'new-york' ||
+                    event.citySlug === 'san-francisco' ||
+                    event.citySlug === 'paris') && (
                     <div className="h-[114px] w-[114px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
                       {event.imageUrl ? (
                         <img
@@ -120,8 +158,8 @@ export default function DayTabs({ groupedEvents }) {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2a2d33] via-[#30333a] to-[#1f2126] text-xs font-semibold uppercase tracking-[0.2em] text-[#25edda]/80">
-                          NY
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2a2d33] via-[#30333a] to-[#1f2126] px-2 text-center text-[11px] font-semibold uppercase leading-tight tracking-[0.18em] text-[#25edda]/80">
+                          {event.title}
                         </div>
                       )}
                     </div>
@@ -151,7 +189,16 @@ export default function DayTabs({ groupedEvents }) {
                     {event.address && (
                       <p className="mt-1 text-sm text-gray-300">{event.address}</p>
                     )}
-                    {event.sourceUrl && event.citySlug !== 'buenos-aires' && (
+                    {event.sourceUrl &&
+                      ![
+                        'buenos-aires',
+                        'berlin',
+                        'sao-paulo',
+                        'athens',
+                        'turkiye',
+                        'england',
+                        'miami',
+                      ].includes(event.citySlug) && (
                       <a
                         href={event.sourceUrl}
                         target="_blank"
