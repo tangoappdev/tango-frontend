@@ -126,6 +126,23 @@ function extractTags(text) {
   return Array.from(tags);
 }
 
+function normalizeKey(value) {
+  return (value || '')
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+function buildEventKey({ title, venue, address }) {
+  return [
+    normalizeKey(title),
+    normalizeKey(venue),
+    normalizeKey(address),
+  ].filter(Boolean).join('|');
+}
+
 function buildEventId(payload) {
   const hash = crypto
     .createHash('sha1')
@@ -295,6 +312,12 @@ export async function POST(request) {
           venue: recurring.venue || null,
           address: recurring.address || null,
           descriptionRaw: lineText,
+          sourceEventId: null,
+          eventKey: buildEventKey({
+            title: recurring.title,
+            venue: recurring.venue,
+            address: recurring.address,
+          }),
           tagsRaw: extractTags(lineText),
           links: [],
           scrapedAt: new Date().toISOString(),
@@ -307,6 +330,9 @@ export async function POST(request) {
           frequencyRaw: recurring.frequencyRaw || null,
           dayOfWeek: recurring.dayOfWeek || null,
         };
+        payload.stableKey = payload.sourceEventId
+          ? `${payload.source}:${payload.sourceEventId}`
+          : `${payload.source}:key:${payload.eventKey}`;
         events.push(payload);
         continue;
       }
@@ -366,6 +392,8 @@ export async function POST(request) {
         venue: venue || null,
         address: address || null,
         descriptionRaw: lineText,
+        sourceEventId: null,
+        eventKey: buildEventKey({ title, venue, address }),
         tagsRaw: extractTags(lineText),
         links: [],
         scrapedAt: new Date().toISOString(),
@@ -377,6 +405,9 @@ export async function POST(request) {
         recurring: false,
         dayOfWeek: currentDayOfWeek || null,
       };
+      payload.stableKey = payload.sourceEventId
+        ? `${payload.source}:${payload.sourceEventId}`
+        : `${payload.source}:key:${payload.eventKey}`;
 
       events.push(payload);
       lastEvent = payload;

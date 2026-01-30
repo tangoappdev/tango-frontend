@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 
 function formatTabLabel(date) {
@@ -86,12 +87,29 @@ export default function DayTabs({ groupedEvents }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2">
+      <div
+        className="flex items-center justify-between gap-2"
+        onTouchStart={(event) => {
+          const touch = event.touches[0];
+          event.currentTarget.dataset.touchX = `${touch.clientX}`;
+        }}
+        onTouchEnd={(event) => {
+          const startX = Number(event.currentTarget.dataset.touchX || 0);
+          const endX = event.changedTouches[0]?.clientX ?? startX;
+          const delta = endX - startX;
+          if (Math.abs(delta) < 40) return;
+          if (delta < 0) {
+            setWeekOffset((prev) => Math.min(3, prev + 1));
+          } else {
+            setWeekOffset((prev) => Math.max(0, prev - 1));
+          }
+        }}
+      >
         <button
           type="button"
           onClick={() => setWeekOffset((prev) => Math.max(0, prev - 1))}
           disabled={weekOffset === 0}
-          className={`h-10 w-10 rounded-full border border-white/10 text-lg text-gray-200 transition ${
+          className={`hidden h-10 w-10 items-center justify-center rounded-full border border-white/10 text-lg text-gray-200 transition sm:inline-flex ${
             weekOffset === 0
               ? 'cursor-not-allowed opacity-40'
               : 'hover:border-white/30 hover:bg-white/5'
@@ -101,30 +119,30 @@ export default function DayTabs({ groupedEvents }) {
           &#x2190;
         </button>
         <div className="grid flex-1 grid-cols-7 gap-2">
-        {days.map((day) => (
-          <button
-            key={day.key}
-            type="button"
-            onClick={() => setActiveKey(day.key)}
-            className={`rounded-2xl px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide transition-colors ${
-              activeKey === day.key
-                ? 'bg-[#25edda] text-[#1f2126]'
-                : 'border border-white/15 text-gray-200 hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            <span className="block text-[11px] font-semibold uppercase tracking-wide">
-              <span className="sm:hidden">{day.label.weekday.slice(0, 1)}</span>
-              <span className="hidden sm:inline">{day.label.weekday}</span>
-            </span>
-            <span className="mt-1 block text-lg font-semibold leading-none">{day.label.day}</span>
-          </button>
-        ))}
+          {days.map((day) => (
+            <button
+              key={day.key}
+              type="button"
+              onClick={() => setActiveKey(day.key)}
+              className={`rounded-2xl px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide transition-colors ${
+                activeKey === day.key
+                  ? 'bg-[#25edda] text-[#1f2126]'
+                  : 'border border-white/15 text-gray-200 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <span className="block text-[11px] font-semibold uppercase tracking-wide">
+                <span className="sm:hidden">{day.label.weekday.slice(0, 1)}</span>
+                <span className="hidden sm:inline">{day.label.weekday}</span>
+              </span>
+              <span className="mt-1 block text-lg font-semibold leading-none">{day.label.day}</span>
+            </button>
+          ))}
         </div>
         <button
           type="button"
           onClick={() => setWeekOffset((prev) => Math.min(3, prev + 1))}
           disabled={weekOffset === 3}
-          className={`h-10 w-10 rounded-full border border-white/10 text-lg text-gray-200 transition ${
+          className={`hidden h-10 w-10 items-center justify-center rounded-full border border-white/10 text-lg text-gray-200 transition sm:inline-flex ${
             weekOffset === 3
               ? 'cursor-not-allowed opacity-40'
               : 'hover:border-white/30 hover:bg-white/5'
@@ -133,6 +151,19 @@ export default function DayTabs({ groupedEvents }) {
         >
           &#x2192;
         </button>
+      </div>
+      <div className="mt-4 flex items-center justify-center gap-2 sm:hidden">
+        {[0, 1, 2, 3].map((index) => (
+          <button
+            key={index}
+            type="button"
+            onClick={() => setWeekOffset(index)}
+            className={`h-2.5 w-2.5 rounded-full transition ${
+              weekOffset === index ? 'bg-[#25edda]' : 'bg-white/20'
+            }`}
+            aria-label={`Week ${index + 1}`}
+          />
+        ))}
       </div>
 
       <div className="mt-6">
@@ -151,11 +182,13 @@ export default function DayTabs({ groupedEvents }) {
                     event.citySlug === 'paris') && (
                     <div className="h-[114px] w-[114px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
                       {event.imageUrl ? (
-                        <img
+                        <Image
                           src={event.imageUrl}
                           alt={`${event.title} logo`}
+                          width={114}
+                          height={114}
                           className="h-full w-full object-cover"
-                          loading="lazy"
+                          sizes="114px"
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2a2d33] via-[#30333a] to-[#1f2126] px-2 text-center text-[11px] font-semibold uppercase leading-tight tracking-[0.18em] text-[#25edda]/80">

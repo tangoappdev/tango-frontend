@@ -96,6 +96,21 @@ function detectEventType(text) {
   return null;
 }
 
+function normalizeKey(value) {
+  return (value || '')
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+function buildEventKey({ title, venue, address }) {
+  return [normalizeKey(title), normalizeKey(venue), normalizeKey(address)]
+    .filter(Boolean)
+    .join('|');
+}
+
 function parseEventRow($, row) {
   const time = normalizeWhitespace($(row).find('td').first().text());
   const title = normalizeWhitespace($(row).find('span[onclick]').first().text());
@@ -186,6 +201,11 @@ export async function POST(request) {
         if (!parsed.time && !parsed.timeRangeRaw) return;
 
         const eventType = detectEventType(parsed.title) || detectEventType(parsed.address) || 'milonga';
+        const eventKey = buildEventKey({
+          title: parsed.title,
+          venue: null,
+          address: parsed.address,
+        });
 
         events.push({
           source: SOURCE_ID,
@@ -197,6 +217,8 @@ export async function POST(request) {
           venue: null,
           address: parsed.address,
           descriptionRaw: parsed.price || null,
+          sourceEventId: null,
+          eventKey,
           tagsRaw: [],
           links: [],
           scrapedAt: new Date().toISOString(),
@@ -209,6 +231,7 @@ export async function POST(request) {
           frequencyRaw: null,
           dayOfWeek: getDayOfWeek(date),
         });
+        events[events.length - 1].stableKey = `${SOURCE_ID}:key:${eventKey}`;
       });
     });
 

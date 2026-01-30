@@ -241,6 +241,11 @@ const handleLogout = async () => {
                 href="/admin/manage-cortinas"
                 icon={SpeakerWaveIcon}
               />
+              <NavCard
+                title="Manage Milongas"
+                href="/admin/manage-milongas"
+                icon={MusicalNoteIcon}
+              />
             </div>
           </div>
         </div>

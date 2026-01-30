@@ -5,7 +5,7 @@ import CitySelect from '../CitySelect';
 const CITIES = [
   { slug: 'new-york', label: 'New York' },
   { slug: 'buenos-aires', label: 'Buenos Aires' },
-  { slug: 'san-francisco', label: 'San Francisco & No. California' },
+  { slug: 'san-francisco', label: 'San Francisco' },
   { slug: 'berlin', label: 'Berlin' },
   { slug: 'sao-paulo', label: 'Sao Paulo' },
   { slug: 'athens', label: 'Athens' },
@@ -15,6 +15,7 @@ const CITIES = [
   { slug: 'paris', label: 'Paris' },
   { slug: 'rome', label: 'Rome' },
   { slug: 'austin', label: 'Austin' },
+  { slug: 'barcelona', label: 'Barcelona' },
 ];
 
 export default async function MilongaGuideCityPage({ params }) {

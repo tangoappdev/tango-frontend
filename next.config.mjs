@@ -12,6 +12,26 @@ const nextConfig = {
         hostname: 'lh3.googleusercontent.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.hoy-milonga.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'agendadeltango.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'tango-argentin.fr',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.tango-argentin.fr',
+        pathname: '/**',
+      },
     ],
   },
 };

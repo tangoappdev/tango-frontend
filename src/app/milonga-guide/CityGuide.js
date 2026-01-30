@@ -86,7 +86,56 @@ async function getEventsByCity(citySlug) {
   const datedEvents = datedSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   const recurringEvents = recurringSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-  datedEvents.sort((a, b) => {
+  const normalizeKey = (value) =>
+    (value || '')
+      .toString()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, '-');
+
+  const buildEventKey = (event) =>
+    [normalizeKey(event.title), normalizeKey(event.venue), normalizeKey(event.address)]
+      .filter(Boolean)
+      .join('|');
+
+  const buildStableKey = (event) => {
+    if (event?.stableKey) return event.stableKey;
+    if (event?.sourceEventId) return `${event.source}:${event.sourceEventId}`;
+    const eventKey = event?.eventKey || buildEventKey(event);
+    return `${event.source}:key:${eventKey}`;
+  };
+
+  const allEvents = [...datedEvents, ...recurringEvents];
+  const stableKeys = Array.from(
+    new Set(allEvents.map((event) => buildStableKey(event)).filter(Boolean))
+  );
+  const overridesMap = new Map();
+  if (stableKeys.length) {
+    const overridesCollection = db.collection('external_event_overrides');
+    const refs = stableKeys.map((key) => overridesCollection.doc(key));
+    const overrideDocs = await db.getAll(...refs);
+    overrideDocs.forEach((doc) => {
+      if (doc.exists) {
+        overridesMap.set(doc.id, doc.data());
+      }
+    });
+  }
+
+  const applyOverrides = (event) => {
+    const stableKey = buildStableKey(event);
+    const override = stableKey ? overridesMap.get(stableKey) : null;
+    return {
+      ...event,
+      stableKey,
+      ...(override || {}),
+    };
+  };
+
+  const mergedDated = datedEvents.map(applyOverrides);
+  const mergedRecurring = recurringEvents.map(applyOverrides);
+
+  mergedDated.sort((a, b) => {
     if (a.date === b.date) {
       const aStart = a.startTimeMinutes ?? parseTimeRange(a.descriptionRaw).startMinutes ?? 9999;
       const bStart = b.startTimeMinutes ?? parseTimeRange(b.descriptionRaw).startMinutes ?? 9999;
@@ -96,12 +145,12 @@ async function getEventsByCity(citySlug) {
   });
 
   const grouped = new Map();
-  datedEvents.forEach((event) => {
+  mergedDated.forEach((event) => {
     if (!grouped.has(event.date)) grouped.set(event.date, []);
     grouped.get(event.date).push(event);
   });
 
-  recurringEvents.sort((a, b) => {
+  mergedRecurring.sort((a, b) => {
     const aIndex = DAY_ORDER.indexOf(a.dayOfWeek || '');
     const bIndex = DAY_ORDER.indexOf(b.dayOfWeek || '');
     if (aIndex !== bIndex) return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
@@ -110,7 +159,7 @@ async function getEventsByCity(citySlug) {
 
   return {
     groupedEvents: Array.from(grouped.entries()),
-    recurringEvents,
+    recurringEvents: mergedRecurring,
   };
 }
 
@@ -140,11 +189,13 @@ export default async function CityGuide({ citySlug }) {
                     event.citySlug === 'paris') && (
                     <div className="h-[114px] w-[114px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
                       {event.imageUrl ? (
-                        <img
+                        <Image
                           src={event.imageUrl}
                           alt={`${event.title} logo`}
+                          width={114}
+                          height={114}
                           className="h-full w-full object-cover"
-                          loading="lazy"
+                          sizes="114px"
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2a2d33] via-[#30333a] to-[#1f2126] px-2 text-center text-[11px] font-semibold uppercase leading-tight tracking-[0.18em] text-[#25edda]/80">
@@ -186,3 +237,4 @@ export default async function CityGuide({ citySlug }) {
     </>
   );
 }
+import Image from 'next/image';

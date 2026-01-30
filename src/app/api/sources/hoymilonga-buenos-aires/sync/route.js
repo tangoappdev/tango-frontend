@@ -92,6 +92,27 @@ function detectEventType(text) {
   return /pr[áa]ctica/i.test(text) ? 'practica' : 'milonga';
 }
 
+function normalizeKey(value) {
+  return (value || '')
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+function buildEventKey({ title, venue, address }) {
+  return [normalizeKey(title), normalizeKey(venue), normalizeKey(address)]
+    .filter(Boolean)
+    .join('|');
+}
+
+function extractEventIdFromUrl(url) {
+  if (!url) return null;
+  const match = url.match(/\/milonga\/(\d+)\//i);
+  return match ? match[1] : null;
+}
+
 function extractImageUrls(imageField) {
   if (!imageField) return [];
   if (Array.isArray(imageField)) {
@@ -162,6 +183,8 @@ export async function POST(request) {
         const sourceUrl = toFullUrl(entry.url) || SOURCE_URL;
         const eventType = detectEventType(`${title} ${description}`);
         const imageUrls = extractImageUrls(entry.image);
+        const sourceEventId = extractEventIdFromUrl(sourceUrl);
+        const eventKey = buildEventKey({ title, venue, address });
 
         events.push({
           source: SOURCE_ID,
@@ -175,6 +198,8 @@ export async function POST(request) {
           descriptionRaw: description || null,
           imageUrl: imageUrls[0] || null,
           imageUrls,
+          sourceEventId,
+          eventKey,
           tagsRaw: [],
           links: [],
           scrapedAt: new Date().toISOString(),
@@ -187,6 +212,9 @@ export async function POST(request) {
           frequencyRaw: null,
           dayOfWeek: getDayOfWeek(date),
         });
+        events[events.length - 1].stableKey = sourceEventId
+          ? `${SOURCE_ID}:${sourceEventId}`
+          : `${SOURCE_ID}:key:${eventKey}`;
       });
     });
 

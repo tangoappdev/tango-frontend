@@ -10,7 +10,7 @@ const SOURCE_ID = 'tangomango-san-francisco';
 const SOURCE_URL =
   'https://www.tangomango.org/index.php?show=San_Francisco,CA+Alameda,CA+San_Mateo,CA+Santa_Clara,CA+Marin,CA+Contra_Costa,CA+Sacramento,CA+Santa_Cruz,CA+Monterey,CA+Sonoma,CA+Mendocino,CA+Stanislaus,CA';
 const SOURCE_BASE = 'https://www.tangomango.org';
-const CITY_NAME = 'San Francisco & No. California';
+const CITY_NAME = 'San Francisco';
 const CITY_SLUG = 'san-francisco';
 const CITY_TIMEZONE = 'America/Los_Angeles';
 
@@ -98,6 +98,21 @@ function detectEventType(text) {
   if (/pr[áa]ctica/i.test(text)) return 'practica';
   if (/milonga/i.test(text)) return 'milonga';
   return null;
+}
+
+function normalizeKey(value) {
+  return (value || '')
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+function buildEventKey({ title, venue, address }) {
+  return [normalizeKey(title), normalizeKey(venue), normalizeKey(address)]
+    .filter(Boolean)
+    .join('|');
 }
 
 function buildEventId(payload) {
@@ -256,6 +271,11 @@ export async function POST(request) {
       const details = detailResults[idx] || {};
       const title = details.title || base.rawTitle || 'Untitled event';
       const eventType = details.eventType || detectEventType(title);
+      const eventKey = buildEventKey({
+        title,
+        venue: details.venue,
+        address: details.address,
+      });
 
       return {
         source: SOURCE_ID,
@@ -267,6 +287,8 @@ export async function POST(request) {
         venue: details.venue || null,
         address: details.address || null,
         descriptionRaw: details.descriptionRaw || null,
+        sourceEventId: base.eventId,
+        eventKey,
         tagsRaw: [],
         links: [],
         scrapedAt: new Date().toISOString(),
@@ -279,6 +301,7 @@ export async function POST(request) {
         frequencyRaw: null,
         dayOfWeek: getDayOfWeek(base.date),
         eventId: base.eventId,
+        stableKey: `${SOURCE_ID}:${base.eventId}`,
       };
     }).filter((event) => event.eventType === 'milonga' || event.eventType === 'practica');
 

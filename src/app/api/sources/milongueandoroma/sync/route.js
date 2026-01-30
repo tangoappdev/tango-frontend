@@ -66,6 +66,21 @@ function detectEventType(text) {
   return 'milonga';
 }
 
+function normalizeKey(value) {
+  return (value || '')
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+function buildEventKey({ title, venue, address }) {
+  return [normalizeKey(title), normalizeKey(venue), normalizeKey(address)]
+    .filter(Boolean)
+    .join('|');
+}
+
 function buildEventId(payload) {
   const hash = crypto
     .createHash('sha1')
@@ -154,6 +169,7 @@ export async function POST(request) {
         const description = decodeIcsText(evt.DESCRIPTION || '');
         const location = normalizeWhitespace(decodeIcsText(evt.LOCATION || ''));
         const url = evt.URL ? decodeIcsText(evt.URL) : null;
+        const sourceEventId = decodeIcsText(evt.UID || '') || null;
 
         const start = parseIcsDateTime(evt.DTSTART || evt['DTSTART;VALUE=DATE']);
         const end = parseIcsDateTime(evt.DTEND || evt['DTEND;VALUE=DATE']);
@@ -162,6 +178,7 @@ export async function POST(request) {
         if (!date || !summary) return null;
 
         const eventType = detectEventType(`${summary} ${description}`);
+        const eventKey = buildEventKey({ title: summary, venue: null, address: location });
 
         return {
           source: SOURCE_ID,
@@ -173,6 +190,8 @@ export async function POST(request) {
           venue: null,
           address: location || null,
           descriptionRaw: normalizeWhitespace(description) || null,
+          sourceEventId: sourceEventId || null,
+          eventKey,
           tagsRaw: [],
           links: [],
           scrapedAt: new Date().toISOString(),
@@ -184,6 +203,9 @@ export async function POST(request) {
           recurring: false,
           frequencyRaw: null,
           dayOfWeek: getDayOfWeek(date),
+          stableKey: sourceEventId
+            ? `${SOURCE_ID}:${sourceEventId}`
+            : `${SOURCE_ID}:key:${eventKey}`,
         };
       })
       .filter(Boolean);
