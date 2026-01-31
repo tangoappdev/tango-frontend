@@ -48,7 +48,6 @@ const buildDraft = (event) => ({
   title: event.title || '',
   venue: event.venue || '',
   address: event.address || '',
-  date: event.date || '',
   startTime: minutesToTime(event.startTimeMinutes),
   endTime: minutesToTime(event.endTimeMinutes),
   eventType: event.eventType || 'milonga',
@@ -191,6 +190,33 @@ export default function ManageMilongasPage() {
     }
   };
 
+  const handleReGeocode = async (event) => {
+    setError('');
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/milongas/manage`;
+      const response = await fetch(apiUrl, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          id: event.id,
+          updates: {},
+          stableKey: event.stableKey,
+          forceGeocode: true,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to re-geocode location.');
+      }
+      fetchEvents(cityFilter);
+    } catch (err) {
+      setError(err.message || 'Failed to re-geocode location.');
+    }
+  };
+
   const handleBulkGeocode = async () => {
     setBulkStatus('Running geocode...');
     try {
@@ -206,6 +232,28 @@ export default function ManageMilongasPage() {
       setBulkStatus(`Geocoded ${data.geocoded} events (skipped ${data.skipped}).`);
     } catch (err) {
       setBulkStatus(err.message || 'Bulk geocode failed.');
+    }
+  };
+
+  const handleBulkReGeocodeCity = async () => {
+    if (!cityFilter) {
+      setBulkStatus('Select a city to re-geocode.');
+      return;
+    }
+    setBulkStatus('Re-geocoding city...');
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/milongas/manage`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ mode: 'bulk-geocode', citySlug: cityFilter, force: true }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to re-geocode city.');
+      setBulkStatus(`Re-geocoded ${data.geocoded} events (skipped ${data.skipped}).`);
+    } catch (err) {
+      setBulkStatus(err.message || 'Re-geocode failed.');
     }
   };
 
@@ -264,6 +312,12 @@ export default function ManageMilongasPage() {
             className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-gray-200 hover:border-white/30"
           >
             Geocode missing locations
+          </button>
+          <button
+            onClick={handleBulkReGeocodeCity}
+            className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-gray-200 hover:border-white/30"
+          >
+            Re-geocode current city
           </button>
         </div>
 
@@ -383,7 +437,6 @@ export default function ManageMilongasPage() {
                                   title: draft.title,
                                   venue: draft.venue,
                                   address: draft.address,
-                                  date: draft.date,
                                   startTimeMinutes: timeToMinutes(draft.startTime),
                                   endTimeMinutes: timeToMinutes(draft.endTime),
                                   eventType: draft.eventType,
@@ -407,12 +460,22 @@ export default function ManageMilongasPage() {
                             </button>
                           </>
                         ) : (
-                          <button
-                            onClick={() => startEdit(event)}
-                            className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300 hover:border-white/30"
-                          >
-                            <PencilSquareIcon className="h-4 w-4" />
-                          </button>
+                          <>
+                            <button
+                              onClick={() => startEdit(event)}
+                              className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300 hover:border-white/30"
+                              title="Edit"
+                            >
+                              <PencilSquareIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleReGeocode(event)}
+                              className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300 hover:border-white/30"
+                              title="Re-geocode"
+                            >
+                              Re-geocode
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>

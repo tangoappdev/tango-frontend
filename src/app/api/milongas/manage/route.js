@@ -31,7 +31,6 @@ const UPDATABLE_FIELDS = new Set([
   'venue',
   'address',
   'descriptionRaw',
-  'date',
   'startTimeMinutes',
   'endTimeMinutes',
   'eventType',
@@ -110,6 +109,14 @@ export async function GET(request) {
     const mergedEvents = events.map((event) => {
       const stableKey = buildStableKey(event);
       const override = stableKey ? overridesMap.get(stableKey) : null;
+      if (override?.date) {
+        const { date, ...rest } = override;
+        return {
+          ...event,
+          stableKey,
+          ...rest,
+        };
+      }
       return {
         ...event,
         stableKey,
@@ -141,7 +148,7 @@ export async function PATCH(request) {
 
   try {
     const body = await request.json();
-    const { id, updates, stableKey } = body || {};
+    const { id, updates, stableKey, forceGeocode } = body || {};
     if (!id || !updates || typeof updates !== 'object') {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
@@ -154,7 +161,7 @@ export async function PATCH(request) {
       }
     });
 
-    if (!Object.keys(sanitized).length) {
+    if (!Object.keys(sanitized).length && !forceGeocode) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
@@ -169,17 +176,20 @@ export async function PATCH(request) {
     }
 
     const needsGeocode =
-      (sanitized.address || sanitized.city || sanitized.citySlug) &&
-      sanitized.latitude === undefined &&
-      sanitized.longitude === undefined;
+      forceGeocode ||
+      ((sanitized.address || sanitized.city || sanitized.citySlug) &&
+        sanitized.latitude === undefined &&
+        sanitized.longitude === undefined);
 
     if (needsGeocode) {
       const eventDoc = await db.collection('external_events').doc(id).get();
       const base = eventDoc.exists ? eventDoc.data() : {};
-      const address = sanitized.address || base.address || '';
-      const city = sanitized.city || base.city || '';
+      const overrideDoc = await db.collection('external_event_overrides').doc(overrideKey).get();
+      const override = overrideDoc.exists ? overrideDoc.data() : {};
+      const address = sanitized.address || override.address || base.address || '';
+      const city = sanitized.city || override.city || base.city || '';
       const fullAddress = [address, city].filter(Boolean).join(', ');
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
       if (apiKey && fullAddress) {
         try {
           const geoUrl =
@@ -202,7 +212,11 @@ export async function PATCH(request) {
 
     await db.collection('external_event_overrides').doc(overrideKey).set(sanitized, { merge: true });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      latitude: sanitized.latitude ?? null,
+      longitude: sanitized.longitude ?? null,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error?.message || 'Failed to update event' },
@@ -231,17 +245,22 @@ export async function POST(request) {
     }
 
     const db = getFirestore();
+    const citySlug = body?.citySlug || '';
+    const force = Boolean(body?.force);
     const today = new Date();
     const end = new Date();
     end.setDate(end.getDate() + 28);
     const startIso = buildDateIso(today);
     const endIso = buildDateIso(end);
 
-    const snapshot = await db
+    let query = db
       .collection('external_events')
       .where('date', '>=', startIso)
-      .where('date', '<=', endIso)
-      .get();
+      .where('date', '<=', endIso);
+    if (citySlug) {
+      query = query.where('citySlug', '==', citySlug);
+    }
+    const snapshot = await query.get();
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
@@ -262,7 +281,7 @@ export async function POST(request) {
       }
 
       const overrideDoc = await overridesCollection.doc(stableKey).get();
-      if (overrideDoc.exists) {
+      if (!force && overrideDoc.exists) {
         const data = overrideDoc.data() || {};
         if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
           skipped += 1;

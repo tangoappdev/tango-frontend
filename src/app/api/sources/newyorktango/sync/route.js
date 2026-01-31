@@ -20,6 +20,14 @@ function normalizeWhitespace(value) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+function normalizeTitleKey(value) {
+  return (value || '')
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 function normalizeDayName(value) {
   if (!value) return null;
   const key = value.slice(0, 3).toLowerCase();
@@ -157,6 +165,7 @@ function splitLinesFromHtml(html) {
   normalized = normalized.replace(/<br\s*\/?>/gi, '\n');
   normalized = normalized.replace(/<\/p>|<\/div>|<\/li>|<\/tr>|<\/h\d>|<\/table>|<\/ul>|<\/ol>/gi, '\n');
   normalized = normalized.replace(/<p[^>]*>|<div[^>]*>|<li[^>]*>|<tr[^>]*>|<td[^>]*>|<h\d[^>]*>|<table[^>]*>|<ul[^>]*>|<ol[^>]*>/gi, '');
+  normalized = normalized.replace(/<[^>]+>/g, '');
   return normalized
     .split('\n')
     .map((line) => line.trim())
@@ -238,6 +247,73 @@ function parseRecurringLine(text) {
   };
 }
 
+function buildVenueAddressIndex(lines) {
+  const index = new Map();
+  let inRecurring = false;
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (/Recurring year-round events/i.test(line)) {
+      inRecurring = true;
+      continue;
+    }
+    if (!inRecurring) continue;
+    if (!line) continue;
+
+    const title = line;
+    let detailLine = '';
+    for (let j = 1; j <= 4; j += 1) {
+      const candidate = lines[i + j] || '';
+      if (!candidate) continue;
+      if (/^(Practicas:|Sun,|Mon,|Tue,|Wed,|Thu,|Fri,|Sat,)/i.test(candidate)) break;
+      if (/^<a\s+id=|^id=/i.test(candidate)) continue;
+      detailLine = candidate;
+      if (/[0-9]/.test(candidate) || /:\s*\d/.test(candidate)) break;
+    }
+    if (!detailLine) {
+      continue;
+    }
+    const key = normalizeTitleKey(title);
+    if (!key) continue;
+    index.set(key, detailLine);
+  }
+  return index;
+}
+
+function applyVenueAddressFromIndex(event, index) {
+  const eventKey = normalizeTitleKey(event.title);
+  if (!eventKey || !index.size) return;
+
+  let matchLine = index.get(eventKey);
+  if (!matchLine) {
+    for (const [key, line] of index.entries()) {
+      if (eventKey.includes(key) || key.includes(eventKey)) {
+        matchLine = line;
+        break;
+      }
+    }
+  }
+  if (!matchLine) return;
+  if (/^<a\s+id=|^id=/i.test(matchLine)) return;
+
+  let venue = event.venue;
+  let address = event.address;
+
+  const colonMatch = matchLine.match(/^([^:]+):\s*(.*)$/);
+  if (colonMatch) {
+    const venueCandidate = colonMatch[1].trim();
+    const rest = colonMatch[2].trim();
+    const addressMatch = rest.match(/^([^.;]+)[.;]?/);
+    const addressCandidate = addressMatch ? addressMatch[1].trim() : rest;
+    if (!venue) venue = venueCandidate;
+    if (!address) address = addressCandidate;
+  } else if (!address) {
+    address = matchLine.trim();
+  }
+
+  if (venue) event.venue = venue;
+  if (address) event.address = address;
+}
+
 async function deleteExistingSourceEvents(db) {
   const collection = db.collection('external_events');
   let totalDeleted = 0;
@@ -277,6 +353,7 @@ export async function POST(request) {
     const $ = cheerio.load(html);
     const bodyHtml = $('body').html() || '';
     const lines = splitLinesFromHtml(bodyHtml);
+    const venueAddressIndex = buildVenueAddressIndex(lines);
 
     const now = new Date();
     const events = [];
@@ -405,6 +482,7 @@ export async function POST(request) {
         recurring: false,
         dayOfWeek: currentDayOfWeek || null,
       };
+      applyVenueAddressFromIndex(payload, venueAddressIndex);
       payload.stableKey = payload.sourceEventId
         ? `${payload.source}:${payload.sourceEventId}`
         : `${payload.source}:key:${payload.eventKey}`;

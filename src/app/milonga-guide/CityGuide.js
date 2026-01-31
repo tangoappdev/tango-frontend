@@ -175,6 +175,14 @@ async function getEventsByCity(citySlug) {
   const applyOverrides = (event) => {
     const stableKey = buildStableKey(event);
     const override = stableKey ? overridesMap.get(stableKey) : null;
+    if (override?.date) {
+      const { date, ...rest } = override;
+      return {
+        ...event,
+        stableKey,
+        ...rest,
+      };
+    }
     return {
       ...event,
       stableKey,
