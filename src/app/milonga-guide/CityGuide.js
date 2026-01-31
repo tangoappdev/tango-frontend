@@ -3,6 +3,40 @@ import DayTabs from './DayTabs';
 
 const DAYS_AHEAD = 28;
 const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const CITY_TIMEZONES = {
+  'new-york': 'America/New_York',
+  'buenos-aires': 'America/Argentina/Buenos_Aires',
+  'san-francisco': 'America/Los_Angeles',
+  berlin: 'Europe/Berlin',
+  'sao-paulo': 'America/Sao_Paulo',
+  athens: 'Europe/Athens',
+  turkiye: 'Europe/Istanbul',
+  england: 'Europe/London',
+  miami: 'America/New_York',
+  paris: 'Europe/Paris',
+  rome: 'Europe/Rome',
+  austin: 'America/Chicago',
+  barcelona: 'Europe/Madrid',
+};
+
+function buildDateKeyFromParts(parts) {
+  const year = parts.find((p) => p.type === 'year')?.value;
+  const month = parts.find((p) => p.type === 'month')?.value;
+  const day = parts.find((p) => p.type === 'day')?.value;
+  if (!year || !month || !day) return null;
+  return `${year}-${month}-${day}`;
+}
+
+function getDateKeyInTimeZone(date, timeZone) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(date);
+  return buildDateKeyFromParts(parts);
+}
 
 function parseTimeRange(text) {
   if (!text) return { startMinutes: null, endMinutes: null, timeRangeRaw: null };
@@ -75,12 +109,15 @@ function buildDirectionsUrl(event) {
 
 async function getEventsByCity(citySlug) {
   const db = getFirestore();
-  const start = new Date();
-  const end = new Date();
-  end.setDate(end.getDate() + DAYS_AHEAD);
+  const timeZone = CITY_TIMEZONES[citySlug] || 'UTC';
+  const now = new Date();
+  const todayKey = getDateKeyInTimeZone(now, timeZone);
+  const base = todayKey ? new Date(`${todayKey}T12:00:00Z`) : now;
+  const end = new Date(base);
+  end.setUTCDate(base.getUTCDate() + DAYS_AHEAD);
 
-  const startIso = start.toISOString().slice(0, 10);
-  const endIso = end.toISOString().slice(0, 10);
+  const startIso = todayKey || now.toISOString().slice(0, 10);
+  const endIso = getDateKeyInTimeZone(end, timeZone) || end.toISOString().slice(0, 10);
 
   const [datedSnapshot, recurringSnapshot] = await Promise.all([
     db
@@ -186,7 +223,7 @@ export default async function CityGuide({ citySlug }) {
           No upcoming events found yet. Please check back soon.
         </div>
       ) : (
-        <DayTabs groupedEvents={groupedEvents} />
+        <DayTabs groupedEvents={groupedEvents} citySlug={citySlug} />
       )}
 
       {recurringEvents.length > 0 && (

@@ -4,18 +4,54 @@ import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import MapView from './MapView';
 
-function formatTabLabel(date) {
+const CITY_TIMEZONES = {
+  'new-york': 'America/New_York',
+  'buenos-aires': 'America/Argentina/Buenos_Aires',
+  'san-francisco': 'America/Los_Angeles',
+  berlin: 'Europe/Berlin',
+  'sao-paulo': 'America/Sao_Paulo',
+  athens: 'Europe/Athens',
+  turkiye: 'Europe/Istanbul',
+  england: 'Europe/London',
+  miami: 'America/New_York',
+  paris: 'Europe/Paris',
+  rome: 'Europe/Rome',
+  austin: 'America/Chicago',
+  barcelona: 'Europe/Madrid',
+};
+
+function buildDateKeyFromParts(parts) {
+  const year = parts.find((p) => p.type === 'year')?.value;
+  const month = parts.find((p) => p.type === 'month')?.value;
+  const day = parts.find((p) => p.type === 'day')?.value;
+  if (!year || !month || !day) return null;
+  return `${year}-${month}-${day}`;
+}
+
+function getDateKeyInTimeZone(date, timeZone) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(date);
+  return buildDateKeyFromParts(parts);
+}
+
+function formatTabLabel(date, timeZone) {
   return {
-    weekday: new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date),
-    day: new Intl.DateTimeFormat('en-US', { day: 'numeric' }).format(date),
+    weekday: new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone }).format(date),
+    day: new Intl.DateTimeFormat('en-US', { day: 'numeric', timeZone }).format(date),
   };
 }
 
-function formatDateHeading(date) {
+function formatDateHeading(date, timeZone) {
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
+    timeZone,
   }).format(date);
 }
 
@@ -63,7 +99,8 @@ function buildDirectionsUrl(event) {
   return null;
 }
 
-export default function DayTabs({ groupedEvents }) {
+export default function DayTabs({ groupedEvents, citySlug }) {
+  const timeZone = CITY_TIMEZONES[citySlug] || 'UTC';
   const [weekOffset, setWeekOffset] = useState(0);
   const eventsByDate = useMemo(() => {
     const map = new Map();
@@ -75,22 +112,23 @@ export default function DayTabs({ groupedEvents }) {
 
   const days = useMemo(() => {
     const list = [];
-    const today = new Date();
-    const start = new Date(today);
-    start.setDate(today.getDate() + weekOffset * 7);
+    const todayKey = getDateKeyInTimeZone(new Date(), timeZone);
+    const base = todayKey ? new Date(`${todayKey}T12:00:00Z`) : new Date();
+    const start = new Date(base);
+    start.setUTCDate(base.getUTCDate() + weekOffset * 7);
     for (let i = 0; i < 7; i += 1) {
       const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const key = buildDateKey(d);
+      d.setUTCDate(start.getUTCDate() + i);
+      const key = getDateKeyInTimeZone(d, timeZone);
       list.push({
         key,
-        label: formatTabLabel(d),
-        heading: formatDateHeading(d),
+        label: formatTabLabel(d, timeZone),
+        heading: formatDateHeading(d, timeZone),
         events: eventsByDate.get(key) || [],
       });
     }
     return list;
-  }, [eventsByDate, weekOffset]);
+  }, [eventsByDate, weekOffset, timeZone]);
 
   const [activeKey, setActiveKey] = useState(days[0]?.key);
 

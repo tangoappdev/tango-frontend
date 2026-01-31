@@ -22,6 +22,7 @@ const MapView = ({ events }) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
+  const infoWindowRef = useRef(null);
   const [ready, setReady] = useState(false);
 
   const points = useMemo(
@@ -33,6 +34,9 @@ const MapView = ({ events }) => {
           title: event.title,
           lat: event.latitude,
           lng: event.longitude,
+          venue: event.venue,
+          address: event.address,
+          time: event.timeRangeRaw,
         })),
     [events]
   );
@@ -60,11 +64,33 @@ const MapView = ({ events }) => {
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
 
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new window.google.maps.InfoWindow();
+    }
+
     points.forEach((point) => {
+      const directionsUrl = point.address
+        ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(point.address)}`
+        : `https://www.google.com/maps/dir/?api=1&destination=${point.lat},${point.lng}`;
+      const content = `
+        <div style="font-family: Arial, sans-serif; max-width: 240px; color: #111827;">
+          <div style="font-weight: 700; margin-bottom: 4px;">${point.title || ''}</div>
+          ${point.time ? `<div style="font-size: 12px; color: #374151;">${point.time}</div>` : ''}
+          ${point.venue ? `<div style="font-size: 12px; margin-top: 6px; color: #1f2937;">${point.venue}</div>` : ''}
+          ${point.address ? `<div style="font-size: 12px; color: #4b5563;">${point.address}</div>` : ''}
+          <a href="${directionsUrl}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:8px;font-size:12px;color:#0f766e;text-decoration:none;font-weight:700;">
+            Get directions
+          </a>
+        </div>
+      `;
       const marker = new window.google.maps.Marker({
         position: { lat: point.lat, lng: point.lng },
         map: mapInstance.current,
         title: point.title,
+      });
+      marker.addListener('click', () => {
+        infoWindowRef.current.setContent(content);
+        infoWindowRef.current.open(mapInstance.current, marker);
       });
       markersRef.current.push(marker);
     });
