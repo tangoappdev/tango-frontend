@@ -22,7 +22,7 @@ const MapView = ({ events }) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
-  const infoWindowRef = useRef(null);
+  const overlayRef = useRef(null);
   const [ready, setReady] = useState(false);
 
   const points = useMemo(
@@ -36,10 +36,31 @@ const MapView = ({ events }) => {
           lng: event.longitude,
           venue: event.venue,
           address: event.address,
-          time: event.timeRangeRaw,
+          timeRangeRaw: event.timeRangeRaw,
+          startTimeMinutes: event.startTimeMinutes,
+          endTimeMinutes: event.endTimeMinutes,
         })),
     [events]
   );
+
+  const formatMinutes = (minutes) => {
+    if (minutes === null || minutes === undefined) return null;
+    const hrs24 = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    const meridiem = hrs24 >= 12 ? 'pm' : 'am';
+    const hrs12 = hrs24 % 12 || 12;
+    return `${hrs12.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')} ${meridiem}`;
+  };
+
+  const formatTimeRange = (point) => {
+    if (point.startTimeMinutes == null && point.endTimeMinutes == null) {
+      return point.timeRangeRaw || null;
+    }
+    const start = formatMinutes(point.startTimeMinutes);
+    const end = formatMinutes(point.endTimeMinutes);
+    if (start && end) return `${start} - ${end}`;
+    return start || end || point.timeRangeRaw || null;
+  };
 
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -79,12 +100,13 @@ const MapView = ({ events }) => {
       });
     }
 
+    if (overlayRef.current) {
+      overlayRef.current.setMap(null);
+      overlayRef.current = null;
+    }
+
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
-
-    if (!infoWindowRef.current) {
-      infoWindowRef.current = new window.google.maps.InfoWindow();
-    }
 
     const markerIcon = {
       path: 'M12 2C7.589 2 4 5.589 4 10c0 6.1 7.1 13 8 13s8-6.9 8-13c0-4.411-3.589-8-8-8zm0 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8z',
@@ -96,21 +118,88 @@ const MapView = ({ events }) => {
       anchor: new window.google.maps.Point(12, 23),
     };
 
-    points.forEach((point) => {
+    const closeOverlay = () => {
+      if (overlayRef.current) {
+        overlayRef.current.setMap(null);
+        overlayRef.current = null;
+      }
+    };
+
+    const openOverlay = (point) => {
+      closeOverlay();
+
+      const timeLabel = formatTimeRange(point);
       const directionsUrl = point.address
         ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(point.address)}`
         : `https://www.google.com/maps/dir/?api=1&destination=${point.lat},${point.lng}`;
+
       const content = `
-        <div style="font-family: Arial, sans-serif; max-width: 240px; color: #111827;">
-          <div style="font-weight: 700; margin-bottom: 4px;">${point.title || ''}</div>
-          ${point.time ? `<div style="font-size: 12px; color: #374151;">${point.time}</div>` : ''}
-          ${point.venue ? `<div style="font-size: 12px; margin-top: 6px; color: #1f2937;">${point.venue}</div>` : ''}
+        <div style="position:relative; font-family: Arial, sans-serif; max-width: 240px; color: #111827; background: #ffffff; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.25); padding: 12px 14px 12px 14px;">
+          <button data-close="true" style="position:absolute; top:10px; right:12px; border:0; background:transparent; color:#6b7280; font-size:16px; line-height:1; cursor:pointer;">×</button>
+          <div style="font-weight: 700; font-size: 15px; margin: 2px 32px 2px 0;">${point.title || ''}</div>
+          ${timeLabel ? `<div style="font-size: 12px; color: #374151; margin-top: 2px;">${timeLabel}</div>` : ''}
+          ${point.venue ? `<div style="font-size: 12px; margin-top: 4px; color: #1f2937;">${point.venue}</div>` : ''}
           ${point.address ? `<div style="font-size: 12px; color: #4b5563;">${point.address}</div>` : ''}
           <a href="${directionsUrl}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:8px;font-size:12px;color:#0f766e;text-decoration:none;font-weight:700;">
             Get directions
           </a>
+          <div style="position:absolute; left:50%; bottom:-10px; width:0; height:0; transform:translateX(-50%); border-left:10px solid transparent; border-right:10px solid transparent; border-top:10px solid #ffffff;"></div>
         </div>
       `;
+
+      class MilongaOverlay extends window.google.maps.OverlayView {
+        constructor(position, html, map) {
+          super();
+          this.position = position;
+          this.html = html;
+          this.div = null;
+          this.setMap(map);
+        }
+
+        onAdd() {
+          const div = document.createElement('div');
+          div.style.position = 'absolute';
+          div.style.transform = 'translate(-50%, -125%)';
+          div.style.zIndex = '100';
+          div.innerHTML = this.html;
+          div.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target && target.getAttribute && target.getAttribute('data-close') === 'true') {
+              event.preventDefault();
+              closeOverlay();
+            }
+          });
+          this.div = div;
+          const panes = this.getPanes();
+          panes?.floatPane.appendChild(div);
+        }
+
+        draw() {
+          if (!this.div) return;
+          const projection = this.getProjection();
+          if (!projection) return;
+          const point = projection.fromLatLngToDivPixel(this.position);
+          if (!point) return;
+          this.div.style.left = `${point.x}px`;
+          this.div.style.top = `${point.y}px`;
+        }
+
+        onRemove() {
+          if (this.div && this.div.parentNode) {
+            this.div.parentNode.removeChild(this.div);
+          }
+          this.div = null;
+        }
+      }
+
+      overlayRef.current = new MilongaOverlay(
+        new window.google.maps.LatLng(point.lat, point.lng),
+        content,
+        mapInstance.current
+      );
+    };
+
+    points.forEach((point) => {
       const marker = new window.google.maps.Marker({
         position: { lat: point.lat, lng: point.lng },
         map: mapInstance.current,
@@ -118,8 +207,7 @@ const MapView = ({ events }) => {
         icon: markerIcon,
       });
       marker.addListener('click', () => {
-        infoWindowRef.current.setContent(content);
-        infoWindowRef.current.open(mapInstance.current, marker);
+        openOverlay(point);
       });
       markersRef.current.push(marker);
     });

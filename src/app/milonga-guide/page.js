@@ -32,7 +32,7 @@ export default async function MilongaGuideIndexPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#25edda]/80">
               Milonga Guide
             </p>
-            <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">
+            <h1 className="mt-3 text-xl font-semibold sm:text-3xl">
               Upcoming milongas & practicas
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-gray-300">
