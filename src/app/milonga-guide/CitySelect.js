@@ -2,7 +2,7 @@
 
 const CitySelect = ({ cities, activeSlug }) => {
   return (
-    <div className="w-full max-w-xs">
+    <div className="w-full">
       <label className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
         City
       </label>

@@ -58,6 +58,24 @@ const MapView = ({ events }) => {
         zoom: points.length ? 12 : 4,
         mapTypeControl: false,
         streetViewControl: false,
+        styles: [
+          { elementType: 'geometry', stylers: [{ color: '#343a43' }] },
+          { elementType: 'labels.text.fill', stylers: [{ color: '#d2d7dd' }] },
+          { elementType: 'labels.text.stroke', stylers: [{ color: '#252932' }] },
+          { featureType: 'poi', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+          { featureType: 'poi', elementType: 'labels.text', stylers: [{ visibility: 'off' }] },
+          { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+          { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#454c56' }] },
+          { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#b0b7c1' }] },
+          { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#2f343c' }] },
+          { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#9ea6b0' }] },
+          { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#4a515c' }] },
+          { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#262b34' }] },
+          { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#c3c9d1' }] },
+          { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#3a4049' }] },
+          { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#2a2f37' }] },
+          { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#8e98a6' }] },
+        ],
       });
     }
 
@@ -67,6 +85,16 @@ const MapView = ({ events }) => {
     if (!infoWindowRef.current) {
       infoWindowRef.current = new window.google.maps.InfoWindow();
     }
+
+    const markerIcon = {
+      path: 'M12 2C7.589 2 4 5.589 4 10c0 6.1 7.1 13 8 13s8-6.9 8-13c0-4.411-3.589-8-8-8zm0 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8z',
+      fillColor: '#25edda',
+      fillOpacity: 1,
+      strokeOpacity: 0,
+      strokeWeight: 0,
+      scale: 1.15,
+      anchor: new window.google.maps.Point(12, 23),
+    };
 
     points.forEach((point) => {
       const directionsUrl = point.address
@@ -87,6 +115,7 @@ const MapView = ({ events }) => {
         position: { lat: point.lat, lng: point.lng },
         map: mapInstance.current,
         title: point.title,
+        icon: markerIcon,
       });
       marker.addListener('click', () => {
         infoWindowRef.current.setContent(content);

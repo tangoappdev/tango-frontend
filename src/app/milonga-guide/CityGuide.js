@@ -264,11 +264,6 @@ export default async function CityGuide({ citySlug }) {
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                      {event.dayOfWeek && (
-                        <span className="rounded-full border border-white/10 px-3 py-1 text-gray-300">
-                          {event.dayOfWeek}
-                        </span>
-                      )}
                       {formatTimeRange(event) && (
                         <span className="rounded-full bg-white/10 px-3 py-1 text-gray-200">
                           {formatTimeRange(event)}

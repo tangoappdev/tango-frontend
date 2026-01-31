@@ -226,9 +226,9 @@ export default function DayTabs({ groupedEvents, citySlug }) {
             {activeDay.events.map((event) => (
               <article
                 key={event.id}
-                className="overflow-hidden rounded-2xl border border-white/5 bg-[#30333a]"
+                className="border-b border-white/10 bg-[#30333a] last:border-b-0 sm:overflow-hidden sm:rounded-2xl sm:border sm:border-white/5"
               >
-                <div className="flex flex-row items-start gap-4 p-5">
+                <div className="flex flex-row items-start gap-4 px-0 py-5 sm:p-5">
                   {(event.imageUrl ||
                     event.citySlug === 'new-york' ||
                     event.citySlug === 'san-francisco' ||
@@ -257,11 +257,6 @@ export default function DayTabs({ groupedEvents, citySlug }) {
                           {formatTimeRange(event)}
                         </span>
                       )}
-                      {event.dayOfWeek && (
-                        <span className="rounded-full border border-white/10 px-3 py-1 text-gray-300">
-                          {event.dayOfWeek}
-                        </span>
-                      )}
                   {event.eventType && (
                     <span className="rounded-full border border-[#25edda]/30 px-3 py-1 text-[#25edda]">
                       {formatEventType(event.eventType)}
@@ -283,25 +278,6 @@ export default function DayTabs({ groupedEvents, citySlug }) {
                         className="mt-3 inline-flex text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
                       >
                         Get directions
-                      </a>
-                    )}
-                    {event.sourceUrl &&
-                      ![
-                        'buenos-aires',
-                        'berlin',
-                        'sao-paulo',
-                        'athens',
-                        'turkiye',
-                        'england',
-                        'miami',
-                      ].includes(event.citySlug) && (
-                      <a
-                        href={event.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-4 inline-flex text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
-                      >
-                        View source
                       </a>
                     )}
                   </div>
