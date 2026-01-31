@@ -39,6 +39,8 @@ const UPDATABLE_FIELDS = new Set([
   'city',
   'sourceUrl',
   'imageUrl',
+  'latitude',
+  'longitude',
 ]);
 
 function normalizeKey(value) {
@@ -147,6 +149,7 @@ export async function PATCH(request) {
     const sanitized = {};
     Object.entries(updates).forEach(([key, value]) => {
       if (UPDATABLE_FIELDS.has(key)) {
+        if (value === undefined) return;
         sanitized[key] = value === '' ? null : value;
       }
     });
@@ -164,12 +167,154 @@ export async function PATCH(request) {
       }
       overrideKey = buildStableKey({ id, ...eventDoc.data() });
     }
+
+    const needsGeocode =
+      (sanitized.address || sanitized.city || sanitized.citySlug) &&
+      sanitized.latitude === undefined &&
+      sanitized.longitude === undefined;
+
+    if (needsGeocode) {
+      const eventDoc = await db.collection('external_events').doc(id).get();
+      const base = eventDoc.exists ? eventDoc.data() : {};
+      const address = sanitized.address || base.address || '';
+      const city = sanitized.city || base.city || '';
+      const fullAddress = [address, city].filter(Boolean).join(', ');
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (apiKey && fullAddress) {
+        try {
+          const geoUrl =
+            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}` +
+            `&key=${apiKey}`;
+          const geoRes = await fetch(geoUrl);
+          if (geoRes.ok) {
+            const geoJson = await geoRes.json();
+            const location = geoJson?.results?.[0]?.geometry?.location;
+            if (location) {
+              sanitized.latitude = location.lat;
+              sanitized.longitude = location.lng;
+            }
+          }
+        } catch (error) {
+          // Ignore geocode failures; allow manual save without lat/lng
+        }
+      }
+    }
+
     await db.collection('external_event_overrides').doc(overrideKey).set(sanitized, { merge: true });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
       { error: error?.message || 'Failed to update event' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
+  try {
+    const body = await request.json();
+    const mode = body?.mode || '';
+    if (mode === 'debug-env') {
+      return NextResponse.json({
+        ok: true,
+        hasServerKey: Boolean(process.env.GOOGLE_MAPS_API_KEY),
+        hasPublicKey: Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY),
+      });
+    }
+
+    if (mode !== 'bulk-geocode') {
+      return NextResponse.json({ error: 'Unsupported operation' }, { status: 400 });
+    }
+
+    const db = getFirestore();
+    const today = new Date();
+    const end = new Date();
+    end.setDate(end.getDate() + 28);
+    const startIso = buildDateIso(today);
+    const endIso = buildDateIso(end);
+
+    const snapshot = await db
+      .collection('external_events')
+      .where('date', '>=', startIso)
+      .where('date', '<=', endIso)
+      .get();
+
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Google Maps API key not configured' }, { status: 500 });
+    }
+
+    const events = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const overridesCollection = db.collection('external_event_overrides');
+
+    let geocoded = 0;
+    let skipped = 0;
+
+    for (const event of events) {
+      const stableKey = buildStableKey(event);
+      if (!stableKey) {
+        skipped += 1;
+        continue;
+      }
+
+      const overrideDoc = await overridesCollection.doc(stableKey).get();
+      if (overrideDoc.exists) {
+        const data = overrideDoc.data() || {};
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+          skipped += 1;
+          continue;
+        }
+      }
+
+      const address = event.address || '';
+      const city = event.city || event.citySlug || '';
+      const fullAddress = [address, city].filter(Boolean).join(', ');
+      if (!fullAddress) {
+        skipped += 1;
+        continue;
+      }
+
+      try {
+        const geoUrl =
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}` +
+          `&key=${apiKey}`;
+        const geoRes = await fetch(geoUrl);
+        if (!geoRes.ok) {
+          skipped += 1;
+          continue;
+        }
+        const geoJson = await geoRes.json();
+        if (geoJson?.status && geoJson.status !== 'OK') {
+          skipped += 1;
+          continue;
+        }
+        const location = geoJson?.results?.[0]?.geometry?.location;
+        if (!location) {
+          skipped += 1;
+          continue;
+        }
+        await overridesCollection.doc(stableKey).set(
+          {
+            latitude: location.lat,
+            longitude: location.lng,
+          },
+          { merge: true }
+        );
+        geocoded += 1;
+      } catch (error) {
+        skipped += 1;
+      }
+    }
+
+    return NextResponse.json({ ok: true, geocoded, skipped });
+  } catch (error) {
+    console.error('Bulk geocode failed:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Bulk geocode failed' },
       { status: 500 }
     );
   }

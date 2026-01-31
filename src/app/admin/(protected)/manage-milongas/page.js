@@ -68,6 +68,7 @@ export default function ManageMilongasPage() {
   const [cityFilter, setCityFilter] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState({});
+  const [bulkStatus, setBulkStatus] = useState('');
   const router = useRouter();
 
   const fetchEvents = async (citySlug = '') => {
@@ -172,6 +173,8 @@ export default function ManageMilongasPage() {
             sourceUrl: updates.sourceUrl,
             imageUrl: updates.imageUrl,
             descriptionRaw: updates.descriptionRaw,
+            latitude: updates.latitude,
+            longitude: updates.longitude,
           },
           stableKey: updates.stableKey,
         }),
@@ -185,6 +188,24 @@ export default function ManageMilongasPage() {
       setEditingId(null);
     } catch (err) {
       setError(err.message || 'Failed to save changes.');
+    }
+  };
+
+  const handleBulkGeocode = async () => {
+    setBulkStatus('Running geocode...');
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/milongas/manage`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ mode: 'bulk-geocode' }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to geocode locations.');
+      setBulkStatus(`Geocoded ${data.geocoded} events (skipped ${data.skipped}).`);
+    } catch (err) {
+      setBulkStatus(err.message || 'Bulk geocode failed.');
     }
   };
 
@@ -238,7 +259,15 @@ export default function ManageMilongasPage() {
               </option>
             ))}
           </select>
+          <button
+            onClick={handleBulkGeocode}
+            className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-gray-200 hover:border-white/30"
+          >
+            Geocode missing locations
+          </button>
         </div>
+
+        {bulkStatus && <p className="text-xs text-gray-400">{bulkStatus}</p>}
 
         {error && <p className="text-sm text-red-400">{error}</p>}
         {isLoading && <p className="text-gray-300">Loading milongas...</p>}

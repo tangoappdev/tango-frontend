@@ -19,9 +19,8 @@ const CITIES = [
 ];
 
 export default async function MilongaGuideCityPage({ params }) {
-  const citySlug = CITIES.some((city) => city.slug === params.city)
-    ? params.city
-    : 'new-york';
+  const { city } = await params;
+  const citySlug = CITIES.some((item) => item.slug === city) ? city : 'new-york';
 
   return (
     <>

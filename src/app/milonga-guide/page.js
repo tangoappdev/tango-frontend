@@ -1,6 +1,7 @@
 import Header from '@/components/Header';
 import CityGuide from './CityGuide';
 import CitySelect from './CitySelect';
+import AutoCityRedirect from './AutoCityRedirect';
 
 const CITIES = [
   { slug: 'new-york', label: 'New York' },
@@ -25,6 +26,7 @@ export default async function MilongaGuideIndexPage() {
     <>
       <Header />
       <main className="min-h-screen bg-[#30333a] px-6 py-12 text-white sm:px-10">
+        <AutoCityRedirect enabled />
         <div className="mx-auto w-full max-w-5xl">
           <header className="mb-10">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#25edda]/80">

@@ -60,6 +60,19 @@ function formatTimeRange(event) {
   return start || end || event.timeRangeRaw || null;
 }
 
+function buildDirectionsUrl(event) {
+  if (!event) return null;
+  if (event.latitude && event.longitude) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${event.latitude},${event.longitude}`;
+  }
+  if (event.address) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      event.address
+    )}`;
+  }
+  return null;
+}
+
 async function getEventsByCity(citySlug) {
   const db = getFirestore();
   const start = new Date();
@@ -221,12 +234,22 @@ export default async function CityGuide({ citySlug }) {
                     {event.venue && (
                       <p className="mt-2 text-sm font-medium text-gray-200">{event.venue}</p>
                     )}
-                    {event.address && (
-                      <p className="mt-1 text-sm text-gray-300">{event.address}</p>
-                    )}
-                    {event.frequencyRaw && (
-                      <p className="mt-2 text-xs text-gray-400">{event.frequencyRaw}</p>
-                    )}
+                {event.address && (
+                  <p className="mt-1 text-sm text-gray-300">{event.address}</p>
+                )}
+                {buildDirectionsUrl(event) && (
+                  <a
+                    href={buildDirectionsUrl(event)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
+                  >
+                    Get directions
+                  </a>
+                )}
+                {event.frequencyRaw && (
+                  <p className="mt-2 text-xs text-gray-400">{event.frequencyRaw}</p>
+                )}
                   </div>
                 </div>
               </article>

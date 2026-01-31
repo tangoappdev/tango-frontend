@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
+import MapView from './MapView';
 
 function formatTabLabel(date) {
   return {
@@ -47,6 +48,19 @@ function formatTimeRange(event) {
 function formatEventType(value) {
   if (!value) return null;
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function buildDirectionsUrl(event) {
+  if (!event) return null;
+  if (event.latitude && event.longitude) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${event.latitude},${event.longitude}`;
+  }
+  if (event.address) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      event.address
+    )}`;
+  }
+  return null;
 }
 
 export default function DayTabs({ groupedEvents }) {
@@ -168,6 +182,7 @@ export default function DayTabs({ groupedEvents }) {
 
       <div className="mt-6">
         <h2 className="text-lg font-semibold text-white">{activeDay?.heading}</h2>
+        <MapView events={activeDay?.events || []} />
         {activeDay?.events?.length ? (
           <div className="mt-4 flex flex-col gap-4">
             {activeDay.events.map((event) => (
@@ -221,6 +236,16 @@ export default function DayTabs({ groupedEvents }) {
                     )}
                     {event.address && (
                       <p className="mt-1 text-sm text-gray-300">{event.address}</p>
+                    )}
+                    {buildDirectionsUrl(event) && (
+                      <a
+                        href={buildDirectionsUrl(event)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
+                      >
+                        Get directions
+                      </a>
                     )}
                     {event.sourceUrl &&
                       ![
