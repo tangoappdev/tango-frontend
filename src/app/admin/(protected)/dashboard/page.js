@@ -219,6 +219,16 @@ const handleLogout = async () => {
               isLoading={isLoading}
               className="w-full"
             />
+            <StatCard
+              title="Festivals & Marathons"
+              value={stats?.festivalStats?.total}
+              breakdown={{
+                Countries: stats?.festivalStats?.countries ?? 0,
+                Cities: stats?.festivalStats?.cities ?? 0,
+              }}
+              isLoading={isLoading}
+              className="w-full"
+            />
           </div>
           <OrchestraStats
             stats={stats?.orchestraStats || {}}
@@ -244,6 +254,11 @@ const handleLogout = async () => {
               <NavCard
                 title="Manage Milongas"
                 href="/admin/manage-milongas"
+                icon={MusicalNoteIcon}
+              />
+              <NavCard
+                title="Manage Festivals"
+                href="/admin/manage-festivals"
                 icon={MusicalNoteIcon}
               />
             </div>

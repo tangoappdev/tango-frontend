@@ -17,6 +17,7 @@ const SYNC_PATHS = [
   '/api/sources/milongueandoroma/sync',
   '/api/sources/austin-tango/sync',
   '/api/sources/agendadeltango-barcelona/sync',
+  '/api/sources/tangocat/sync',
 ];
 
 async function callSync(origin, token, path) {

@@ -228,7 +228,7 @@ export default function DayTabs({ groupedEvents, citySlug }) {
                 key={event.id}
                 className="border-b border-white/10 bg-[#30333a] last:border-b-0 sm:overflow-hidden sm:rounded-2xl sm:border sm:border-white/5"
               >
-                <div className="flex flex-row items-start gap-4 px-0 py-5 sm:p-5">
+                <div className="flex flex-row items-start gap-4 px-0 py-3 sm:p-5">
                   {(event.imageUrl ||
                     event.citySlug === 'new-york' ||
                     event.citySlug === 'san-francisco' ||
@@ -275,8 +275,11 @@ export default function DayTabs({ groupedEvents, citySlug }) {
                         href={buildDirectionsUrl(event)}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-3 inline-flex text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
+                        className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
                       >
+                        <svg aria-hidden="true" viewBox="0 0 48 48" className="h-4 w-4" fill="currentColor">
+                          <path d="M43.41 22.59l-18-18c-.78-.78-2.05-.78-2.82 0l-18 18c-.78.78-.78 2.05 0 2.83l18 17.99v.01c.78.78 2.05.78 2.83 0l18-18c.78-.79.78-2.05-.01-2.83zM28 29v-5h-8v6h-4v-8c0-1.11.89-2 2-2h10v-5l7 7-7 7z" />
+                        </svg>
                         Get directions
                       </a>
                     )}

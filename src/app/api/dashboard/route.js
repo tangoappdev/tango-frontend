@@ -30,6 +30,31 @@ export async function GET(request) {
     const db = getFirestore();
     const tandasRef = db.collection('tandas');
     const snapshot = await tandasRef.get();
+    const today = new Date().toISOString().slice(0, 10);
+
+    const festivalsSnapshot = await db
+      .collection('external_festivals')
+      .where('endDate', '>=', today)
+      .get();
+    const overridesSnapshot = await db.collection('external_festival_overrides').get();
+
+    const overrideMap = new Map();
+    overridesSnapshot.docs.forEach((doc) => {
+      overrideMap.set(doc.id, doc.data());
+    });
+
+    let festivalCount = 0;
+    const countries = new Set();
+    const cities = new Set();
+    festivalsSnapshot.docs.forEach((doc) => {
+      const festival = doc.data();
+      const override = overrideMap.get(doc.id);
+      const merged = { ...festival, ...(override || {}) };
+      if (merged.deleted) return;
+      festivalCount += 1;
+      if (merged.country) countries.add(merged.country);
+      if (merged.city) cities.add(`${merged.country || ''}|${merged.city}`);
+    });
 
     if (snapshot.empty) {
       return NextResponse.json({
@@ -39,6 +64,11 @@ export async function GET(request) {
         tracksByType: { Tango: 0, Vals: 0, Milonga: 0 },
         orchestraStats: {},
         tangoMoodBreakdown: { rhythmic: 0, melodic: 0 },
+        festivalStats: {
+          total: festivalCount,
+          countries: countries.size,
+          cities: cities.size,
+        },
       });
     }
 
@@ -97,6 +127,11 @@ export async function GET(request) {
       tracksByType,
       orchestraStats,
       tangoMoodBreakdown,
+      festivalStats: {
+        total: festivalCount,
+        countries: countries.size,
+        cities: cities.size,
+      },
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
