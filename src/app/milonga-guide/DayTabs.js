@@ -1,7 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { slugify } from './utils';
 import MapView from './MapView';
@@ -138,6 +139,24 @@ export default function DayTabs({ groupedEvents, citySlug }) {
     setActiveKey(days[0]?.key);
   }, [days]);
   const activeDay = days.find((day) => day.key === activeKey) || days[0];
+  const listRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const updateScrollState = () => {
+    const el = listRef.current;
+    if (!el) return;
+    const maxScrollLeft = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft < maxScrollLeft - 4);
+  };
+
+  const scrollByAmount = (direction) => {
+    const el = listRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.8;
+    el.scrollBy({ left: direction * amount, behavior: 'smooth' });
+  };
 
   return (
     <div>
@@ -170,7 +189,7 @@ export default function DayTabs({ groupedEvents, citySlug }) {
           }`}
           aria-label="Previous week"
         >
-          &#x2190;
+          <ChevronLeftIcon className="h-5 w-5" />
         </button>
         <div className="grid flex-1 grid-cols-7 gap-2">
           {days.map((day) => (
@@ -203,7 +222,7 @@ export default function DayTabs({ groupedEvents, citySlug }) {
           }`}
           aria-label="Next week"
         >
-          &#x2192;
+          <ChevronRightIcon className="h-5 w-5" />
         </button>
       </div>
       <div className="mt-4 flex items-center justify-center gap-2 sm:hidden">
@@ -224,11 +243,39 @@ export default function DayTabs({ groupedEvents, citySlug }) {
         <MapView events={activeDay?.events || []} />
         <h2 className="mt-4 text-lg font-semibold text-white">{activeDay?.heading}</h2>
         {activeDay?.events?.length ? (
-          <div className="mt-4 flex flex-col gap-4">
+          <>
+            <div className="relative mt-4">
+              <div className="pointer-events-none absolute left-0 top-1/2 z-10 flex w-full -translate-y-1/2 items-center justify-between px-3">
+                <button
+                  type="button"
+                  onClick={() => scrollByAmount(-1)}
+                  disabled={!canScrollLeft}
+                  className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#2a2d33] text-gray-300 transition hover:border-white/30 disabled:opacity-40"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeftIcon className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollByAmount(1)}
+                  disabled={!canScrollRight}
+                  className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#2a2d33] text-gray-300 transition hover:border-white/30 disabled:opacity-40"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRightIcon className="h-5 w-5" />
+                </button>
+              </div>
+              <div
+                ref={listRef}
+                onScroll={updateScrollState}
+                onMouseEnter={updateScrollState}
+                className="milonga-scroll -mx-2 flex gap-4 overflow-x-auto px-2 pb-2 sm:mx-0 sm:px-0 sm:pb-0"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
             {activeDay.events.map((event) => (
               <article
                 key={event.id}
-                className="cursor-pointer border-b border-white/10 bg-[#30333a] transition hover:border-white/20 last:border-b-0 sm:overflow-hidden sm:rounded-2xl sm:border sm:border-white/5"
+                className="w-[394px] flex-shrink-0 cursor-pointer border border-white/10 bg-[#30333a] transition hover:border-white/20 sm:overflow-hidden sm:rounded-2xl sm:border-white/5"
                 onClick={(eventClick) => {
                   if (eventClick.target.closest('a')) return;
                   window.location.href = `/milonga-guide/event/${event.id}/${slugify(event.title)}`;
@@ -277,12 +324,8 @@ export default function DayTabs({ groupedEvents, citySlug }) {
                         {event.title}
                       </Link>
                     </h3>
-                    {event.venue && (
-                      <p className="mt-2 text-sm font-medium text-gray-200">{event.venue}</p>
-                    )}
-                    {event.address && (
-                      <p className="mt-1 text-sm text-gray-300">{event.address}</p>
-                    )}
+                    {event.venue && <MarqueeText className="mt-2 text-sm font-medium text-gray-200" text={event.venue} />}
+                    {event.address && <MarqueeText className="mt-1 text-sm text-gray-300" text={event.address} />}
                     {buildDirectionsUrl(event) && (
                       <a
                         href={buildDirectionsUrl(event)}
@@ -300,13 +343,76 @@ export default function DayTabs({ groupedEvents, citySlug }) {
                 </div>
               </article>
             ))}
-          </div>
+              </div>
+            </div>
+            <style jsx>{`
+              .milonga-scroll::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
+          </>
         ) : (
           <div className="mt-4 rounded-2xl border border-white/10 bg-[#30333a] p-6 text-sm text-gray-300">
             No events listed for this day.
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function MarqueeText({ text, className }) {
+  const containerRef = useRef(null);
+  const [isOverflow, setIsOverflow] = useState(false);
+  const [marqueeStyle, setMarqueeStyle] = useState({});
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const distance = node.scrollWidth - node.clientWidth;
+    if (distance > 0) {
+      const duration = Math.max(4, distance / 35);
+      setIsOverflow(true);
+      setMarqueeStyle({
+        '--marquee-distance': `${distance}px`,
+        '--marquee-duration': `${duration}s`,
+      });
+    } else {
+      setIsOverflow(false);
+      setMarqueeStyle({});
+    }
+  }, [text]);
+
+  return (
+    <div ref={containerRef} className={`marquee-container ${className}`}>
+      <span
+        className={`marquee-content ${isOverflow ? 'marquee-animate' : ''}`}
+        style={marqueeStyle}
+      >
+        {text}
+      </span>
+      <style jsx>{`
+        .marquee-container {
+          overflow: hidden;
+          white-space: nowrap;
+          position: relative;
+        }
+        .marquee-content {
+          display: inline-block;
+          will-change: transform;
+        }
+        .marquee-animate {
+          animation: marquee var(--marquee-duration) linear infinite;
+        }
+        @keyframes marquee {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(calc(-1 * var(--marquee-distance)));
+          }
+        }
+      `}</style>
     </div>
   );
 }

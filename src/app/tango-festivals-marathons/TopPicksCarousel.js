@@ -83,7 +83,27 @@ const TopPicksCarousel = ({ topPicks, showHeader = true, title, onCardClick }) =
                 />
               </div>
             ) : (
-              <div className="aspect-[16/10] w-full bg-[#30333a]" />
+              <div className="aspect-[16/10] w-full bg-[#30333a]">
+                <div className="flex h-full w-full items-center justify-center text-[#25edda]/80">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="h-12 w-12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  >
+                    <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
+                    <path d="M7 3.5v4M17 3.5v4M3.5 9h17" />
+                    <rect x="7" y="12" width="2" height="2" fill="currentColor" stroke="none" />
+                    <rect x="11" y="12" width="2" height="2" fill="currentColor" stroke="none" />
+                    <rect x="15" y="12" width="2" height="2" fill="currentColor" stroke="none" />
+                    <rect x="7" y="16" width="2" height="2" fill="currentColor" stroke="none" />
+                    <rect x="11" y="16" width="2" height="2" fill="currentColor" stroke="none" />
+                    <rect x="15" y="16" width="2" height="2" fill="currentColor" stroke="none" />
+                  </svg>
+                </div>
+              </div>
             )}
             <div className="p-4">
               <h3 className="text-sm font-semibold text-white">{festival.title}</h3>

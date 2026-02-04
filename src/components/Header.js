@@ -13,6 +13,13 @@ const navLinks = [
   { href: '/about', label: 'About' },
 ];
 
+const tangoAppLinks = [
+  { href: '/home', label: 'Home' },
+  { href: '/milonga-guide', label: 'Milonga Guide' },
+  { href: '/tango-festivals-marathons', label: 'Festivals & Marathons' },
+  { href: '/', label: 'Virtual DJ' },
+];
+
 function NavLink({ href, label, isActive, onClick }) {
   const baseClasses =
     'w-full md:w-auto px-4 py-2 text-sm font-medium rounded-full transition-colors duration-200';
@@ -48,6 +55,9 @@ export default function Header() {
   const isTrial = !!trialActive;
   const isPro = !!me?.isPro && !isTrial;
   const isFree = !isPro && !isTrial;
+  const [isTangoAppSite, setIsTangoAppSite] = useState(false);
+  const brandName = isTangoAppSite ? 'TangoApp' : 'Virtual Tango DJ';
+  const headerLinks = isTangoAppSite ? tangoAppLinks : navLinks;
   const badgeLabel = isPro || isTrial ? 'Pro' : isFree ? 'Free' : null;
   const badgeClass =
     isPro || isTrial ? 'bg-[#25edda] text-[#1f2126]' : 'bg-white text-[#30333a]';
@@ -131,6 +141,18 @@ export default function Header() {
   }, [pathname]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const host = window.location.hostname.toLowerCase();
+    const isLocal =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '[::1]';
+    setIsTangoAppSite(
+      isLocal || host === 'tangoapp.ar' || host === 'www.tangoapp.ar'
+    );
+  }, []);
+
+  useEffect(() => {
     const updateHeaderHeight = () => {
       if (!headerRef.current) return;
       const { height } = headerRef.current.getBoundingClientRect();
@@ -156,16 +178,20 @@ export default function Header() {
           className="flex w-full md:w-auto items-center justify-center md:justify-start gap-3 text-white text-center md:text-left"
         >
           <Image
-            src="/favicon.ico"
-            alt="Virtual Tango DJ logo"
+            src={isTangoAppSite ? '/tangoappicon.png' : '/favicon.ico'}
+            alt={`${brandName} logo`}
             width={36}
             height={36}
-            className="h-9 w-9 rounded-lg"
+            className={isTangoAppSite ? 'h-9 w-auto' : 'h-9 w-9 rounded-lg'}
             priority
           />
           <div className="flex flex-col leading-tight">
-            <span className="text-base font-semibold tracking-wide uppercase text-[#25edda] flex items-center gap-2">
-              Virtual Tango DJ
+            <span
+              className={`font-semibold tracking-wide text-[#25edda] flex items-center gap-2 ${
+                isTangoAppSite ? 'text-lg normal-case' : 'text-base uppercase'
+              }`}
+            >
+              {brandName}
               <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#25edda] text-[#1f2126]">
                 Beta
               </span>
@@ -174,7 +200,7 @@ export default function Header() {
         </Link>
 
         <nav className="hidden items-center gap-3 md:flex">
-          {navLinks
+          {headerLinks
             .filter((link) => link.href !== '/pricing' || !user || isTrial || isFree)
             .map((link) => (
             <NavLink
@@ -343,7 +369,7 @@ export default function Header() {
       {menuOpen && (
         <div className="border-t border-white/10 bg-[#30333a] px-4 py-4 md:hidden">
           <div className="flex flex-col gap-3">
-            {navLinks
+            {headerLinks
               .filter((link) => link.href !== '/pricing' || !user || isTrial || isFree)
               .map((link) => (
               <NavLink

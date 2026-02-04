@@ -1,6 +1,6 @@
 'use client';
 
-const CitySelect = ({ cities, activeSlug }) => {
+const CitySelect = ({ cities, activeSlug, onChange }) => {
   return (
     <div className="w-full sm:w-1/2">
       <label className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
@@ -10,6 +10,10 @@ const CitySelect = ({ cities, activeSlug }) => {
         <select
           value={activeSlug}
           onChange={(event) => {
+            if (onChange) {
+              onChange(event.target.value);
+              return;
+            }
             window.location.href = `/milonga-guide/${event.target.value}`;
           }}
           className="w-full bg-transparent text-sm font-semibold text-white outline-none"

@@ -1,10 +1,11 @@
 import Header from '@/components/Header';
-import Link from 'next/link';
+import MilongaGuideEmbed from './MilongaGuideEmbed';
+import FestivalsEmbed from './FestivalsEmbed';
 
 export const metadata = {
-  title: 'TangoApp | Your Tango Events Hub',
+  title: 'TangoApp | Tango Made Easy',
   description:
-    'Discover milongas, practicas, festivals, and marathons worldwide with TangoApp.',
+    'Find milongas, practicas, festivals, marathons, and teachers worldwide, plus listen to tandas with Virtual Tango DJ.',
 };
 
 export default function TangoAppHomePage() {
@@ -18,45 +19,21 @@ export default function TangoAppHomePage() {
               TangoApp
             </p>
             <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">
-              Your tango events hub
+              Tango Made Easy
             </h1>
-            <p className="mt-4 max-w-2xl text-base text-gray-300">
-              Find milongas, practicas, festivals, and marathons across the world. Stay
-              updated with curated listings and plan your next tango experience.
+            <p className="mt-4 max-w-3xl text-base text-gray-300">
+              Find milongas and festivals around the world and enjoy the best tandas with Virtual Tango DJ.
             </p>
           </header>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            <Link
-              href="/milonga-guide"
-              className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6 transition hover:border-white/20"
-            >
-              <h2 className="text-xl font-semibold text-white">Milonga Guide</h2>
-              <p className="mt-2 text-sm text-gray-300">
-                Daily listings of milongas and practicas by city, with map view and
-                directions.
-              </p>
-              <span className="mt-4 inline-flex text-xs font-semibold text-[#25edda]">
-                Explore milongas →
-              </span>
-            </Link>
-
-            <Link
-              href="/tango-festivals-marathons"
-              className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6 transition hover:border-white/20"
-            >
-              <h2 className="text-xl font-semibold text-white">Festivals & Marathons</h2>
-              <p className="mt-2 text-sm text-gray-300">
-                Upcoming tango festivals and marathons, grouped by month with top picks.
-              </p>
-              <span className="mt-4 inline-flex text-xs font-semibold text-[#25edda]">
-                Explore festivals →
-              </span>
-            </Link>
-          </div>
+          <MilongaGuideEmbed />
+          <FestivalsEmbed />
         </div>
       </main>
     </>
   );
 }
+
+
+
 
