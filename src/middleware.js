@@ -24,6 +24,14 @@ export default function middleware(req) {
     return NextResponse.redirect(new URL('/home', req.url));
   }
 
+  // Only protect admin + selected API routes; everything else is public.
+  const isAdminRoute = pathname.startsWith('/admin') && pathname !== '/admin/login';
+  const isProtectedApi = pathname.startsWith('/api/dashboard') || pathname.startsWith('/api/tandas/manage');
+
+  if (!isAdminRoute && !isProtectedApi) {
+    return NextResponse.next();
+  }
+
   const session = req.cookies.get('__session')?.value;
 
   // Not logged in? -> send to /login and remember where they wanted to go
