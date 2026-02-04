@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { formatDateRange } from './utils';
 
-const TopPicksCarousel = ({ topPicks, showHeader = true, title }) => {
+const TopPicksCarousel = ({ topPicks, showHeader = true, title, onCardClick }) => {
   const containerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -70,7 +70,8 @@ const TopPicksCarousel = ({ topPicks, showHeader = true, title }) => {
         {topPicks.map((festival) => (
           <article
             key={festival.id}
-            className="min-w-[240px] max-w-[240px] overflow-hidden rounded-2xl border border-white/10 bg-[#2a2d33]"
+            className="min-w-[240px] max-w-[240px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#2a2d33] transition hover:border-white/20"
+            onClick={() => onCardClick?.(festival)}
           >
             {festival.imageUrl ? (
               <div className="aspect-[16/10] w-full overflow-hidden bg-white/5">
@@ -110,6 +111,7 @@ const TopPicksCarousel = ({ topPicks, showHeader = true, title }) => {
                   target="_blank"
                   rel="noreferrer"
                   className="mt-3 inline-flex text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
+                  onClick={(event) => event.stopPropagation()}
                 >
                   Visit website
                 </a>

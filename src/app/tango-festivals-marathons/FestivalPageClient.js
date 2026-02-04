@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import FestivalFilters from './FestivalFilters';
 import MapView from './MapView';
 import TopPicksCarousel from './TopPicksCarousel';
-import { formatDateRange } from './utils';
+import { formatDateRange, slugify } from './utils';
+import { useRouter } from 'next/navigation';
 
 const MONTH_NAMES = [
   'January',
@@ -50,6 +51,7 @@ const FestivalPageClient = ({
   enableAutoLocate,
   countLabelSuffix = 'festivals and marathons listed.',
 }) => {
+  const router = useRouter();
   const [selectedMonth, setSelectedMonth] = useState(null);
   const monthButtons = useMemo(() => buildMonthButtons(), []);
 
@@ -132,7 +134,14 @@ const FestivalPageClient = ({
         <span className="text-[#25edda]">{filteredFestivals.length}</span> {countLabelSuffix}
       </p>
       {topPicks.length > 0 && (
-        <TopPicksCarousel topPicks={topPicks} />
+        <TopPicksCarousel
+          topPicks={topPicks}
+          onCardClick={(festival) =>
+            router.push(
+              `/tango-festivals-marathons/event/${festival.id}/${slugify(festival.title)}`
+            )
+          }
+        />
       )}
       {groupedByMonth.length > 0 && (
         <section className="mt-8">
@@ -149,7 +158,14 @@ const FestivalPageClient = ({
                   {group.items.map((festival) => (
                     <article
                       key={festival.id}
-                      className="overflow-hidden rounded-2xl border border-white/5 bg-[#30333a]"
+                      className="cursor-pointer overflow-hidden rounded-2xl border border-white/5 bg-[#30333a] transition hover:border-white/20"
+                      onClick={() =>
+                        router.push(
+                          `/tango-festivals-marathons/event/${festival.id}/${slugify(
+                            festival.title
+                          )}`
+                        )
+                      }
                     >
                       <div className="flex flex-col">
                         {festival.imageUrl ? (
@@ -192,6 +208,7 @@ const FestivalPageClient = ({
                               target="_blank"
                               rel="noreferrer"
                               className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
+                              onClick={(event) => event.stopPropagation()}
                             >
                               Visit website
                             </a>
@@ -208,11 +225,16 @@ const FestivalPageClient = ({
       )}
       {groupedByMonth.length === 0 && (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredFestivals.map((festival) => (
-            <article
-              key={festival.id}
-              className="overflow-hidden rounded-2xl border border-white/5 bg-[#30333a]"
-            >
+        {filteredFestivals.map((festival) => (
+          <article
+            key={festival.id}
+            className="cursor-pointer overflow-hidden rounded-2xl border border-white/5 bg-[#30333a] transition hover:border-white/20"
+            onClick={() =>
+              router.push(
+                `/tango-festivals-marathons/event/${festival.id}/${slugify(festival.title)}`
+              )
+            }
+          >
               <div className="flex flex-col">
                 {festival.imageUrl ? (
                   <div className="aspect-[16/10] w-full overflow-hidden bg-white/5">
@@ -248,16 +270,17 @@ const FestivalPageClient = ({
                       {[festival.city, festival.country].filter(Boolean).join(', ')}
                     </p>
                   )}
-                  {festival.website && (
-                    <a
-                      href={festival.website}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
-                    >
-                      Visit website
-                    </a>
-                  )}
+                {festival.website && (
+                  <a
+                    href={festival.website}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    Visit website
+                  </a>
+                )}
                 </div>
               </div>
             </article>

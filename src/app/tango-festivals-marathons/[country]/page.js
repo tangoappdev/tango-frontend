@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Header from '@/components/Header';
 import FestivalPageClient from '../FestivalPageClient';
 import { buildCountryIndex, filterFestivals, loadFestivals } from '../data';
+import { buildFestivalSchema } from '../schema';
 
 const buildTitle = (countryName) => `Tango festivals & marathons in ${countryName}`;
 
@@ -28,11 +29,16 @@ export default async function TangoFestivalsCountryPage({ params }) {
   if (!country) return notFound();
 
   const filtered = filterFestivals(festivals, countrySlug, '');
+  const schema = buildFestivalSchema(filtered);
 
   return (
     <>
       <Header />
       <main className="min-h-screen bg-[#30333a] px-6 py-6 text-white sm:px-10 sm:py-12">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
         <div className="mx-auto w-full max-w-5xl">
           <header className="mb-7 sm:mb-8">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#25edda]/80">

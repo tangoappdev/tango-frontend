@@ -2,6 +2,8 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { slugify } from './utils';
 import MapView from './MapView';
 
 const CITY_TIMEZONES = {
@@ -226,7 +228,11 @@ export default function DayTabs({ groupedEvents, citySlug }) {
             {activeDay.events.map((event) => (
               <article
                 key={event.id}
-                className="border-b border-white/10 bg-[#30333a] last:border-b-0 sm:overflow-hidden sm:rounded-2xl sm:border sm:border-white/5"
+                className="cursor-pointer border-b border-white/10 bg-[#30333a] transition hover:border-white/20 last:border-b-0 sm:overflow-hidden sm:rounded-2xl sm:border sm:border-white/5"
+                onClick={(eventClick) => {
+                  if (eventClick.target.closest('a')) return;
+                  window.location.href = `/milonga-guide/event/${event.id}/${slugify(event.title)}`;
+                }}
               >
                 <div className="flex flex-row items-start gap-4 px-0 py-3 sm:p-5">
                   {(event.imageUrl ||
@@ -263,7 +269,14 @@ export default function DayTabs({ groupedEvents, citySlug }) {
                     </span>
                   )}
                     </div>
-                    <h3 className="mt-3 text-base font-semibold text-white">{event.title}</h3>
+                    <h3 className="mt-3 text-base font-semibold text-white">
+                      <Link
+                        href={`/milonga-guide/event/${event.id}/${slugify(event.title)}`}
+                        className="hover:text-[#25edda]"
+                      >
+                        {event.title}
+                      </Link>
+                    </h3>
                     {event.venue && (
                       <p className="mt-2 text-sm font-medium text-gray-200">{event.venue}</p>
                     )}

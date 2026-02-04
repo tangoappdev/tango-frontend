@@ -1,5 +1,7 @@
 import { getFirestore } from '@/lib/firebaseAdmin.server';
 import DayTabs from './DayTabs';
+import RecurringEvents from './RecurringEvents';
+import { buildEventSchema } from './schema';
 
 const DAYS_AHEAD = 28;
 const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -223,9 +225,14 @@ async function getEventsByCity(citySlug) {
 
 export default async function CityGuide({ citySlug }) {
   const { groupedEvents, recurringEvents } = await getEventsByCity(citySlug);
+  const schema = buildEventSchema({ citySlug, groupedEvents });
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
       {groupedEvents.length === 0 ? (
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-gray-300">
           No upcoming events found yet. Please check back soon.
@@ -234,70 +241,7 @@ export default async function CityGuide({ citySlug }) {
         <DayTabs groupedEvents={groupedEvents} citySlug={citySlug} />
       )}
 
-      {recurringEvents.length > 0 && (
-        <section className="mt-12 rounded-3xl border border-white/10 bg-[#2a2d33] p-6">
-          <h2 className="text-lg font-semibold text-white">Recurring year-round events</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {recurringEvents.map((event) => (
-              <article key={event.id} className="rounded-2xl border border-white/5 bg-[#30333a]">
-                <div className="flex flex-row items-start gap-4 p-5">
-                  {(event.imageUrl ||
-                    event.citySlug === 'new-york' ||
-                    event.citySlug === 'san-francisco' ||
-                    event.citySlug === 'paris') && (
-                    <div className="h-[114px] w-[114px] flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-                      {event.imageUrl ? (
-                        <Image
-                          src={event.imageUrl}
-                          alt={`${event.title} logo`}
-                          width={114}
-                          height={114}
-                          className="h-full w-full object-cover"
-                          sizes="114px"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2a2d33] via-[#30333a] to-[#1f2126] px-2 text-center text-[11px] font-semibold uppercase leading-tight tracking-[0.18em] text-[#25edda]/80">
-                          {event.title}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                      {formatTimeRange(event) && (
-                        <span className="rounded-full bg-white/10 px-3 py-1 text-gray-200">
-                          {formatTimeRange(event)}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="mt-3 text-base font-semibold text-white">{event.title}</h3>
-                    {event.venue && (
-                      <p className="mt-2 text-sm font-medium text-gray-200">{event.venue}</p>
-                    )}
-                {event.address && (
-                  <p className="mt-1 text-sm text-gray-300">{event.address}</p>
-                )}
-                {buildDirectionsUrl(event) && (
-                  <a
-                    href={buildDirectionsUrl(event)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-flex text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
-                  >
-                    Get directions
-                  </a>
-                )}
-                {event.frequencyRaw && (
-                  <p className="mt-2 text-xs text-gray-400">{event.frequencyRaw}</p>
-                )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+      <RecurringEvents events={recurringEvents} />
     </>
   );
 }
-import Image from 'next/image';

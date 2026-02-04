@@ -1,14 +1,20 @@
 import Header from '@/components/Header';
 import FestivalPageClient from './FestivalPageClient';
 import { buildCountryIndex, loadFestivals } from './data';
+import { buildFestivalSchema } from './schema';
 
 export default async function TangoFestivalsMarathonsPage() {
   const festivals = await loadFestivals();
   const countries = buildCountryIndex(festivals);
+  const schema = buildFestivalSchema(festivals);
   return (
     <>
       <Header />
       <main className="min-h-screen bg-[#30333a] px-6 py-6 text-white sm:px-10 sm:py-12">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
         <div className="mx-auto w-full max-w-5xl">
           <header className="mb-7 sm:mb-8">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#25edda]/80">
