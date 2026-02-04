@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const SYNC_PATHS = [
+const DAILY_PATHS = [
   '/api/sources/newyorktango/sync',
   '/api/sources/hoymilonga-buenos-aires/sync',
   '/api/sources/hoymilonga-berlin/sync',
@@ -17,8 +17,17 @@ const SYNC_PATHS = [
   '/api/sources/milongueandoroma/sync',
   '/api/sources/austin-tango/sync',
   '/api/sources/agendadeltango-barcelona/sync',
-  '/api/sources/tangocat/sync',
 ];
+
+const WEEKLY_PATHS = ['/api/sources/tangocat/sync'];
+
+function getWeekdayInTimeZone(timeZone) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'long',
+  });
+  return formatter.format(new Date());
+}
 
 async function callSync(origin, token, path) {
   const res = await fetch(`${origin}${path}`, {
@@ -44,7 +53,14 @@ export async function GET(request) {
 
   const origin = new URL(request.url).origin;
 
-  const results = await Promise.all(SYNC_PATHS.map((path) => callSync(origin, token, path)));
+  const results = await Promise.all(DAILY_PATHS.map((path) => callSync(origin, token, path)));
+  const weekday = getWeekdayInTimeZone('America/New_York');
+  if (weekday === 'Monday') {
+    const weeklyResults = await Promise.all(
+      WEEKLY_PATHS.map((path) => callSync(origin, token, path))
+    );
+    results.push(...weeklyResults);
+  }
   const ok = results.every((result) => result.ok);
 
   return NextResponse.json(

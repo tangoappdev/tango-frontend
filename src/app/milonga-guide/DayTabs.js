@@ -218,9 +218,9 @@ export default function DayTabs({ groupedEvents, citySlug }) {
         ))}
       </div>
 
-      <div className="mt-6">
-        <h2 className="text-lg font-semibold text-white">{activeDay?.heading}</h2>
+      <div className="mt-4">
         <MapView events={activeDay?.events || []} />
+        <h2 className="mt-4 text-lg font-semibold text-white">{activeDay?.heading}</h2>
         {activeDay?.events?.length ? (
           <div className="mt-4 flex flex-col gap-4">
             {activeDay.events.map((event) => (

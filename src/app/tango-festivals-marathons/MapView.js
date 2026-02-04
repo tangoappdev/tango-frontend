@@ -18,7 +18,7 @@ const loadScript = (src) =>
     document.head.appendChild(script);
   });
 
-const MapView = ({ events }) => {
+const MapView = ({ events, zoomBump = false }) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
@@ -252,6 +252,14 @@ const MapView = ({ events }) => {
       const bounds = new window.google.maps.LatLngBounds();
       points.forEach((point) => bounds.extend({ lat: point.lat, lng: point.lng }));
       mapInstance.current.fitBounds(bounds);
+      if (zoomBump && window.innerWidth < 640) {
+        window.setTimeout(() => {
+          const currentZoom = mapInstance.current?.getZoom?.();
+          if (typeof currentZoom === 'number') {
+            mapInstance.current.setZoom(currentZoom + 1);
+          }
+        }, 200);
+      }
     } else if (points.length === 1) {
       mapInstance.current.setCenter(points[0]);
       mapInstance.current.setZoom(5);

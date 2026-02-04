@@ -68,9 +68,7 @@ const FestivalPageClient = ({
 
   const groupedByMonth = useMemo(() => {
     const grouped = new Map();
-    filteredFestivals
-      .filter((festival) => !festival.topPick)
-      .forEach((festival) => {
+    filteredFestivals.forEach((festival) => {
       const monthIndex = getMonthIndex(festival.startDate);
       if (monthIndex == null) return;
       if (!grouped.has(monthIndex)) grouped.set(monthIndex, []);
@@ -93,17 +91,22 @@ const FestivalPageClient = ({
         currentCitySlug={currentCitySlug}
         enableAutoLocate={enableAutoLocate}
       />
-      <div className="mt-4 flex w-full flex-wrap gap-2">
+      <div className="relative mt-4 w-full">
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-[#30333a] to-transparent md:hidden" />
+        <div
+          className="flex w-full gap-2 overflow-x-auto md:flex-nowrap"
+          style={{ scrollbarWidth: 'none' }}
+        >
         <button
           type="button"
           onClick={() => setSelectedMonth(null)}
-          className={`rounded-full border px-3 py-1 text-xs transition ${
+          className={`whitespace-nowrap rounded-full border px-3 py-1 text-sm transition md:flex-1 ${
             selectedMonth == null
               ? 'border-[#25edda] bg-[#25edda] text-[#1f2126]'
               : 'border-white/10 text-gray-300 hover:border-white/30'
           }`}
         >
-          All months
+          All year
         </button>
         {monthButtons.map((month) => {
           const isActive = selectedMonth === month.index;
@@ -112,7 +115,7 @@ const FestivalPageClient = ({
               key={month.index}
               type="button"
               onClick={() => setSelectedMonth(month.index)}
-              className={`rounded-full border px-3 py-1 text-xs transition ${
+              className={`whitespace-nowrap rounded-full border px-3 py-1 text-sm transition md:flex-1 ${
                 isActive
                   ? 'border-[#25edda] bg-[#25edda] text-[#1f2126]'
                   : 'border-white/10 text-gray-300 hover:border-white/30'
@@ -122,8 +125,9 @@ const FestivalPageClient = ({
             </button>
           );
         })}
+        </div>
       </div>
-      <MapView events={filteredFestivals} />
+      <MapView events={filteredFestivals} zoomBump={!currentCountrySlug} />
       <p className="mt-3 text-sm text-gray-300">
         <span className="text-[#25edda]">{filteredFestivals.length}</span> {countLabelSuffix}
       </p>

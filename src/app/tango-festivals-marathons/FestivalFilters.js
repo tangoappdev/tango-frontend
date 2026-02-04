@@ -122,15 +122,22 @@ const FestivalFilters = ({
 
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
-        <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-6 md:flex-1">
+        <div className="flex flex-col gap-2 md:w-full">
           <label className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
             Country
           </label>
           <select
             value={currentCountrySlug || ''}
             onChange={handleCountryChange}
-            className="w-full min-w-[220px] rounded-full border border-white/10 bg-[#2a2d33] px-4 py-2 text-sm text-white md:w-64"
+            className="w-full appearance-none rounded-full border border-white/10 bg-[#2a2d33] px-4 py-2 pr-10 text-sm text-white"
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%23cbd5f5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '16px 16px',
+            }}
           >
             {countryOptions.map((option) => (
               <option key={option.slug || 'all'} value={option.slug}>
@@ -139,7 +146,7 @@ const FestivalFilters = ({
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 md:w-full">
           <label className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
             City
           </label>
@@ -147,7 +154,14 @@ const FestivalFilters = ({
             value={currentCitySlug || ''}
             onChange={handleCityChange}
             disabled={!selectedCountry}
-            className="w-full min-w-[220px] rounded-full border border-white/10 bg-[#2a2d33] px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60 md:w-64"
+            className="w-full appearance-none rounded-full border border-white/10 bg-[#2a2d33] px-4 py-2 pr-10 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%23cbd5f5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              backgroundSize: '16px 16px',
+            }}
           >
             {cityOptions.map((option) => (
               <option key={option.slug || 'all'} value={option.slug}>
