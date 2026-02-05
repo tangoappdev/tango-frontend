@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { callSync, requireCronAuth } from '../_utils';
 
 const DAILY_PATHS = [
-  '/api/sources/milongueandoroma/sync',
   '/api/sources/austin-tango/sync',
 ];
 
