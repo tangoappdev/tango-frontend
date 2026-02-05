@@ -164,15 +164,44 @@ export async function POST(request) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(SOURCE_URL, {
-      cache: 'no-store',
-      headers: {
-        'User-Agent': 'VirtualTangoDJBot/1.0 (+https://virtualtangodj.com)',
-      },
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    let res;
+    try {
+      res = await fetch(SOURCE_URL, {
+        cache: 'no-store',
+        headers: {
+          'User-Agent': 'VirtualTangoDJBot/1.0 (+https://virtualtangodj.com)',
+        },
+        signal: controller.signal,
+      });
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error?.name === 'AbortError' || `${error?.message || ''}`.includes('aborted')) {
+        await db
+          .collection('external_sources')
+          .doc(SOURCE_ID)
+          .set(
+            {
+              source: SOURCE_ID,
+              sourceUrl: SOURCE_URL,
+              lastRunAt: new Date().toISOString(),
+              status: 'timeout',
+              lastError: 'Fetch timed out',
+              durationMs: Date.now() - startedAt,
+            },
+            { merge: true }
+          );
+
+        return NextResponse.json(
+          { ok: true, skipped: true, reason: 'timeout' },
+          { status: 200 }
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
     if (!res.ok) {
       throw new Error(`Failed to fetch source: ${res.status}`);
     }
