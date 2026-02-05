@@ -21,6 +21,11 @@ export async function GET(request) {
   } catch (e) {
     console.error("Error fetching user claims:", e);
   }
+  const adminEmails = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  const isAdminEmail = adminEmails.includes((user.email || '').toLowerCase());
 
   const db = getFirestore();
   let profile = null;
@@ -52,7 +57,7 @@ export async function GET(request) {
         (user.email ? user.email.split('@')[0] : ''),
       photoURL: profile?.photoURL || '',
       tier,
-      isAdmin: !!userClaims.admin,
+      isAdmin: !!userClaims.admin || isAdminEmail,
       isPro,
       subscriptionStatus,
       stripeCustomerId: profile?.stripeCustomerId || null,

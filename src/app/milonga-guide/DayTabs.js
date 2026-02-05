@@ -2,10 +2,12 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { slugify } from './utils';
 import MapView from './MapView';
+import { useAuth } from '@/components/AuthProvider';
+import MilongaQuickEditModal from './MilongaQuickEditModal';
 
 const CITY_TIMEZONES = {
   'new-york': 'America/New_York',
@@ -103,15 +105,23 @@ function buildDirectionsUrl(event) {
 }
 
 export default function DayTabs({ groupedEvents, citySlug }) {
+  const { isAdmin } = useAuth();
   const timeZone = CITY_TIMEZONES[citySlug] || 'UTC';
   const [weekOffset, setWeekOffset] = useState(0);
+  const [localGroupedEvents, setLocalGroupedEvents] = useState(groupedEvents);
+  const [editingEvent, setEditingEvent] = useState(null);
+
+  useEffect(() => {
+    setLocalGroupedEvents(groupedEvents);
+  }, [groupedEvents]);
+
   const eventsByDate = useMemo(() => {
     const map = new Map();
-    groupedEvents.forEach(([date, events]) => {
+    localGroupedEvents.forEach(([date, events]) => {
       map.set(date, events);
     });
     return map;
-  }, [groupedEvents]);
+  }, [localGroupedEvents]);
 
   const days = useMemo(() => {
     const list = [];
@@ -275,12 +285,25 @@ export default function DayTabs({ groupedEvents, citySlug }) {
             {activeDay.events.map((event) => (
               <article
                 key={event.id}
-                className="w-[394px] flex-shrink-0 cursor-pointer border border-white/10 bg-[#30333a] transition hover:border-white/20 sm:overflow-hidden sm:rounded-2xl sm:border-white/5"
+                className="relative w-[394px] flex-shrink-0 cursor-pointer border border-white/10 bg-[#30333a] transition hover:border-white/20 sm:overflow-hidden sm:rounded-2xl sm:border-white/5"
                 onClick={(eventClick) => {
                   if (eventClick.target.closest('a')) return;
                   window.location.href = `/milonga-guide/event/${event.id}/${slugify(event.title)}`;
                 }}
               >
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={(eventClick) => {
+                      eventClick.stopPropagation();
+                      setEditingEvent(event);
+                    }}
+                    className="absolute right-3 top-3 rounded-full border border-white/10 bg-[#2a2d33] p-1.5 text-gray-200 hover:border-white/30"
+                    title="Edit"
+                  >
+                    <PencilSquareIcon className="h-4 w-4" />
+                  </button>
+                )}
                 <div className="flex flex-row items-start gap-4 px-0 py-3 sm:p-5">
                   {(event.imageUrl ||
                     event.citySlug === 'new-york' ||
@@ -357,6 +380,26 @@ export default function DayTabs({ groupedEvents, citySlug }) {
           </div>
         )}
       </div>
+      <MilongaQuickEditModal
+        open={Boolean(editingEvent)}
+        event={editingEvent}
+        onClose={() => setEditingEvent(null)}
+        onSaved={(updated) => {
+          setLocalGroupedEvents((prev) =>
+            prev.map(([date, items]) => [
+              date,
+              items.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)),
+            ])
+          );
+        }}
+        onDeleted={(deleted) => {
+          setLocalGroupedEvents((prev) =>
+            prev
+              .map(([date, items]) => [date, items.filter((item) => item.id !== deleted.id)])
+              .filter(([, items]) => items.length > 0)
+          );
+        }}
+      />
     </div>
   );
 }

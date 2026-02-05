@@ -143,6 +143,9 @@ export async function getEventsByCity(citySlug) {
   const applyOverrides = (event) => {
     const stableKey = buildStableKey(event);
     const override = stableKey ? overridesMap.get(stableKey) : null;
+    if (override?.deleted) {
+      return null;
+    }
     if (override?.date) {
       const { date, ...rest } = override;
       return {
@@ -158,8 +161,8 @@ export async function getEventsByCity(citySlug) {
     };
   };
 
-  const mergedDated = datedEvents.map(applyOverrides);
-  const mergedRecurring = recurringEvents.map(applyOverrides);
+  const mergedDated = datedEvents.map(applyOverrides).filter(Boolean);
+  const mergedRecurring = recurringEvents.map(applyOverrides).filter(Boolean);
 
   mergedDated.sort((a, b) => {
     if (a.date === b.date) {
@@ -188,4 +191,3 @@ export async function getEventsByCity(citySlug) {
     recurringEvents: mergedRecurring,
   };
 }
-

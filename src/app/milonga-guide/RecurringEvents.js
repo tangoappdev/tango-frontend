@@ -1,7 +1,11 @@
 'use client';
 
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import { PencilSquareIcon } from '@heroicons/react/24/outline';
 import { slugify } from './utils';
+import { useAuth } from '@/components/AuthProvider';
+import MilongaQuickEditModal from './MilongaQuickEditModal';
 
 const formatMinutes = (minutes) => {
   if (minutes === null || minutes === undefined) return null;
@@ -40,21 +44,42 @@ const buildDirectionsUrl = (event) => {
 };
 
 const RecurringEvents = ({ events }) => {
-  if (!events?.length) return null;
+  const { isAdmin } = useAuth();
+  const [localEvents, setLocalEvents] = useState(events || []);
+  const [editingEvent, setEditingEvent] = useState(null);
+
+  useEffect(() => {
+    setLocalEvents(events || []);
+  }, [events]);
+
+  if (!localEvents?.length) return null;
 
   return (
     <section className="mt-12 rounded-3xl border border-white/10 bg-[#2a2d33] p-6">
       <h2 className="text-lg font-semibold text-white">Recurring year-round events</h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {events.map((event) => (
+        {localEvents.map((event) => (
           <article
             key={event.id}
-            className="cursor-pointer rounded-2xl border border-white/5 bg-[#30333a] transition hover:border-white/20"
+            className="relative cursor-pointer rounded-2xl border border-white/5 bg-[#30333a] transition hover:border-white/20"
             onClick={(eventClick) => {
               if (eventClick.target.closest('a')) return;
               window.location.href = `/milonga-guide/event/${event.id}/${slugify(event.title)}`;
             }}
           >
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={(eventClick) => {
+                  eventClick.stopPropagation();
+                  setEditingEvent(event);
+                }}
+                className="absolute right-3 top-3 rounded-full border border-white/10 bg-[#2a2d33] p-1.5 text-gray-200 hover:border-white/30"
+                title="Edit"
+              >
+                <PencilSquareIcon className="h-4 w-4" />
+              </button>
+            )}
             <div className="flex flex-row items-start gap-4 p-5">
               {(event.imageUrl ||
                 event.citySlug === 'new-york' ||
@@ -116,9 +141,21 @@ const RecurringEvents = ({ events }) => {
           </article>
         ))}
       </div>
+      <MilongaQuickEditModal
+        open={Boolean(editingEvent)}
+        event={editingEvent}
+        onClose={() => setEditingEvent(null)}
+        onSaved={(updated) => {
+          setLocalEvents((prev) =>
+            prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
+          );
+        }}
+        onDeleted={(deleted) => {
+          setLocalEvents((prev) => prev.filter((item) => item.id !== deleted.id));
+        }}
+      />
     </section>
   );
 };
 
 export default RecurringEvents;
-

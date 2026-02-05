@@ -23,6 +23,7 @@ const createEmptyMe = () => ({
   likedCortinaIds: [],
   likedMixedOrder: [],
   advancedAccess: false,
+  isAdmin: false,
 });
 
 export default function AuthProvider({ children }) {
@@ -58,6 +59,7 @@ export default function AuthProvider({ children }) {
         likedCortinaIds: data?.likedCortinaIds || [],
         likedMixedOrder: data?.likedMixedOrder || [],
         advancedAccess: !!data?.advancedAccess,
+        isAdmin: !!data?.isAdmin,
       });
     } catch {
       setMe(createEmptyMe());
@@ -303,6 +305,7 @@ export default function AuthProvider({ children }) {
       likedMixedOrder: me.likedMixedOrder,
       advancedAccess: me.advancedAccess,
       hasAdvancedAccess,
+      isAdmin: me.isAdmin,
       requireAuth,
       refreshMe,
       logout,

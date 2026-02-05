@@ -109,6 +109,9 @@ export async function GET(request) {
     const mergedEvents = events.map((event) => {
       const stableKey = buildStableKey(event);
       const override = stableKey ? overridesMap.get(stableKey) : null;
+      if (override?.deleted) {
+        return null;
+      }
       if (override?.date) {
         const { date, ...rest } = override;
         return {
@@ -122,7 +125,7 @@ export async function GET(request) {
         stableKey,
         ...(override || {}),
       };
-    });
+    }).filter(Boolean);
 
     mergedEvents.sort((a, b) => {
       if (a.date === b.date) {
@@ -334,6 +337,41 @@ export async function POST(request) {
     console.error('Bulk geocode failed:', error);
     return NextResponse.json(
       { error: error?.message || 'Bulk geocode failed' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request) {
+  const gate = await requireAdmin(request);
+  if (gate.error) return gate.error;
+
+  try {
+    const body = await request.json();
+    const { id, stableKey } = body || {};
+    if (!id && !stableKey) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    const db = getFirestore();
+    let overrideKey = stableKey;
+    if (!overrideKey) {
+      const eventDoc = await db.collection('external_events').doc(id).get();
+      if (!eventDoc.exists) {
+        return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+      }
+      overrideKey = buildStableKey({ id, ...eventDoc.data() });
+    }
+
+    await db.collection('external_event_overrides').doc(overrideKey).set(
+      { deleted: true },
+      { merge: true }
+    );
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error?.message || 'Failed to delete event' },
       { status: 500 }
     );
   }

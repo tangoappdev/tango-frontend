@@ -1,10 +1,10 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { formatDateRange } from './utils';
 
-const TopPicksCarousel = ({ topPicks, showHeader = true, title, onCardClick }) => {
+const TopPicksCarousel = ({ topPicks, showHeader = true, title, onCardClick, isAdmin = false, onEdit }) => {
   const containerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -70,9 +70,22 @@ const TopPicksCarousel = ({ topPicks, showHeader = true, title, onCardClick }) =
         {topPicks.map((festival) => (
           <article
             key={festival.id}
-            className="min-w-[240px] max-w-[240px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#2a2d33] transition hover:border-white/20"
+            className="relative min-w-[240px] max-w-[240px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#2a2d33] transition hover:border-white/20"
             onClick={() => onCardClick?.(festival)}
           >
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEdit?.(festival);
+                }}
+                className="absolute right-3 top-3 z-10 rounded-full border border-white/10 bg-[#2a2d33] p-1.5 text-gray-200 hover:border-white/30"
+                title="Edit"
+              >
+                <PencilSquareIcon className="h-4 w-4" />
+              </button>
+            )}
             {festival.imageUrl ? (
               <div className="aspect-[16/10] w-full overflow-hidden bg-white/5">
                 <img

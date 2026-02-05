@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import MapView from '@/app/tango-festivals-marathons/MapView';
 import TopPicksCarousel from '@/app/tango-festivals-marathons/TopPicksCarousel';
 import { formatDateRange, slugify } from '@/app/tango-festivals-marathons/utils';
+import { useAuth } from '@/components/AuthProvider';
+import FestivalQuickEditModal from '@/app/tango-festivals-marathons/FestivalQuickEditModal';
 
 const MONTH_NAMES = [
   'January',
@@ -59,6 +61,7 @@ const resolveCountryFromIp = async () => {
 };
 
 export default function FestivalsEmbed() {
+  const { isAdmin } = useAuth();
   const router = useRouter();
   const [festivals, setFestivals] = useState([]);
   const [countries, setCountries] = useState([]);
@@ -67,6 +70,7 @@ export default function FestivalsEmbed() {
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [editingFestival, setEditingFestival] = useState(null);
   const [autoStatus, setAutoStatus] = useState('idle');
   const hasAutoLocated = useRef(false);
   const monthButtons = useMemo(() => buildMonthButtons(), []);
@@ -229,7 +233,9 @@ export default function FestivalsEmbed() {
           Festivals & Marathons
         </p>
         <h2 className="mt-3 text-xl font-semibold sm:text-3xl">
-          Tango festivals & marathons worldwide
+          {selectedCountryEntry
+            ? `Tango Festivals & Marathons in ${selectedCountryEntry.name}`
+            : 'Tango Festivals & Marathons Worldwide'}
         </h2>
         <p className="mt-3 max-w-2xl text-sm text-gray-300">
           Plan your next tango escape with a global calendar of festivals and marathons.
@@ -361,6 +367,8 @@ export default function FestivalsEmbed() {
                   `/tango-festivals-marathons/event/${festival.id}/${slugify(festival.title)}`
                 )
               }
+              isAdmin={isAdmin}
+              onEdit={(festival) => setEditingFestival(festival)}
             />
           )}
           {!selectedCountry && filteredFestivals.length > 0 && (
@@ -372,6 +380,8 @@ export default function FestivalsEmbed() {
                   `/tango-festivals-marathons/event/${festival.id}/${slugify(festival.title)}`
                 )
               }
+              isAdmin={isAdmin}
+              onEdit={(festival) => setEditingFestival(festival)}
             />
           )}
           {selectedCountry && chronologicalFestivals.length > 0 && (
@@ -383,6 +393,8 @@ export default function FestivalsEmbed() {
                   `/tango-festivals-marathons/event/${festival.id}/${slugify(festival.title)}`
                 )
               }
+              isAdmin={isAdmin}
+              onEdit={(festival) => setEditingFestival(festival)}
             />
           )}
           {!selectedCountry && groupedByMonth.length === 0 && (
@@ -395,6 +407,19 @@ export default function FestivalsEmbed() {
               No upcoming festivals found yet. Please check back soon.
             </div>
           )}
+          <FestivalQuickEditModal
+            open={Boolean(editingFestival)}
+            festival={editingFestival}
+            onClose={() => setEditingFestival(null)}
+            onSaved={(updated) => {
+              setFestivals((prev) =>
+                prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item))
+              );
+            }}
+            onDeleted={(deleted) => {
+              setFestivals((prev) => prev.filter((item) => item.id !== deleted.id));
+            }}
+          />
         </>
       )}
     </section>
