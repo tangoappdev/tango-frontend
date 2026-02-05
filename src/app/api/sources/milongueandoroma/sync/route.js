@@ -13,6 +13,8 @@ const SOURCE_URL = `https://calendar.google.com/calendar/ical/${encodeURICompone
 const CITY_NAME = 'Rome';
 const CITY_SLUG = 'rome';
 const CITY_TIMEZONE = 'Europe/Rome';
+const LOOKBACK_DAYS = 7;
+const LOOKAHEAD_DAYS = 90;
 
 function normalizeWhitespace(value) {
   return value ? value.replace(/\s+/g, ' ').trim() : '';
@@ -89,6 +91,17 @@ function buildEventId(payload) {
   return `${payload.source}-${hash.slice(0, 20)}`;
 }
 
+function isWithinWindow(dateStr) {
+  if (!dateStr) return false;
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return false;
+  const now = new Date();
+  const minDate = new Date(now);
+  minDate.setDate(now.getDate() - LOOKBACK_DAYS);
+  const maxDate = new Date(now);
+  maxDate.setDate(now.getDate() + LOOKAHEAD_DAYS);
+  return date >= minDate && date <= maxDate;
+}
 function parseIcsEvents(icsText) {
   const lines = icsText
     .split(/\r?\n/)
@@ -150,12 +163,16 @@ export async function POST(request) {
   const db = getFirestore();
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(SOURCE_URL, {
       cache: 'no-store',
       headers: {
         'User-Agent': 'VirtualTangoDJBot/1.0 (+https://virtualtangodj.com)',
       },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!res.ok) {
       throw new Error(`Failed to fetch source: ${res.status}`);
     }
@@ -208,9 +225,8 @@ export async function POST(request) {
             : `${SOURCE_ID}:key:${eventKey}`,
         };
       })
-      .filter(Boolean);
-
-    await deleteExistingSourceEvents(db);
+      .filter(Boolean)
+      .filter((event) => isWithinWindow(event.date));
 
     const eventsCollection = db.collection('external_events');
     let eventsWritten = 0;
