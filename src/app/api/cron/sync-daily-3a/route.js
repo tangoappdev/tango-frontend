@@ -4,8 +4,6 @@ import { callSync, requireCronAuth } from '../_utils';
 const DAILY_PATHS = [
   '/api/sources/milongueandoroma/sync',
   '/api/sources/austin-tango/sync',
-  '/api/sources/agendadeltango-barcelona/sync',
-  '/api/sources/tangotube/sync',
 ];
 
 export async function GET(request) {
