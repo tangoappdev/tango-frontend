@@ -17,7 +17,7 @@ const tangoAppLinks = [
   { href: '/home', label: 'Home' },
   { href: '/milonga-guide', label: 'Milonga Guide' },
   { href: '/tango-festivals-marathons', label: 'Festivals & Marathons' },
-  { href: '/', label: 'Virtual DJ' },
+  { href: '/player', label: 'Virtual DJ' },
 ];
 
 function NavLink({ href, label, isActive, onClick }) {

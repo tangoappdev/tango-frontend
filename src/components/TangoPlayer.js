@@ -1126,9 +1126,10 @@ export default function TangoPlayer() {
   });
   const [upcomingPlaylist, setUpcomingPlaylist] = useState([]);
   const [manualQueue, setManualQueue] = useState([]);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+    const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [sidebarsVisible, setSidebarsVisible] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -2495,17 +2496,23 @@ export default function TangoPlayer() {
     masterGainRef.current = masterGain;
   }, [eq.low, eq.mid, eq.high, shouldUseWebAudio]);
   initAudioGraphRef.current = initAudioGraph;
-  const handlePlay = useCallback(async () => {
-    logPlayActivity();
-    if (shouldUseWebAudio && !audioContextRef.current) initAudioGraph();
-    const audioCtx = audioContextRef.current;
-    if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
-    if (audioRef.current?.src && audioRef.current.paused) {
-      try { await audioRef.current.play(); } catch { setIsPlaying(false); }
-    } else if (!currentTanda && !isLoading) {
-      fetchAndFillPlaylist();
-    }
-  }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph, shouldUseWebAudio, logPlayActivity]);
+    const handlePlay = useCallback(async () => {
+      logPlayActivity();
+      if (shouldUseWebAudio && !audioContextRef.current) initAudioGraph();
+      const audioCtx = audioContextRef.current;
+      if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+      if (audioRef.current?.src && audioRef.current.paused) {
+        try {
+          await audioRef.current.play();
+          setAutoplayBlocked(false);
+        } catch {
+          setIsPlaying(false);
+          setAutoplayBlocked(true);
+        }
+      } else if (!currentTanda && !isLoading) {
+        fetchAndFillPlaylist();
+      }
+    }, [currentTanda, isLoading, fetchAndFillPlaylist, initAudioGraph, shouldUseWebAudio, logPlayActivity]);
   const playNextTanda = useCallback(() => {
     const sourceTanda = manualQueue.length > 0 ? manualQueue[0] : upcomingPlaylist[0];
     if (!sourceTanda) { fetchAndFillPlaylist(); return; }
@@ -3391,6 +3398,7 @@ export default function TangoPlayer() {
           setManualQueue([overrideTanda]);
           setCurrentTrackIndex(0);
           setTandaHistory([]);
+          setAutoplayBlocked(false);
         } else {
           setManualQueue([]);
         }
@@ -3512,17 +3520,22 @@ export default function TangoPlayer() {
       return;
     }
 
-    if (audioRef.current.src !== trackUrl) {
-      audioRef.current.src = trackUrl;
-      audioRef.current.load();
-    }
+      if (audioRef.current.src !== trackUrl) {
+        audioRef.current.src = trackUrl;
+        audioRef.current.load();
+      }
 
-    isResettingRef.current = false;
+      isResettingRef.current = false;
     if (autoplayIntentRef.current) {
       autoplayIntentRef.current = false;
-      audioRef.current.play().catch(() => setIsPlaying(false));
-    }
-  }, [currentTanda, currentTrackIndex, isCortinaPlaying]);
+        audioRef.current.play().then(() => {
+          setAutoplayBlocked(false);
+        }).catch(() => {
+          setIsPlaying(false);
+          setAutoplayBlocked(true);
+        });
+      }
+    }, [currentTanda, currentTrackIndex, isCortinaPlaying]);
   useEffect(() => { // Demo timer for non-pro users
     // If the user is logged in, or if music isn't playing, we don't need a timer.
     if (user || !isPlaying) {
@@ -3670,9 +3683,22 @@ export default function TangoPlayer() {
     isRefreshing,
     isPro
   };
-  return (
-    <div className="w-full flex flex-col font-sans text-white">
-      <main className="flex-1 flex items-center justify-center w-full">
+    return (
+      <div className="w-full flex flex-col font-sans text-white">
+        <main className="flex-1 flex items-center justify-center w-full">
+          {autoplayBlocked && currentTanda && (
+            <div className="absolute top-[calc(var(--app-header-height)+12px)] left-1/2 z-20 w-[min(420px,90%)] -translate-x-1/2 rounded-2xl border border-white/10 bg-[#2a2d33] px-4 py-3 text-center text-sm text-gray-200 shadow-[0_16px_35px_rgba(0,0,0,0.35)]">
+              <div className="font-semibold text-white">Tap to start playback</div>
+              <p className="mt-1 text-xs text-gray-400">Your browser blocked autoplay. Click play to begin.</p>
+              <button
+                type="button"
+                onClick={handlePlay}
+                className="mt-3 inline-flex items-center justify-center rounded-full bg-[#25edda] px-4 py-2 text-xs font-semibold text-[#1f2126] transition hover:scale-[1.02]"
+              >
+                Play now
+              </button>
+            </div>
+          )}
       {/* DESKTOP LAYOUT */}
       <div className="hidden lg:flex justify-center items-center w-full p-4">
         <div className={`w-full h-[650px] bg-[#30333a]/70 backdrop-blur-xl rounded-2xl p-4 flex justify-center gap-6 shadow-[3px_3px_5px_#131417,-3px_-3px_5px_#4d525d] transition-all duration-500 ease-in-out ${sidebarsVisible ? 'max-w-[85rem]' : 'max-w-lg'}`}>
