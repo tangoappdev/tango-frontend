@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import { getFirestore } from '@/lib/firebaseAdmin.server';
 
@@ -28,7 +28,7 @@ const cleanText = (value) => (value || '').replace(/\s+/g, ' ').trim();
 
 function parsePublishedDate(metadata, now = new Date()) {
   if (!metadata) return null;
-  const parts = metadata.split('�').map((part) => part.trim());
+  const parts = metadata.split('•').map((part) => part.trim());
   const datePart = parts[0] || '';
   const match = datePart.match(/([A-Za-z]+)\s+(\d{4})/);
   if (!match) return null;

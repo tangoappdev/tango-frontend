@@ -122,7 +122,7 @@ export default function MilongaGuideEmbed() {
   );
 
   return (
-    <section className="mt-12">
+    <section>
       <header className="mb-4">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#25edda]/80">
           Milonga Guide
@@ -166,4 +166,3 @@ export default function MilongaGuideEmbed() {
     </section>
   );
 }
-
