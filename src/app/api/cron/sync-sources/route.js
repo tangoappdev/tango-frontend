@@ -17,6 +17,7 @@ const DAILY_PATHS = [
   '/api/sources/milongueandoroma/sync',
   '/api/sources/austin-tango/sync',
   '/api/sources/agendadeltango-barcelona/sync',
+  '/api/sources/tangotube/sync',
 ];
 
 const WEEKLY_PATHS = ['/api/sources/tangocat/sync'];

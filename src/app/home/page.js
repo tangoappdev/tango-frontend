@@ -1,6 +1,8 @@
 import Header from '@/components/Header';
 import MilongaGuideEmbed from './MilongaGuideEmbed';
 import FestivalsEmbed from './FestivalsEmbed';
+import TandaCarousel from './TandaCarousel';
+import TangoTubeCarousel from './TangoTubeCarousel';
 
 export const metadata = {
   title: 'TangoApp | Tango Made Easy',
@@ -27,7 +29,11 @@ export default function TangoAppHomePage() {
           </header>
 
           <MilongaGuideEmbed />
+          <div className="mt-14">
+            <TandaCarousel />
+          </div>
           <FestivalsEmbed />
+          <TangoTubeCarousel />
         </div>
       </main>
     </>

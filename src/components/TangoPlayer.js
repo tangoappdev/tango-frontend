@@ -960,6 +960,8 @@ export default function TangoPlayer() {
   const upcomingPlaylistRef = useRef([]);
   const shuffledCortinasRef = useRef([]);
   const queueStateHydratedRef = useRef(false);
+  const handledUrlTandaRef = useRef(false);
+  const urlTandaOverrideRef = useRef(null);
   const cortinaMapRef = useRef(new Map());
   const persistQueueStateTimeoutRef = useRef(null);
   const persistSettingsTimeoutRef = useRef(null);
@@ -1276,22 +1278,77 @@ export default function TangoPlayer() {
   }, [queueStateHydrated]);
 
   useEffect(() => {
+    if (handledUrlTandaRef.current) return;
+    if (typeof window === 'undefined') return;
+    if (!settingsHydrated || !queueStateHydrated || libraryLoading) return;
+    const params = new URLSearchParams(window.location.search);
+    const tandaId = params.get('tandaId');
+    if (!tandaId) return;
+    handledUrlTandaRef.current = true;
+    const loadTanda = async () => {
+      try {
+        const res = await fetch('/api/tandas/by-ids', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tandaIds: [tandaId] }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+          const tanda = Array.isArray(data?.tandas) ? data.tandas[0] : null;
+          if (tanda) {
+            setManualQueue([tanda]);
+            setUpcomingPlaylist([]);
+            setTandaHistory([]);
+            setCurrentTrackIndex(0);
+            urlTandaOverrideRef.current = tanda;
+            autoplayIntentRef.current = true;
+          }
+        } catch {
+          /* noop */
+        } finally {
+        params.delete('tandaId');
+        const nextQuery = params.toString();
+        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`;
+        window.history.replaceState({}, '', nextUrl);
+      }
+    };
+    loadTanda();
+  }, [
+    settingsHydrated,
+    queueStateHydrated,
+    libraryLoading,
+    setManualQueue,
+    setUpcomingPlaylist,
+  ]);
+
+  useEffect(() => {
     manualQueueRef.current = manualQueue;
   }, [manualQueue]);
   useEffect(() => {
     upcomingPlaylistRef.current = upcomingPlaylist;
   }, [upcomingPlaylist]);
-  useEffect(() => {
-    let cancelled = false;
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const restoreState = async () => {
-      if (!user) {
-        if (!cancelled) setQueueStateHydrated(true);
-        return;
-      }
-      if (!settingsHydrated || queueStateHydrated || libraryLoading || !libraryState.category || !settings.activeMode) {
-        return;
-      }
+    useEffect(() => {
+      let cancelled = false;
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const restoreState = async () => {
+        if (!user) {
+          if (!cancelled) setQueueStateHydrated(true);
+          return;
+        }
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('tandaId')) {
+            if (!cancelled) setQueueStateHydrated(true);
+            return;
+          }
+        }
+        if (urlTandaOverrideRef.current) {
+          if (!cancelled) setQueueStateHydrated(true);
+          return;
+        }
+        if (!settingsHydrated || queueStateHydrated || libraryLoading || !libraryState.category || !settings.activeMode) {
+          return;
+        }
       let context = generatorRef.current;
       if (!context) {
         context = buildGeneratorContext(
@@ -3326,13 +3383,20 @@ export default function TangoPlayer() {
       navigator.mediaSession.setActionHandler('nexttrack', isPro ? handleSkipForward : null);
     }
   }, [currentTanda, currentTrackIndex, handlePlay, handlePause, handleSkipBackward, handleSkipForward, isPro]);
-  useEffect(() => {
-    if (resetCounter > 0) {
-      setUpcomingPlaylist([]);
-      setManualQueue([]);
-      setRecentlyPlayedIds(new Set());
-    }
-  }, [resetCounter]);
+    useEffect(() => {
+      if (resetCounter > 0) {
+        const overrideTanda = urlTandaOverrideRef.current;
+        setUpcomingPlaylist([]);
+        if (overrideTanda) {
+          setManualQueue([overrideTanda]);
+          setCurrentTrackIndex(0);
+          setTandaHistory([]);
+        } else {
+          setManualQueue([]);
+        }
+        setRecentlyPlayedIds(new Set());
+      }
+    }, [resetCounter]);
   useEffect(() => {
     const fetchCortinas = async () => {
       try {
