@@ -92,13 +92,26 @@ const TandaCarousel = () => {
 
   if (loading) {
     return (
-      <section className="mt-12 rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-gray-300">
-        Loading tandas...
+      <section className="mt-12">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="h-6 w-56 rounded-full bg-white/10" />
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-full border border-white/10 bg-white/5" />
+            <div className="h-9 w-9 rounded-full border border-white/10 bg-white/5" />
+          </div>
+        </div>
+        <div className="flex gap-4 overflow-hidden py-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={`tanda-skeleton-${index}`}
+              className="h-[300px] min-w-[220px] rounded-2xl border border-white/10 bg-white/5"
+            />
+          ))}
+        </div>
       </section>
     );
   }
-
-  if (!tandas.length) {
+if (!tandas.length) {
     return null;
   }
 
@@ -131,13 +144,13 @@ const TandaCarousel = () => {
         ref={containerRef}
         onScroll={updateScrollState}
         onMouseEnter={updateScrollState}
-        className="tanda-scroll flex gap-4 overflow-x-auto pb-2"
+        className="tanda-scroll flex gap-4 overflow-x-auto overflow-y-visible py-3"
         style={{ scrollbarWidth: 'none' }}
       >
         {tandas.map((tanda) => (
           <article
             key={tanda.id}
-            className="group min-w-[220px] max-w-[220px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#2a2d33] transition hover:border-white/20"
+            className="group min-w-[220px] max-w-[220px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#2a2d33] transition hover:scale-[1.05] hover:border-white/20"
             onClick={() => {
               window.location.href = `/player?tandaId=${tanda.id}`;
             }}
@@ -149,8 +162,8 @@ const TandaCarousel = () => {
                 className="h-full w-full object-cover"
                 loading="lazy"
               />
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition group-hover:opacity-100">
-                <PlayIcon className="h-10 w-10 text-white" />
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35">
+                <PlayIcon className="h-10 w-10 text-white transition-transform duration-200 group-hover:scale-150" />
               </div>
             </div>
             <div className="p-4">
@@ -186,3 +199,4 @@ const TandaCarousel = () => {
 };
 
 export default TandaCarousel;
+

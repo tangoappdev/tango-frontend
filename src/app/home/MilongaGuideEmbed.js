@@ -143,8 +143,25 @@ export default function MilongaGuideEmbed() {
       </header>
 
       {loading && (
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-gray-300">
-          Loading milongas…
+        <div className="mt-6 animate-pulse space-y-6">
+          <div className="flex items-center gap-3 overflow-hidden">
+            {Array.from({ length: 7 }).map((_, index) => (
+              <div
+                key={`day-skeleton-${index}`}
+                className="h-10 w-20 rounded-full border border-white/10 bg-white/5"
+              />
+            ))}
+          </div>
+          <div className="h-[260px] w-full rounded-2xl border border-white/10 bg-white/5" />
+          <div className="h-5 w-48 rounded-full bg-white/10" />
+          <div className="flex gap-6 overflow-hidden pb-2">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={`milonga-card-skeleton-${index}`}
+                className="h-[170px] min-w-[394px] rounded-2xl border border-white/10 bg-white/5"
+              />
+            ))}
+          </div>
         </div>
       )}
       {!loading && error && (
@@ -166,3 +183,4 @@ export default function MilongaGuideEmbed() {
     </section>
   );
 }
+

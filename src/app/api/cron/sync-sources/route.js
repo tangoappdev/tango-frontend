@@ -48,11 +48,15 @@ export async function GET(request) {
   }
 
   const vercelCron = request.headers.get('x-vercel-cron');
-  if (!vercelCron) {
+  const cronSecret = process.env.CRON_SECRET;
+  const url = new URL(request.url);
+  const providedSecret =
+    request.headers.get('x-cron-token') || url.searchParams.get('cronToken');
+  if (!vercelCron && (!cronSecret || providedSecret !== cronSecret)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const origin = new URL(request.url).origin;
+  const origin = url.origin;
 
   const results = await Promise.all(DAILY_PATHS.map((path) => callSync(origin, token, path)));
   const weekday = getWeekdayInTimeZone('America/New_York');

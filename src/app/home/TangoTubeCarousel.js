@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { PlayIcon } from '@heroicons/react/24/solid';
 
-const MarqueeText = ({ text, className }) => {
+const MarqueeText = ({ text, className, alwaysScroll = false }) => {
   const containerRef = useRef(null);
   const innerRef = useRef(null);
   const [marquee, setMarquee] = useState({ duration: 0, distance: 0 });
@@ -18,11 +18,17 @@ const MarqueeText = ({ text, className }) => {
     const overflow = innerWidth - containerWidth;
     if (overflow > 6) {
       const distance = overflow + 16;
-      const duration = Math.max(6, distance / 35);
+      const duration = Math.max(6, distance / 28);
       setMarquee({ duration, distance });
-    } else {
-      setMarquee({ duration: 0, distance: 0 });
+      return;
     }
+    if (alwaysScroll) {
+      const distance = innerWidth + containerWidth + 16;
+      const duration = Math.max(6, distance / 28);
+      setMarquee({ duration, distance });
+      return;
+    }
+    setMarquee({ duration: 0, distance: 0 });
   }, [text]);
 
   return (
@@ -37,6 +43,9 @@ const MarqueeText = ({ text, className }) => {
                 animation: 'tangotube-marquee linear infinite',
                 animationDuration: `${marquee.duration}s`,
                 ['--marquee-distance']: `-${marquee.distance}px`,
+                display: 'inline-block',
+                paddingRight: '24px',
+                willChange: 'transform',
               }
             : undefined
         }
@@ -140,9 +149,9 @@ const TangoTubeCarousel = () => {
             href={`https://www.youtube.com/watch?v=${video.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group min-w-[240px] max-w-[240px] overflow-hidden rounded-2xl border border-white/10 bg-[#2a2d33] transition hover:border-white/20"
+            className="group min-w-[280px] max-w-[280px] overflow-hidden transition"
           >
-            <div className="relative aspect-video w-full overflow-hidden bg-[#30333a]">
+            <div className="relative aspect-video w-full overflow-hidden bg-[#30333a] mb-2">
               <img
                 src={video.thumbnail}
                 alt={video.title || 'Tango video'}
@@ -152,17 +161,22 @@ const TangoTubeCarousel = () => {
               <div className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white">
                 {video.duration || 'Video'}
               </div>
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition group-hover:opacity-100">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35">
                 <PlayIcon className="h-10 w-10 text-white" />
               </div>
             </div>
-            <div className="p-4">
-              <MarqueeText text={video.title || 'Untitled video'} className="text-sm font-semibold text-white" />
-              <div className="mt-1">
-                <MarqueeText text={video.channel || 'Unknown channel'} className="text-xs text-gray-300" />
-              </div>
+            <div className="space-y-0">
+              <MarqueeText
+                text={video.title || 'Untitled video'}
+                className="text-sm font-semibold text-white"
+                alwaysScroll
+              />
+              <MarqueeText text={video.channel || 'Unknown channel'} className="text-xs text-gray-300" />
               {video.metadata && (
-                <p className="mt-2 text-[11px] text-gray-400">{video.metadata}</p>
+                <MarqueeText
+                  text={video.metadata}
+                  className="text-[11px] text-gray-400"
+                />
               )}
             </div>
           </a>

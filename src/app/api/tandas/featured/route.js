@@ -28,6 +28,15 @@ const normalizeKey = (value) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
+function shuffle(array) {
+  const items = [...array];
+  for (let i = items.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -50,7 +59,7 @@ export async function GET(request) {
       });
     });
 
-    const featured = Array.from(byOrchestra.values()).slice(0, limit);
+    const featured = shuffle(Array.from(byOrchestra.values())).slice(0, limit);
     const withSigned = await Promise.all(
       featured.map(async (tanda) => ({
         ...tanda,

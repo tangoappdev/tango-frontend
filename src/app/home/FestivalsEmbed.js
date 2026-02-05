@@ -329,10 +329,19 @@ export default function FestivalsEmbed() {
       </div>
 
       {loading && (
-        <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-gray-300">
-          Loading festivals…
-        </div>
-      )}
+          <div className="mt-4 animate-pulse space-y-6">
+            <div className="h-[320px] w-full rounded-2xl border border-white/10 bg-white/5" />
+            <div className="h-6 w-64 rounded-full bg-white/10" />
+            <div className="flex gap-4 overflow-hidden py-3">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={`festival-skeleton-${index}`}
+                  className="h-[260px] min-w-[260px] rounded-2xl border border-white/10 bg-white/5"
+                />
+              ))}
+            </div>
+          </div>
+        )}
       {!loading && error && (
         <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-gray-300">
           {error}
@@ -391,4 +400,5 @@ export default function FestivalsEmbed() {
     </section>
   );
 }
+
 
