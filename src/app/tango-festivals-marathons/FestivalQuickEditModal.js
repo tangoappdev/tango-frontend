@@ -19,11 +19,13 @@ export default function FestivalQuickEditModal({ open, festival, onClose, onSave
   const [draft, setDraft] = useState(buildDraft(festival));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [uploadStatus, setUploadStatus] = useState('');
 
   useEffect(() => {
     if (open) {
       setDraft(buildDraft(festival));
       setError('');
+      setUploadStatus('');
     }
   }, [open, festival]);
 
@@ -89,6 +91,27 @@ export default function FestivalQuickEditModal({ open, festival, onClose, onSave
       setError(err.message || 'Failed to delete festival.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+    setUploadStatus('Uploading image...');
+    try {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/festivals/upload-image`;
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to upload image.');
+      setDraft((prev) => ({ ...prev, imageUrl: data.imageUrl }));
+      setUploadStatus('Image uploaded.');
+    } catch (err) {
+      setUploadStatus(err.message || 'Failed to upload image.');
     }
   };
 
@@ -172,6 +195,16 @@ export default function FestivalQuickEditModal({ open, festival, onClose, onSave
               onChange={(e) => setDraft((prev) => ({ ...prev, imageUrl: e.target.value }))}
               className="mt-1 w-full rounded-lg border border-white/10 bg-[#30333a] px-3 py-2 text-sm"
             />
+            <label className="mt-2 block text-xs text-gray-300">
+              Upload file
+              <input
+                type="file"
+                accept="image/*"
+                className="mt-1 block w-full text-xs"
+                onChange={(e) => handleFileUpload(e.target.files?.[0])}
+              />
+            </label>
+            {uploadStatus && <p className="mt-2 text-xs text-gray-400">{uploadStatus}</p>}
           </div>
           <label className="flex items-center gap-3 text-sm text-gray-300">
             <input
