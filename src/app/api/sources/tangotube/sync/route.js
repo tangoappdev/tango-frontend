@@ -6,8 +6,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const SOURCE_ID = 'tangotube';
-const SOURCE_URL = 'https://tangotube.tv/';
-const BASE_URL = 'https://tangotube.tv';
+const SOURCE_URL = 'https://tangotube.tv/?sort=most_recent';
 
 const MONTHS = {
   january: 0,
@@ -41,8 +40,8 @@ function parsePublishedDate(metadata, now = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
-async function fetchVideos(limit = 24) {
-  const res = await fetch(`${BASE_URL}/`, {
+async function fetchVideos(limit = 35) {
+  const res = await fetch(SOURCE_URL, {
     headers: {
       'user-agent': 'Mozilla/5.0 (compatible; TangoAppBot/1.0; +https://virtualtangodj.com)',
       accept: 'text/html',
@@ -58,7 +57,34 @@ async function fetchVideos(limit = 24) {
   const $ = cheerio.load(html);
   const videos = [];
 
-  $('.video-card').each((_, element) => {
+  const newestFrame = $('#newest_videos');
+  const frameSrc = newestFrame.attr('src');
+  let cards = $('.video-card');
+
+  if (frameSrc) {
+    const frameUrl = frameSrc.startsWith('http') ? frameSrc : `https://tangotube.tv${frameSrc}`;
+    const frameRes = await fetch(frameUrl, {
+      headers: {
+        'user-agent': 'Mozilla/5.0 (compatible; TangoAppBot/1.0; +https://virtualtangodj.com)',
+        accept: 'text/html',
+      },
+      cache: 'no-store',
+    });
+    if (frameRes.ok) {
+      const frameHtml = await frameRes.text();
+      const frame$ = cheerio.load(frameHtml);
+      const frameCards = frame$('.video-card');
+      if (frameCards.length) {
+        cards = frameCards;
+      }
+    }
+  }
+
+  if (!cards.length) {
+    throw new Error('No videos found in latest section');
+  }
+
+  cards.each((_, element) => {
     if (videos.length >= limit) return;
     const card = $(element);
     const watchHref = card.find('a[href^="/watch?v="]').first().attr('href') || '';
@@ -99,7 +125,7 @@ export async function POST(request) {
   const db = getFirestore();
 
   try {
-    const videos = await fetchVideos(40);
+    const videos = await fetchVideos(35);
     const now = new Date();
     let written = 0;
 

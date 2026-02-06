@@ -70,7 +70,12 @@ const TangoTubeCarousel = () => {
         const res = await fetch('/api/tangotube/latest?limit=20');
         const data = await res.json();
         if (!isMounted) return;
-        setVideos(Array.isArray(data?.videos) ? data.videos : []);
+        const list = Array.isArray(data?.videos) ? [...data.videos] : [];
+        for (let i = list.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [list[i], list[j]] = [list[j], list[i]];
+        }
+        setVideos(list);
       } catch {
         if (!isMounted) return;
         setVideos([]);
@@ -114,7 +119,7 @@ const TangoTubeCarousel = () => {
   return (
     <section className="mt-12">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Latest Tango Videos</h2>
+        <h2 className="text-lg font-semibold text-white">Trending Videos</h2>
         <div className="flex items-center gap-2">
           <button
             type="button"
