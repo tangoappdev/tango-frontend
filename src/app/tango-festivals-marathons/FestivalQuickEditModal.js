@@ -119,7 +119,17 @@ export default function FestivalQuickEditModal({ open, festival, onClose, onSave
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#2a2d33] p-6 text-white shadow-xl">
+      <div
+        className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#2a2d33] p-6 text-white shadow-xl"
+        onPaste={(event) => {
+          const items = Array.from(event.clipboardData?.files || []);
+          const imageFile = items.find((file) => file.type.startsWith('image/'));
+          if (imageFile) {
+            event.preventDefault();
+            handleFileUpload(imageFile);
+          }
+        }}
+      >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Edit festival</h2>
           <button
@@ -213,6 +223,9 @@ export default function FestivalQuickEditModal({ open, festival, onClose, onSave
                 onChange={(e) => handleFileUpload(e.target.files?.[0])}
               />
             </label>
+            <p className="mt-2 text-[11px] text-gray-400">
+              Tip: paste a screenshot here to upload instantly.
+            </p>
             {uploadStatus && <p className="mt-2 text-xs text-gray-400">{uploadStatus}</p>}
           </div>
           <label className="flex items-center gap-3 text-sm text-gray-300">

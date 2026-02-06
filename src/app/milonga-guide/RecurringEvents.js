@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PencilSquareIcon } from '@heroicons/react/24/outline';
 import { slugify } from './utils';
 import { useAuth } from '@/components/AuthProvider';
@@ -115,7 +115,9 @@ const RecurringEvents = ({ events }) => {
                     </span>
                   )}
                 </div>
-                <h3 className="mt-3 text-base font-semibold text-white">{event.title}</h3>
+                <h3 className="mt-3 text-base font-semibold text-white">
+                  <MarqueeText className="text-base font-semibold text-white" text={event.title} />
+                </h3>
                 {event.venue && (
                   <p className="mt-2 text-sm font-medium text-gray-200">{event.venue}</p>
                 )}
@@ -157,5 +159,61 @@ const RecurringEvents = ({ events }) => {
     </section>
   );
 };
+
+function MarqueeText({ text, className }) {
+  const containerRef = useRef(null);
+  const [isOverflow, setIsOverflow] = useState(false);
+  const [marqueeStyle, setMarqueeStyle] = useState({});
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const distance = node.scrollWidth - node.clientWidth;
+    if (distance > 0) {
+      const duration = Math.max(4, distance / 35);
+      setIsOverflow(true);
+      setMarqueeStyle({
+        '--marquee-distance': `${distance}px`,
+        '--marquee-duration': `${duration}s`,
+      });
+    } else {
+      setIsOverflow(false);
+      setMarqueeStyle({});
+    }
+  }, [text]);
+
+  return (
+    <div ref={containerRef} className={`marquee-container ${className}`}>
+      <span
+        className={`marquee-content ${isOverflow ? 'marquee-animate' : ''}`}
+        style={marqueeStyle}
+      >
+        {text}
+      </span>
+      <style jsx>{`
+        .marquee-container {
+          overflow: hidden;
+          white-space: nowrap;
+          position: relative;
+        }
+        .marquee-content {
+          display: inline-block;
+          will-change: transform;
+        }
+        .marquee-animate {
+          animation: marquee var(--marquee-duration) linear infinite;
+        }
+        @keyframes marquee {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(calc(-1 * var(--marquee-distance)));
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 export default RecurringEvents;

@@ -17,9 +17,7 @@ export default function TangoAppHomePage() {
       <main className="min-h-screen bg-[#30333a] px-6 py-10 text-white sm:px-10 sm:py-16">
         <div className="mx-auto w-full max-w-5xl">
           <MilongaGuideEmbed />
-          <div className="mt-14">
-            <TandaCarousel />
-          </div>
+          <TandaCarousel />
           <FestivalsEmbed />
           <TangoTubeCarousel />
         </div>

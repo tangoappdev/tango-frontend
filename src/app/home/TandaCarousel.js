@@ -92,7 +92,7 @@ const TandaCarousel = () => {
 
   if (loading) {
     return (
-      <section className="mt-12">
+      <section className="mt-10">
         <div className="mb-4 flex items-center justify-between">
           <div className="h-6 w-56 rounded-full bg-white/10" />
           <div className="flex items-center gap-2">
@@ -116,7 +116,7 @@ if (!tandas.length) {
   }
 
   return (
-    <section className="mt-12">
+    <section className="mt-10">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white">Listen to the Best Tandas to Dance</h2>
         <div className="flex items-center gap-2">
@@ -171,7 +171,7 @@ if (!tandas.length) {
                 text={tanda.orchestra || 'Unknown Orchestra'}
                 className="text-sm font-semibold text-white"
               />
-              <div className="mt-1">
+              <div>
                 <MarqueeText
                   text={tanda.singer || 'Instrumental'}
                   className="text-xs text-gray-300"

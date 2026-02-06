@@ -342,9 +342,12 @@ export default function DayTabs({ groupedEvents, citySlug }) {
                     <h3 className="mt-3 text-base font-semibold text-white">
                       <Link
                         href={`/milonga-guide/event/${event.id}/${slugify(event.title)}`}
-                        className="hover:text-[#25edda]"
+                        className="group block"
                       >
-                        {event.title}
+                        <MarqueeText
+                          className="text-base font-semibold text-white group-hover:text-[#25edda]"
+                          text={event.title}
+                        />
                       </Link>
                     </h3>
                     {event.venue && <MarqueeText className="mt-2 text-sm font-medium text-gray-200" text={event.venue} />}
