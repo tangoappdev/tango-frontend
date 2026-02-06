@@ -6,7 +6,7 @@ const CitySelect = ({ cities, activeSlug, onChange }) => {
       <label className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-400">
         City
       </label>
-      <div className="mt-2 rounded-2xl border border-white/10 bg-[#2a2d33] px-3 py-2">
+      <div className="mt-2 rounded-full border border-white/10 bg-[#2a2d33] px-4 py-2">
         <select
           value={activeSlug}
           onChange={(event) => {

@@ -285,7 +285,7 @@ export default function DayTabs({ groupedEvents, citySlug }) {
             {activeDay.events.map((event) => (
               <article
                 key={event.id}
-                className="relative w-[394px] flex-shrink-0 cursor-pointer border border-white/10 bg-[#30333a] transition hover:border-white/20 sm:overflow-hidden sm:rounded-2xl sm:border-white/5"
+                className="relative w-[394px] flex-shrink-0 cursor-pointer rounded-2xl border border-white/10 bg-[#30333a] transition hover:border-white/20 sm:overflow-hidden sm:border-white/5"
                 onClick={(eventClick) => {
                   if (eventClick.target.closest('a')) return;
                   window.location.href = `/milonga-guide/event/${event.id}/${slugify(event.title)}`;
@@ -304,7 +304,7 @@ export default function DayTabs({ groupedEvents, citySlug }) {
                     <PencilSquareIcon className="h-4 w-4" />
                   </button>
                 )}
-                <div className="flex flex-row items-start gap-4 px-0 py-3 sm:p-5">
+                <div className="flex flex-row items-start gap-4 px-3 py-3 sm:p-5">
                   {(event.imageUrl ||
                     event.citySlug === 'new-york' ||
                     event.citySlug === 'san-francisco' ||
