@@ -37,6 +37,7 @@ const buildDraft = (event) => ({
   citySlug: event?.citySlug || '',
   sourceUrl: event?.sourceUrl || '',
   imageUrl: event?.imageUrl || '',
+  signedImageUrl: '',
   descriptionRaw: event?.descriptionRaw || '',
   stableKey: event?.stableKey || '',
 });
@@ -62,28 +63,29 @@ export default function MilongaQuickEditModal({ open, event, onClose, onSaved, o
     setError('');
     try {
       const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/milongas/manage`;
-      const response = await fetch(apiUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          id: event.id,
-          updates: {
-            title: draft.title,
-            venue: draft.venue,
-            address: draft.address,
-            startTimeMinutes: timeToMinutes(draft.startTime),
-            endTimeMinutes: timeToMinutes(draft.endTime),
-            eventType: draft.eventType,
-            city: draft.city,
-            citySlug: draft.citySlug,
-            sourceUrl: draft.sourceUrl,
-            imageUrl: draft.imageUrl,
-            descriptionRaw: draft.descriptionRaw,
-          },
-          stableKey: event.stableKey,
-        }),
-      });
+    const response = await fetch(apiUrl, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        id: event.id,
+        updates: {
+          title: draft.title,
+          venue: draft.venue,
+          address: draft.address,
+          startTimeMinutes: timeToMinutes(draft.startTime),
+          endTimeMinutes: timeToMinutes(draft.endTime),
+          eventType: draft.eventType,
+          city: draft.city,
+          citySlug: draft.citySlug,
+          sourceUrl: draft.sourceUrl,
+          imageUrl: draft.imageUrl,
+          signedImageUrl: draft.signedImageUrl,
+          descriptionRaw: draft.descriptionRaw,
+        },
+        stableKey: event.stableKey,
+      }),
+    });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data?.error || 'Failed to save changes.');
@@ -93,6 +95,7 @@ export default function MilongaQuickEditModal({ open, event, onClose, onSaved, o
         ...draft,
         startTimeMinutes: timeToMinutes(draft.startTime),
         endTimeMinutes: timeToMinutes(draft.endTime),
+        imageUrl: data?.imageUrl || draft.imageUrl,
       });
       onClose?.();
     } catch (err) {
@@ -249,6 +252,13 @@ export default function MilongaQuickEditModal({ open, event, onClose, onSaved, o
             <input
               value={draft.imageUrl}
               onChange={(e) => setDraft((prev) => ({ ...prev, imageUrl: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-white/10 bg-[#30333a] px-3 py-2 text-sm"
+            />
+            <label className="mt-3 block text-xs text-gray-400">Signed image URL (optional)</label>
+            <input
+              value={draft.signedImageUrl}
+              onChange={(e) => setDraft((prev) => ({ ...prev, signedImageUrl: e.target.value }))}
+              placeholder="Paste signed URL to copy into storage"
               className="mt-1 w-full rounded-lg border border-white/10 bg-[#30333a] px-3 py-2 text-sm"
             />
             <label className="mt-2 block text-xs text-gray-300">

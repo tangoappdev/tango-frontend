@@ -12,6 +12,7 @@ const buildDraft = (festival) => ({
   dateText: festival?.dateText || '',
   website: festival?.website || '',
   imageUrl: festival?.imageUrl || '',
+  signedImageUrl: '',
   topPick: Boolean(festival?.topPick),
 });
 
@@ -51,6 +52,7 @@ export default function FestivalQuickEditModal({ open, festival, onClose, onSave
             dateText: draft.dateText,
             website: draft.website,
             imageUrl: draft.imageUrl,
+            signedImageUrl: draft.signedImageUrl,
             topPick: Boolean(draft.topPick),
           },
         }),
@@ -59,7 +61,7 @@ export default function FestivalQuickEditModal({ open, festival, onClose, onSave
       if (!response.ok) {
         throw new Error(data?.error || 'Failed to save changes.');
       }
-      onSaved?.({ ...festival, ...draft });
+      onSaved?.({ ...festival, ...draft, imageUrl: data?.imageUrl || draft.imageUrl });
       onClose?.();
     } catch (err) {
       setError(err.message || 'Failed to save changes.');
@@ -193,6 +195,13 @@ export default function FestivalQuickEditModal({ open, festival, onClose, onSave
             <input
               value={draft.imageUrl}
               onChange={(e) => setDraft((prev) => ({ ...prev, imageUrl: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-white/10 bg-[#30333a] px-3 py-2 text-sm"
+            />
+            <label className="mt-3 block text-xs text-gray-400">Signed image URL (optional)</label>
+            <input
+              value={draft.signedImageUrl}
+              onChange={(e) => setDraft((prev) => ({ ...prev, signedImageUrl: e.target.value }))}
+              placeholder="Paste signed URL to copy into storage"
               className="mt-1 w-full rounded-lg border border-white/10 bg-[#30333a] px-3 py-2 text-sm"
             />
             <label className="mt-2 block text-xs text-gray-300">

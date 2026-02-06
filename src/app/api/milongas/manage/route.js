@@ -1,5 +1,6 @@
+import crypto from 'crypto';
 import { NextResponse } from 'next/server';
-import { getFirestore } from '@/lib/firebaseAdmin.server';
+import { getFirestore, getStorage } from '@/lib/firebaseAdmin.server';
 import { getUserFromRequest } from '@/lib/getUserFromRequest';
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
@@ -41,6 +42,48 @@ const UPDATABLE_FIELDS = new Set([
   'latitude',
   'longitude',
 ]);
+
+function guessExtension(contentType, url) {
+  if (contentType?.includes('png')) return 'png';
+  if (contentType?.includes('webp')) return 'webp';
+  if (contentType?.includes('jpeg') || contentType?.includes('jpg')) return 'jpg';
+  const match = url?.match(/\.(jpg|jpeg|png|webp)(\?|#|$)/i);
+  if (match) return match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
+  return 'jpg';
+}
+
+async function storeExternalImage(url, folder) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Image download failed (${response.status})`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const contentType = response.headers.get('content-type') || 'image/jpeg';
+  const ext = guessExtension(contentType, url);
+  const hash = crypto
+    .createHash('sha1')
+    .update(`${Date.now()}-${url}-${buffer.length}`)
+    .digest('hex');
+  const filePath = `${folder}/${hash}.${ext}`;
+
+  const bucket = getStorage().bucket();
+  const storageFile = bucket.file(filePath);
+  const downloadToken = crypto.randomUUID();
+  await storageFile.save(buffer, {
+    contentType,
+    metadata: {
+      cacheControl: 'public, max-age=31536000',
+      metadata: {
+        firebaseStorageDownloadTokens: downloadToken,
+      },
+    },
+  });
+
+  const bucketName = bucket.name;
+  const encodedPath = encodeURIComponent(filePath);
+  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+}
 
 function normalizeKey(value) {
   return (value || '')
@@ -157,12 +200,18 @@ export async function PATCH(request) {
     }
 
     const sanitized = {};
+    const signedImageUrl = updates?.signedImageUrl;
     Object.entries(updates).forEach(([key, value]) => {
       if (UPDATABLE_FIELDS.has(key)) {
         if (value === undefined) return;
         sanitized[key] = value === '' ? null : value;
       }
     });
+
+    if (signedImageUrl) {
+      const storedUrl = await storeExternalImage(signedImageUrl, 'milongas/imported');
+      sanitized.imageUrl = storedUrl;
+    }
 
     if (!Object.keys(sanitized).length && !forceGeocode) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
@@ -219,6 +268,7 @@ export async function PATCH(request) {
       ok: true,
       latitude: sanitized.latitude ?? null,
       longitude: sanitized.longitude ?? null,
+      imageUrl: sanitized.imageUrl ?? null,
     });
   } catch (error) {
     return NextResponse.json(
