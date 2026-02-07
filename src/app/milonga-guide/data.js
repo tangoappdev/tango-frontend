@@ -143,7 +143,8 @@ export async function getEventsByCity(citySlug) {
   const applyOverrides = (event) => {
     const stableKey = buildStableKey(event);
     const override = stableKey ? overridesMap.get(stableKey) : null;
-    if (override?.deleted) {
+    const mergedStatus = override?.status || event?.status;
+    if (override?.deleted || mergedStatus === 'paused') {
       return null;
     }
     if (override?.date) {

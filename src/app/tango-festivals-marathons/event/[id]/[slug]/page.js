@@ -50,6 +50,7 @@ export default async function FestivalEventPage({ params }) {
   const overrideDoc = await db.collection('external_festival_overrides').doc(id).get();
   const override = overrideDoc.exists ? overrideDoc.data() : null;
   const event = { ...baseEvent, ...(override || {}) };
+  if (event.status === 'paused') return notFound();
 
   const mapUrl = buildMapEmbedUrl(event);
   const directionsUrl = buildDirectionsUrl(event);
@@ -119,6 +120,11 @@ export default async function FestivalEventPage({ params }) {
                 {(event.city || event.country) && (
                   <p className="mt-2 text-sm font-medium text-gray-200">
                     {[event.city, event.country].filter(Boolean).join(', ')}
+                  </p>
+                )}
+                {event.description && (
+                  <p className="mt-3 whitespace-pre-line text-sm text-gray-300">
+                    {event.description}
                   </p>
                 )}
                 {(event.website || directionsUrl) && (

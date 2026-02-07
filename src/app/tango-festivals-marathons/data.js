@@ -30,7 +30,7 @@ export const loadFestivals = async () => {
         id: festival.id,
       };
     })
-    .filter((festival) => !festival.deleted)
+    .filter((festival) => !festival.deleted && festival.status !== 'paused')
     .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
 };
 
@@ -82,4 +82,3 @@ export const filterFestivals = (festivals, countrySlug, citySlug) => {
   }
   return filtered;
 };
-

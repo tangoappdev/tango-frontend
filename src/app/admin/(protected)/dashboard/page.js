@@ -171,7 +171,7 @@ const handleLogout = async () => {
 // ANCHOR: admin-dashboard-logout (END)
 
 
-  const NavCard = ({ title, description, href, icon: Icon }) => (
+  const NavCard = ({ title, description, href, icon: Icon, badge }) => (
     <button
       onClick={() => router.push(href)}
       className="bg-[#30333a] px-4 py-3 rounded-xl hover:bg-[#363a42] transition-colors duration-150 ease-in-out text-left w-full group"
@@ -181,6 +181,11 @@ const handleLogout = async () => {
           <div className="flex items-center gap-3">
             <Icon className="h-6 w-6 text-[#25edda]" />
             <h2 className="text-sm font-normal text-white">{title}</h2>
+            {badge > 0 && (
+              <span className="rounded-full bg-[#25edda] px-2 py-0.5 text-[10px] font-semibold uppercase text-[#1f2126]">
+                {badge}
+              </span>
+            )}
           </div>
           {description && <p className="text-gray-400 mt-1">{description}</p>}
         </div>
@@ -260,6 +265,18 @@ const handleLogout = async () => {
                 title="Manage Festivals"
                 href="/admin/manage-festivals"
                 icon={MusicalNoteIcon}
+              />
+              <NavCard
+                title="Pending Milongas"
+                href="/admin/pending-milongas"
+                icon={MusicalNoteIcon}
+                badge={stats?.pendingStats?.milongas ?? 0}
+              />
+              <NavCard
+                title="Pending Festivals"
+                href="/admin/pending-festivals"
+                icon={MusicalNoteIcon}
+                badge={stats?.pendingStats?.festivals ?? 0}
               />
             </div>
           </div>

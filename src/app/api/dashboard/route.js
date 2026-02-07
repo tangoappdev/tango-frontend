@@ -37,6 +37,16 @@ export async function GET(request) {
       .where('endDate', '>=', today)
       .get();
     const overridesSnapshot = await db.collection('external_festival_overrides').get();
+    const pendingMilongasSnapshot = await db
+      .collection('event_submissions')
+      .where('type', '==', 'milonga')
+      .where('status', '==', 'pending')
+      .get();
+    const pendingFestivalsSnapshot = await db
+      .collection('event_submissions')
+      .where('type', '==', 'festival')
+      .where('status', '==', 'pending')
+      .get();
 
     const overrideMap = new Map();
     overridesSnapshot.docs.forEach((doc) => {
@@ -68,6 +78,10 @@ export async function GET(request) {
           total: festivalCount,
           countries: countries.size,
           cities: cities.size,
+        },
+        pendingStats: {
+          milongas: pendingMilongasSnapshot.size,
+          festivals: pendingFestivalsSnapshot.size,
         },
       });
     }
@@ -131,6 +145,10 @@ export async function GET(request) {
         total: festivalCount,
         countries: countries.size,
         cities: cities.size,
+      },
+      pendingStats: {
+        milongas: pendingMilongasSnapshot.size,
+        festivals: pendingFestivalsSnapshot.size,
       },
     });
   } catch (error) {

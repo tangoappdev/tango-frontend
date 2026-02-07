@@ -104,6 +104,14 @@ export default function Header() {
     }, 'login');
   };
 
+  const handleAccount = () => {
+    setUserMenuOpen(false);
+    setMenuOpen(false);
+    requireAuth(() => {
+      router.push('/account');
+    }, 'login');
+  };
+
   const trialDaysLeft = useMemo(() => {
     if (!trialActive) return null;
     const trialEndsAt = me?.trialEndsAt ?? 0;
@@ -286,6 +294,12 @@ export default function Header() {
                         </div>
                       )}
                       <button
+                        onClick={handleAccount}
+                        className="mb-2 w-full rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition-colors duration-200 hover:bg-white/10 hover:text-white"
+                      >
+                        Manage your TangoApp account
+                      </button>
+                      <button
                         onClick={handleManageSubscription}
                         className="mb-2 w-full rounded-lg px-3 py-2 text-left text-sm text-gray-200 transition-colors duration-200 hover:bg-white/10 hover:text-white"
                       >
@@ -441,6 +455,14 @@ export default function Header() {
                     )}
                   </div>
                 )}
+                <button
+                  onClick={() => {
+                    handleAccount();
+                  }}
+                  className="w-full rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-gray-200 transition-colors duration-200 hover:text-white hover:bg-white/5"
+                >
+                  Manage your TangoApp account
+                </button>
                 <button
                   onClick={() => {
                     handleManageSubscription();

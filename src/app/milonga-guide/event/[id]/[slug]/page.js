@@ -77,6 +77,7 @@ export default async function MilongaEventPage({ params }) {
   const doc = await db.collection('external_events').doc(id).get();
   if (!doc.exists) return notFound();
   const baseEvent = { id: doc.id, ...doc.data() };
+  if (baseEvent.status === 'paused') return notFound();
   const stableKey = buildStableKey(baseEvent);
   let mergedEvent = baseEvent;
 
@@ -178,6 +179,11 @@ export default async function MilongaEventPage({ params }) {
                 )}
                 {mergedEvent.address && (
                   <p className="mt-1 text-sm text-gray-300">{mergedEvent.address}</p>
+                )}
+                {mergedEvent.descriptionRaw && (
+                  <p className="mt-3 whitespace-pre-line text-sm text-gray-300">
+                    {mergedEvent.descriptionRaw}
+                  </p>
                 )}
                 {directionsUrl && (
                   <a
