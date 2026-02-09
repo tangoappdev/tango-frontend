@@ -6,7 +6,12 @@ import { sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import Header from '@/components/Header';
 import { auth } from '@/lib/firebaseClient';
 import { useAuth } from '@/components/AuthProvider';
-import { CheckCircleIcon, ExclamationCircleIcon, PencilSquareIcon } from '@heroicons/react/24/solid';
+import {
+  ArrowUpTrayIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  PencilSquareIcon,
+} from '@heroicons/react/24/solid';
 
 const toMinutes = (timeValue) => {
   if (!timeValue) return null;
@@ -16,13 +21,13 @@ const toMinutes = (timeValue) => {
 };
 
 const WEEKDAY_OPTIONS = [
-  { label: 'Sun', value: 0 },
-  { label: 'Mon', value: 1 },
-  { label: 'Tue', value: 2 },
-  { label: 'Wed', value: 3 },
-  { label: 'Thu', value: 4 },
-  { label: 'Fri', value: 5 },
-  { label: 'Sat', value: 6 },
+  { label: 'Sunday', value: 0 },
+  { label: 'Monday', value: 1 },
+  { label: 'Tuesday', value: 2 },
+  { label: 'Wednesday', value: 3 },
+  { label: 'Thursday', value: 4 },
+  { label: 'Friday', value: 5 },
+  { label: 'Saturday', value: 6 },
 ];
 
 const MONTHLY_WEEK_OPTIONS = [
@@ -32,6 +37,10 @@ const MONTHLY_WEEK_OPTIONS = [
   { label: '4th', value: 4 },
   { label: '5th', value: 5 },
 ];
+
+const NEO_CARD = 'shadow-[3px_3px_5px_#181a1d,-3px_-3px_5px_#484d57]';
+const NEO_INSET = 'shadow-[inset_3px_3px_5px_#1f2126,inset_-3px_-3px_5px_#41454e]';
+const SELECT_STYLE = 'account-select';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -61,13 +70,18 @@ export default function AccountPage() {
     date: '',
     startTime: '',
     endTime: '',
+    classBefore: false,
+    classStartTime: '',
+    classEndTime: '',
     eventType: 'milonga',
-    frequencyType: 'one-time',
+    frequencyType: 'weekly',
     weeklyDays: [],
-    monthlyRules: [],
+    monthlyRules: [{ week: 1, day: 5 }],
     venue: '',
     address: '',
     city: '',
+    stateRegion: '',
+    country: '',
     imageUrl: '',
     signedImageUrl: '',
     descriptionRaw: '',
@@ -222,10 +236,19 @@ export default function AccountPage() {
         date: milongaForm.date,
         startTimeMinutes: toMinutes(milongaForm.startTime),
         endTimeMinutes: toMinutes(milongaForm.endTime),
+        classBefore: milongaForm.classBefore,
+        classStartTimeMinutes: milongaForm.classBefore
+          ? toMinutes(milongaForm.classStartTime)
+          : null,
+        classEndTimeMinutes: milongaForm.classBefore
+          ? toMinutes(milongaForm.classEndTime)
+          : null,
         eventType: milongaForm.eventType,
         venue: milongaForm.venue.trim(),
         address: milongaForm.address.trim(),
         city: milongaForm.city.trim(),
+        stateRegion: milongaForm.stateRegion.trim(),
+        country: milongaForm.country.trim(),
         imageUrl: milongaForm.imageUrl.trim(),
         signedImageUrl: milongaForm.signedImageUrl.trim(),
         descriptionRaw: milongaForm.descriptionRaw.trim(),
@@ -253,13 +276,18 @@ export default function AccountPage() {
         date: '',
         startTime: '',
         endTime: '',
+        classBefore: false,
+        classStartTime: '',
+        classEndTime: '',
         eventType: 'milonga',
-        frequencyType: 'one-time',
+        frequencyType: 'weekly',
         weeklyDays: [],
-        monthlyRules: [],
+        monthlyRules: [{ week: 1, day: 5 }],
         venue: '',
         address: '',
         city: '',
+        stateRegion: '',
+        country: '',
         imageUrl: '',
         signedImageUrl: '',
         descriptionRaw: '',
@@ -391,13 +419,26 @@ export default function AccountPage() {
         date: eventItem.date || '',
         startTime,
         endTime,
+        classBefore: !!eventItem.classBefore,
+        classStartTime:
+          typeof eventItem.classStartTimeMinutes === 'number'
+            ? `${String(Math.floor(eventItem.classStartTimeMinutes / 60)).padStart(2, '0')}:${String(eventItem.classStartTimeMinutes % 60).padStart(2, '0')}`
+            : '',
+        classEndTime:
+          typeof eventItem.classEndTimeMinutes === 'number'
+            ? `${String(Math.floor(eventItem.classEndTimeMinutes / 60)).padStart(2, '0')}:${String(eventItem.classEndTimeMinutes % 60).padStart(2, '0')}`
+            : '',
         eventType: eventItem.eventType || 'milonga',
-        frequencyType: eventItem.recurrence?.type || 'one-time',
+        frequencyType: eventItem.recurrence?.type || 'weekly',
         weeklyDays: eventItem.recurrence?.weeklyDays || [],
-        monthlyRules: eventItem.recurrence?.monthlyRules || [],
+        monthlyRules: eventItem.recurrence?.monthlyRules?.length
+          ? eventItem.recurrence.monthlyRules
+          : [{ week: 1, day: 5 }],
         venue: eventItem.venue || '',
         address: eventItem.address || '',
         city: eventItem.city || '',
+        stateRegion: eventItem.stateRegion || eventItem.region || '',
+        country: eventItem.country || '',
         imageUrl: eventItem.imageUrl || '',
         signedImageUrl: '',
         descriptionRaw: eventItem.descriptionRaw || '',
@@ -506,6 +547,23 @@ export default function AccountPage() {
   return (
     <>
       <Header />
+      <style jsx global>{`
+        .account-modal input[type='date']::-webkit-calendar-picker-indicator,
+        .account-modal input[type='time']::-webkit-calendar-picker-indicator,
+        .account-create-event input[type='date']::-webkit-calendar-picker-indicator,
+        .account-create-event input[type='time']::-webkit-calendar-picker-indicator {
+          filter: invert(78%) sepia(34%) saturate(682%) hue-rotate(122deg) brightness(97%)
+            contrast(92%);
+        }
+        .account-select {
+          appearance: none;
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5.25 7.5L10 12.25L14.75 7.5'/></svg>");
+          background-repeat: no-repeat;
+          background-position: right 0.9rem center;
+          background-size: 0.8rem;
+          padding-right: 2.5rem;
+        }
+      `}</style>
       <main className="min-h-screen bg-[#30333a] px-6 py-10 text-white sm:px-10">
         <div className="mx-auto w-full max-w-5xl space-y-10">
           <div>
@@ -524,7 +582,7 @@ export default function AccountPage() {
           <div className="grid gap-6 md:grid-cols-3">
             <button
               onClick={() => setActivePanel('profile')}
-              className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6 text-left transition hover:border-white/20"
+              className={`rounded-3xl  bg-[#30333a] p-6 text-left transition hover:border-white/20 ${NEO_CARD}`}
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -533,14 +591,14 @@ export default function AccountPage() {
                     Manage your name, photo, and organizer status.
                   </p>
                 </div>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300">
+                <span className="rounded-full  px-3 py-1 text-xs text-gray-300">
                   Edit
                 </span>
               </div>
             </button>
             <button
               onClick={() => setActivePanel('password')}
-              className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6 text-left transition hover:border-white/20"
+              className={`rounded-3xl  bg-[#30333a] p-6 text-left transition hover:border-white/20 ${NEO_CARD}`}
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -549,14 +607,14 @@ export default function AccountPage() {
                     Send a reset email to update your password.
                   </p>
                 </div>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300">
+                <span className="rounded-full  px-3 py-1 text-xs text-gray-300">
                   Edit
                 </span>
               </div>
             </button>
             <button
               onClick={() => setActivePanel('billing')}
-              className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6 text-left transition hover:border-white/20"
+              className={`rounded-3xl  bg-[#30333a] p-6 text-left transition hover:border-white/20 ${NEO_CARD}`}
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -565,7 +623,7 @@ export default function AccountPage() {
                     Manage billing details and subscription status.
                   </p>
                 </div>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300">
+                <span className="rounded-full  px-3 py-1 text-xs text-gray-300">
                   {profile.organizer ? 'Open' : 'Locked'}
                 </span>
               </div>
@@ -584,9 +642,9 @@ export default function AccountPage() {
                   setOrganizerMode('');
                   setActivePanel('organizer');
                 }}
-                className={`rounded-3xl border border-white/10 bg-[#2a2d33] p-6 text-left transition ${
+                className={`rounded-3xl  bg-[#30333a] p-6 text-left transition ${
                   profile.organizer ? 'hover:border-white/20' : 'opacity-50'
-                }`}
+                } ${NEO_CARD}`}
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -597,14 +655,14 @@ export default function AccountPage() {
                         : 'Enable organizer to unlock submissions.'}
                     </p>
                   </div>
-                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300">
+                  <span className="rounded-full  px-3 py-1 text-xs text-gray-300">
                     Open
                   </span>
                 </div>
               </button>
               <button
                 onClick={() => setActivePanel('submissions')}
-                className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6 text-left transition hover:border-white/20"
+                className={`rounded-3xl  bg-[#30333a] p-6 text-left transition hover:border-white/20 ${NEO_CARD}`}
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -613,7 +671,7 @@ export default function AccountPage() {
                       View your live and pending events.
                     </p>
                   </div>
-                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300">
+                  <span className="rounded-full  px-3 py-1 text-xs text-gray-300">
                     View
                   </span>
                 </div>
@@ -623,7 +681,7 @@ export default function AccountPage() {
 
           <div className="hidden">
 
-          <section className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6">
+          <section className="rounded-3xl  bg-[#30333a] p-6">
             <h2 className="text-lg font-semibold">Personal information</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="text-sm text-gray-300">
@@ -633,7 +691,7 @@ export default function AccountPage() {
                   onChange={(event) =>
                     setProfile((prev) => ({ ...prev, displayName: event.target.value }))
                   }
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-[#1f232b] px-4 py-2 text-white"
+                  className="mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-white"
                 />
               </label>
               <label className="text-sm text-gray-300">
@@ -641,7 +699,7 @@ export default function AccountPage() {
                 <input
                   value={profile.email}
                   disabled
-                  className="mt-2 w-full rounded-2xl border border-white/10 bg-[#1f232b] px-4 py-2 text-gray-400"
+                  className="mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-gray-400"
                 />
               </label>
             </div>
@@ -667,7 +725,7 @@ export default function AccountPage() {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6">
+          <section className="rounded-3xl  bg-[#30333a] p-6">
             <h2 className="text-lg font-semibold">Password</h2>
             <p className="mt-2 text-sm text-gray-300">
               Send yourself a password reset email to update your login credentials.
@@ -675,7 +733,7 @@ export default function AccountPage() {
             <button
               onClick={handleResetPassword}
               disabled={resetState.sending}
-              className="mt-4 rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-gray-200"
+              className="mt-4 rounded-full  px-4 py-2 text-sm font-semibold text-gray-200"
             >
               {resetState.sending ? 'Sending...' : 'Send password reset email'}
             </button>
@@ -684,7 +742,7 @@ export default function AccountPage() {
             )}
           </section>
 
-          <section className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6">
+          <section className="rounded-3xl  bg-[#30333a] p-6">
             <h2 className="text-lg font-semibold">Payment & subscriptions</h2>
             <p className="mt-2 text-sm text-gray-300">
               Manage billing details and subscription status.
@@ -698,104 +756,222 @@ export default function AccountPage() {
           </section>
 
           {isOrganizer && (
-            <section className="rounded-3xl border border-white/10 bg-[#2a2d33] p-6">
+            <section className="account-create-event rounded-3xl  bg-[#30333a] p-6">
             <h2 className="text-lg font-semibold">Create a new event</h2>
               <p className="mt-2 text-sm text-gray-300">
                 Submit new events. Each submission is reviewed before it appears publicly.
               </p>
 
               <div className="mt-6 grid gap-6 lg:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-[#1f232b] p-5">
+                <div className="rounded-2xl  bg-[#30333a] p-5">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-[#25edda]/80">
                     Milonga / Practica
                   </h3>
                   <div className="mt-4 grid gap-3">
-                    <input
-                      placeholder="Title"
-                      value={milongaForm.title}
-                      onChange={(event) =>
-                        setMilongaForm((prev) => ({ ...prev, title: event.target.value }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                    />
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <input
-                        type="date"
-                        value={milongaForm.date}
-                        onChange={(event) =>
-                          setMilongaForm((prev) => ({ ...prev, date: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
-                      <select
-                        value={milongaForm.eventType}
-                        onChange={(event) =>
-                          setMilongaForm((prev) => ({ ...prev, eventType: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                    <div className="flex flex-wrap items-start gap-4">
+                      <button
+                        type="button"
+                        onClick={() => milongaImageInputRef.current?.click()}
+                        disabled={!canBeOrganizer}
+                        className="flex h-[128px] w-[128px] flex-col items-center justify-center gap-2 rounded-2xl  border border-[#25edda]/40 bg-[#30333a] text-[11px] font-semibold text-[#25edda] disabled:opacity-60"
                       >
-                        <option value="milonga">Milonga</option>
-                        <option value="practica">Practica</option>
-                      </select>
+                        {milongaForm.imageUrl ? (
+                          <img
+                            src={milongaForm.imageUrl}
+                            alt="Milonga"
+                            className="h-full w-full rounded-2xl object-cover"
+                          />
+                        ) : (
+                          <>
+                            <ArrowUpTrayIcon className="h-5 w-5" />
+                            Upload image
+                          </>
+                        )}
+                      </button>
+                      <div className="min-w-[220px] flex-1 space-y-3">
+                        <input
+                          placeholder="Milonga name"
+                          value={milongaForm.title}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, title: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
+                        <input
+                          type="date"
+                          value={milongaForm.date}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, date: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
+                        <div className={`flex items-center gap-2 rounded-full  bg-[#30333a] p-1 text-xs font-semibold ${NEO_INSET}`}>
+                          {[
+                            { value: 'milonga', label: 'Milonga' },
+                            { value: 'practica', label: 'Practica' },
+                          ].map((option) => {
+                            const isActive = milongaForm.eventType === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() =>
+                                  setMilongaForm((prev) => ({ ...prev, eventType: option.value }))
+                                }
+                                className={`rounded-full px-4 py-1 text-xs font-semibold transition ${
+                                  isActive
+                                    ? 'bg-[#25edda] text-[#1f232b]'
+                                    : 'text-gray-300 hover:text-white'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
+                    <input
+                      ref={milongaImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) =>
+                        handleOrganizerImageUpload(event.target.files?.[0], 'milonga')
+                      }
+                      className="hidden"
+                    />
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <input
-                        type="time"
-                        value={milongaForm.startTime}
-                        onChange={(event) =>
-                          setMilongaForm((prev) => ({ ...prev, startTime: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
-                      <input
-                        type="time"
-                        value={milongaForm.endTime}
-                        onChange={(event) =>
-                          setMilongaForm((prev) => ({ ...prev, endTime: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
+                      <label className="text-xs text-gray-400">
+                        Milonga start time
+                        <input
+                          type="time"
+                          value={milongaForm.startTime}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, startTime: event.target.value }))
+                          }
+                          className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET}`}
+                        />
+                      </label>
+                      <label className="text-xs text-gray-400">
+                        Milonga end time
+                        <input
+                          type="time"
+                          value={milongaForm.endTime}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, endTime: event.target.value }))
+                          }
+                          className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET}`}
+                        />
+                      </label>
                     </div>
-                    <input
-                      placeholder="Venue"
-                      value={milongaForm.venue}
-                      onChange={(event) =>
-                        setMilongaForm((prev) => ({ ...prev, venue: event.target.value }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                    />
-                    <input
-                      placeholder="Address"
-                      value={milongaForm.address}
-                      onChange={(event) =>
-                        setMilongaForm((prev) => ({ ...prev, address: event.target.value }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                    />
-                    <input
-                      placeholder="City"
-                      value={milongaForm.city}
-                      onChange={(event) =>
-                        setMilongaForm((prev) => ({ ...prev, city: event.target.value }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                    />
-                    <input
-                      placeholder="Image URL"
-                      value={milongaForm.imageUrl}
-                      onChange={(event) =>
-                        setMilongaForm((prev) => ({ ...prev, imageUrl: event.target.value }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                    />
-                    <input
-                      placeholder="Signed Image URL (we'll download it)"
-                      value={milongaForm.signedImageUrl}
-                      onChange={(event) =>
-                        setMilongaForm((prev) => ({ ...prev, signedImageUrl: event.target.value }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                    />
+                      {milongaForm.classBefore && (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="text-xs text-gray-400">
+                            Class start time
+                            <input
+                              type="time"
+                              value={milongaForm.classStartTime}
+                              onChange={(event) =>
+                                setMilongaForm((prev) => ({
+                                  ...prev,
+                                  classStartTime: event.target.value,
+                                }))
+                              }
+                              className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET}`}
+                            />
+                          </label>
+                          <label className="text-xs text-gray-400">
+                            Class end time
+                            <input
+                              type="time"
+                              value={milongaForm.classEndTime}
+                              onChange={(event) =>
+                                setMilongaForm((prev) => ({
+                                  ...prev,
+                                  classEndTime: event.target.value,
+                                }))
+                              }
+                              className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET}`}
+                            />
+                          </label>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl  bg-[#30333a]">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            Class before milonga
+                          </p>
+                          <p className="text-[11px] text-gray-500">Optional class times.</p>
+                        </div>
+                        <div className={`flex items-center gap-2 rounded-full  bg-[#30333a] text-xs font-semibold ${NEO_INSET}`}>
+                          {[
+                            { value: false, label: 'Off' },
+                            { value: true, label: 'On' },
+                          ].map((option) => {
+                            const isActive = milongaForm.classBefore === option.value;
+                            return (
+                              <button
+                                key={option.label}
+                                type="button"
+                                onClick={() =>
+                                  setMilongaForm((prev) => ({ ...prev, classBefore: option.value }))
+                                }
+                                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                                  isActive
+                                    ? `bg-[#30333a] text-[#25edda] ${NEO_CARD}`
+                                    : 'text-gray-300 hover:text-white'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <input
+                        placeholder="Address"
+                        value={milongaForm.address}
+                        onChange={(event) =>
+                          setMilongaForm((prev) => ({ ...prev, address: event.target.value }))
+                        }
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                      />
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input
+                          placeholder="Venue"
+                          value={milongaForm.venue}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, venue: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
+                        <input
+                          placeholder="City"
+                          value={milongaForm.city}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, city: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input
+                          placeholder="State / Region"
+                          value={milongaForm.stateRegion}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, stateRegion: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
+                        <input
+                          placeholder="Country"
+                          value={milongaForm.country}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, country: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
+                      </div>
                     <textarea
                       placeholder="Description"
                       rows={4}
@@ -803,7 +979,7 @@ export default function AccountPage() {
                       onChange={(event) =>
                         setMilongaForm((prev) => ({ ...prev, descriptionRaw: event.target.value }))
                       }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                      className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                     />
                   </div>
                   <button
@@ -815,7 +991,7 @@ export default function AccountPage() {
                   </button>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-[#1f232b] p-5">
+                <div className="rounded-2xl  bg-[#30333a] p-5">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-[#25edda]/80">
                     Festival / Marathon
                   </h3>
@@ -826,7 +1002,7 @@ export default function AccountPage() {
                       onChange={(event) =>
                         setFestivalForm((prev) => ({ ...prev, title: event.target.value }))
                       }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                      className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                     />
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input
@@ -835,7 +1011,7 @@ export default function AccountPage() {
                         onChange={(event) =>
                           setFestivalForm((prev) => ({ ...prev, city: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
                       <input
                         placeholder="Country"
@@ -843,7 +1019,7 @@ export default function AccountPage() {
                         onChange={(event) =>
                           setFestivalForm((prev) => ({ ...prev, country: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -853,7 +1029,7 @@ export default function AccountPage() {
                         onChange={(event) =>
                           setFestivalForm((prev) => ({ ...prev, startDate: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
                       <input
                         type="date"
@@ -861,7 +1037,7 @@ export default function AccountPage() {
                         onChange={(event) =>
                           setFestivalForm((prev) => ({ ...prev, endDate: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
                     </div>
                     <input
@@ -870,7 +1046,7 @@ export default function AccountPage() {
                       onChange={(event) =>
                         setFestivalForm((prev) => ({ ...prev, dateText: event.target.value }))
                       }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                      className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                     />
                     <input
                       placeholder="Website"
@@ -878,23 +1054,7 @@ export default function AccountPage() {
                       onChange={(event) =>
                         setFestivalForm((prev) => ({ ...prev, website: event.target.value }))
                       }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                    />
-                    <input
-                      placeholder="Image URL"
-                      value={festivalForm.imageUrl}
-                      onChange={(event) =>
-                        setFestivalForm((prev) => ({ ...prev, imageUrl: event.target.value }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                    />
-                    <input
-                      placeholder="Signed Image URL (we'll download it)"
-                      value={festivalForm.signedImageUrl}
-                      onChange={(event) =>
-                        setFestivalForm((prev) => ({ ...prev, signedImageUrl: event.target.value }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                      className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                     />
                     <textarea
                       placeholder="Description"
@@ -903,7 +1063,7 @@ export default function AccountPage() {
                       onChange={(event) =>
                         setFestivalForm((prev) => ({ ...prev, description: event.target.value }))
                       }
-                      className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                      className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                     />
                   </div>
                   <button
@@ -922,28 +1082,28 @@ export default function AccountPage() {
       </main>
       {activePanel && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 py-8">
-          <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-[#2a2d33] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.5)]">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
+          <div className="account-modal w-full max-w-xl rounded-3xl  bg-[#30333a] p-4 text-white shadow-[0_24px_70px_rgba(0,0,0,0.5)]">
+            <div className="flex flex-col items-center">
+              <button
+                onClick={() => setActivePanel('')}
+                className="ml-auto rounded-full px-3 py-1 text-xs text-gray-300 hover:text-white self-end"
+              >
+                Close
+              </button>
+              <h2 className="mt-2 text-center text-lg font-semibold">
                 {activePanel === 'profile' && 'Personal information'}
                 {activePanel === 'password' && 'Password'}
                 {activePanel === 'billing' && 'Payment & subscriptions'}
                 {activePanel === 'organizer' && 'Create a new event'}
                 {activePanel === 'submissions' && 'My events'}
               </h2>
-              <button
-                onClick={() => setActivePanel('')}
-                className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-300 hover:text-white"
-              >
-                Close
-              </button>
             </div>
 
             {activePanel === 'profile' && (
               <div className="mt-5 space-y-6">
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="relative">
-                    <div className="h-20 w-20 overflow-hidden rounded-full border border-white/10 bg-white/5">
+                    <div className="h-20 w-20 overflow-hidden rounded-full  bg-white/5">
                       {profile.photoURL ? (
                         <img
                           src={profile.photoURL}
@@ -958,7 +1118,7 @@ export default function AccountPage() {
                     </div>
                     <button
                       onClick={() => avatarInputRef.current?.click()}
-                      className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#1f232b] text-white hover:text-[#25edda]"
+                      className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full  bg-[#1f232b] text-white hover:text-[#25edda]"
                       title="Edit profile photo"
                     >
                       <PencilSquareIcon className="h-4 w-4" />
@@ -1001,7 +1161,7 @@ export default function AccountPage() {
                       onChange={(event) =>
                         setProfile((prev) => ({ ...prev, displayName: event.target.value }))
                       }
-                      className="mt-2 w-full rounded-2xl border border-white/10 bg-[#1f232b] px-4 py-2 text-white"
+                      className="mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-white"
                     />
                   </label>
                   <label className="text-sm text-gray-300">
@@ -1009,12 +1169,12 @@ export default function AccountPage() {
                     <input
                       value={profile.email}
                       disabled
-                      className="mt-2 w-full rounded-2xl border border-white/10 bg-[#1f232b] px-4 py-2 text-gray-400"
+                      className="mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-gray-400"
                     />
                   </label>
                 </div>
                 <div className="space-y-3 text-sm text-gray-300">
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#1f232b] px-4 py-3">
+                  <div className="flex items-center justify-between rounded-2xl  bg-[#30333a] px-4 py-3">
                     <div>
                       <p className="font-semibold text-white">Organizer</p>
                       <p className="text-xs text-gray-400">Submit milongas and festivals.</p>
@@ -1025,8 +1185,8 @@ export default function AccountPage() {
                       onClick={() =>
                         setProfile((prev) => ({ ...prev, organizer: !prev.organizer }))
                       }
-                      className={`h-7 w-12 rounded-full border border-white/10 p-1 transition ${
-                        profile.organizer ? 'bg-[#25edda]' : 'bg-[#14161b]'
+                      className={`h-7 w-12 rounded-full  p-1 transition ${
+                        profile.organizer ? 'bg-[#25edda]' : 'bg-[#30333a]'
                       } ${!canBeOrganizer ? 'opacity-50' : ''}`}
                     >
                       <span
@@ -1036,7 +1196,7 @@ export default function AccountPage() {
                       />
                     </button>
                   </div>
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#1f232b] px-4 py-3">
+                  <div className="flex items-center justify-between rounded-2xl  bg-[#30333a] px-4 py-3">
                     <div>
                       <p className="font-semibold text-white">Teacher</p>
                       <p className="text-xs text-gray-400">Coming soon.</p>
@@ -1047,8 +1207,8 @@ export default function AccountPage() {
                       onClick={() =>
                         setProfile((prev) => ({ ...prev, teacher: !prev.teacher }))
                       }
-                      className={`h-7 w-12 rounded-full border border-white/10 p-1 transition ${
-                        profile.teacher ? 'bg-[#25edda]' : 'bg-[#14161b]'
+                      className={`h-7 w-12 rounded-full  p-1 transition ${
+                        profile.teacher ? 'bg-[#25edda]' : 'bg-[#30333a]'
                       } ${!canBeOrganizer ? 'opacity-50' : ''}`}
                     >
                       <span
@@ -1058,7 +1218,7 @@ export default function AccountPage() {
                       />
                     </button>
                   </div>
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#1f232b] px-4 py-3">
+                  <div className="flex items-center justify-between rounded-2xl  bg-[#30333a] px-4 py-3">
                     <div>
                       <p className="font-semibold text-white">Tango DJ</p>
                       <p className="text-xs text-gray-400">Coming soon.</p>
@@ -1069,8 +1229,8 @@ export default function AccountPage() {
                       onClick={() =>
                         setProfile((prev) => ({ ...prev, tangoDj: !prev.tangoDj }))
                       }
-                      className={`h-7 w-12 rounded-full border border-white/10 p-1 transition ${
-                        profile.tangoDj ? 'bg-[#25edda]' : 'bg-[#14161b]'
+                      className={`h-7 w-12 rounded-full  p-1 transition ${
+                        profile.tangoDj ? 'bg-[#25edda]' : 'bg-[#30333a]'
                       } ${!canBeOrganizer ? 'opacity-50' : ''}`}
                     >
                       <span
@@ -1104,7 +1264,7 @@ export default function AccountPage() {
                 <button
                   onClick={handleResetPassword}
                   disabled={resetState.sending}
-                  className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-gray-200"
+                  className="rounded-full  px-4 py-2 text-sm font-semibold text-gray-200"
                 >
                   {resetState.sending ? 'Sending...' : 'Send password reset email'}
                 </button>
@@ -1129,21 +1289,21 @@ export default function AccountPage() {
             )}
 
             {activePanel === 'organizer' && (
-              <div className="mt-5 space-y-6">
+              <div className="space-y-4">
                 {!canBeOrganizer && (
                   <div className="rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
                     Verify your account to submit events.
                   </div>
                 )}
                 {!profile.organizer && (
-                  <div className="rounded-2xl border border-white/10 bg-[#1f232b] px-4 py-3 text-sm text-gray-300">
+                  <div className="rounded-2xl  bg-[#30333a] px-4 py-3 text-sm text-gray-300">
                     Mark yourself as an organizer in Personal information to enable submissions.
                   </div>
                 )}
                 {organizerMode === '' ? (
-                  <div className="rounded-2xl border border-white/10 bg-[#1f232b] p-5">
+                  <div className="rounded-2xl bg-[#30333a] p-4">
                     <p className="text-sm text-gray-300">Choose the type of event to create.</p>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-4 grid gap-3">
                       <button
                         type="button"
                         onClick={() => {
@@ -1151,7 +1311,7 @@ export default function AccountPage() {
                           setOrganizerMode('milonga');
                         }}
                         disabled={!profile.organizer || !canBeOrganizer}
-                        className={`rounded-2xl border border-white/10 bg-[#14161b] px-4 py-3 text-sm font-semibold text-white hover:border-white/30 ${
+                        className={`rounded-2xl bg-[#30333a] px-4 py-3 text-sm font-semibold text-white ${NEO_CARD} ${
                           !profile.organizer || !canBeOrganizer ? 'opacity-50' : ''
                         }`}
                       >
@@ -1164,7 +1324,7 @@ export default function AccountPage() {
                           setOrganizerMode('festival');
                         }}
                         disabled={!profile.organizer || !canBeOrganizer}
-                        className={`rounded-2xl border border-white/10 bg-[#14161b] px-4 py-3 text-sm font-semibold text-white hover:border-white/30 ${
+                        className={`rounded-2xl bg-[#30333a] px-4 py-3 text-sm font-semibold text-white ${NEO_CARD} ${
                           !profile.organizer || !canBeOrganizer ? 'opacity-50' : ''
                         }`}
                       >
@@ -1172,139 +1332,193 @@ export default function AccountPage() {
                       </button>
                     </div>
                   </div>
-                ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#1f232b] px-4 py-3 text-sm text-gray-300">
-                    <span>
-                      {editTarget ? 'Editing event details.' : 'Fill out the details below.'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOrganizerMode('');
-                        setEditTarget(null);
-                      }}
-                      className="rounded-full border border-white/15 px-3 py-1 text-xs text-gray-200"
-                    >
-                      Change type
-                    </button>
-                  </div>
-                )}
+                ) : null}
                 {organizerMode === 'milonga' && (
-                  <div className="rounded-2xl border border-white/10 bg-[#1f232b] p-5">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-[#25edda]/80">
-                      Milonga / Practica
-                    </h3>
+                  <div className="rounded-2xl bg-[#30333a] p-5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-[#25edda]/80">
+                        Milonga / Practica
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrganizerMode('');
+                          setEditTarget(null);
+                        }}
+                        className="rounded-full  px-3 py-1 text-xs text-gray-200"
+                      >
+                        Change type
+                      </button>
+                    </div>
                     <div className="mt-4 grid gap-3">
-                      <input
-                        placeholder="Title"
-                        value={milongaForm.title}
-                        onChange={(event) =>
-                          setMilongaForm((prev) => ({ ...prev, title: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <input
-                          type="date"
-                          value={milongaForm.date}
-                          onChange={(event) =>
-                            setMilongaForm((prev) => ({ ...prev, date: event.target.value }))
-                          }
-                          className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                        />
-                        <select
-                          value={milongaForm.eventType}
-                          onChange={(event) =>
-                            setMilongaForm((prev) => ({ ...prev, eventType: event.target.value }))
-                          }
-                          className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                      <div className="flex flex-wrap items-start gap-4">
+                        <button
+                          type="button"
+                          onClick={() => milongaImageInputRef.current?.click()}
+                          disabled={!canBeOrganizer}
+                        className="flex h-[128px] w-[128px] flex-col items-center justify-center gap-2 rounded-2xl  border border-[#25edda]/40 bg-[#30333a] text-[11px] font-semibold text-[#25edda] disabled:opacity-60"
                         >
-                          <option value="milonga">Milonga</option>
-                          <option value="practica">Practica</option>
-                        </select>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <select
-                          value={milongaForm.frequencyType}
-                          onChange={(event) =>
-                            setMilongaForm((prev) => ({
-                              ...prev,
-                              frequencyType: event.target.value,
-                            }))
-                          }
-                          className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                        >
-                          <option value="one-time">One-time event</option>
-                          <option value="weekly">Weekly recurrence</option>
-                          <option value="monthly">Monthly recurrence</option>
-                        </select>
-                        <div className="flex items-center text-xs text-gray-400">
-                          Upcoming dates are generated from the start date.
-                        </div>
-                      </div>
-                      {milongaForm.frequencyType === 'weekly' && (
-                        <div className="rounded-2xl border border-white/10 bg-[#14161b] px-4 py-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                            Weekly days
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {WEEKDAY_OPTIONS.map((day) => {
-                              const active = milongaForm.weeklyDays.includes(day.value);
+                          {milongaForm.imageUrl ? (
+                            <img
+                              src={milongaForm.imageUrl}
+                              alt="Milonga"
+                              className="h-full w-full rounded-2xl object-cover"
+                            />
+                          ) : (
+                            <>
+                              <ArrowUpTrayIcon className="h-5 w-5" />
+                              Upload image
+                            </>
+                          )}
+                        </button>
+                        <div className="min-w-[220px] flex-1 space-y-3">
+                          <input
+                            placeholder="Milonga name"
+                            value={milongaForm.title}
+                            onChange={(event) =>
+                              setMilongaForm((prev) => ({ ...prev, title: event.target.value }))
+                            }
+                            className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                          />
+                          <input
+                            type="date"
+                            value={milongaForm.date}
+                            onChange={(event) =>
+                              setMilongaForm((prev) => ({ ...prev, date: event.target.value }))
+                            }
+                            className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                          />
+                          <div className={`flex w-full items-center gap-2 rounded-full  bg-[#30333a] text-xs font-semibold ${NEO_INSET}`}>
+                            {[
+                              { value: 'milonga', label: 'Milonga' },
+                              { value: 'practica', label: 'Practica' },
+                            ].map((option) => {
+                              const isActive = milongaForm.eventType === option.value;
                               return (
                                 <button
-                                  key={day.value}
+                                  key={option.value}
                                   type="button"
                                   onClick={() =>
-                                    setMilongaForm((prev) => ({
-                                      ...prev,
-                                      weeklyDays: active
-                                        ? prev.weeklyDays.filter((val) => val !== day.value)
-                                        : [...prev.weeklyDays, day.value],
-                                    }))
+                                    setMilongaForm((prev) => ({ ...prev, eventType: option.value }))
                                   }
-                                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                                    active
-                                      ? 'border-[#25edda] bg-[#25edda]/10 text-[#25edda]'
-                                      : 'border-white/10 text-gray-300'
+                                  className={`w-1/2 rounded-full px-4 py-2 text-xs font-semibold transition ${
+                                    isActive
+                                      ? `bg-[#30333a] text-[#25edda] ${NEO_CARD}`
+                                      : 'text-gray-300 hover:text-white'
                                   }`}
                                 >
-                                  {day.label}
+                                  {option.label}
                                 </button>
                               );
                             })}
                           </div>
                         </div>
-                      )}
-                      {milongaForm.frequencyType === 'monthly' && (
-                        <div className="rounded-2xl border border-white/10 bg-[#14161b] px-4 py-3">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                              Monthly rules
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() =>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="text-xs text-gray-400">
+                          Frequency
+                          <select
+                            value={milongaForm.frequencyType}
+                            onChange={(event) =>
+                              setMilongaForm((prev) => ({
+                                ...prev,
+                                frequencyType: event.target.value,
+                              }))
+                            }
+                            className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET} ${SELECT_STYLE}`}
+                          >
+                            <option value="one-time">One-time event</option>
+                          <option value="weekly">Every week</option>
+                          <option value="monthly">Every month</option>
+                          </select>
+                        </label>
+                        {milongaForm.frequencyType === 'weekly' ? (
+                          <label className="text-xs text-gray-400">
+                            Day of week
+                            <select
+                              value={milongaForm.weeklyDays?.[0] ?? ''}
+                              onChange={(event) => {
+                                const value = Number(event.target.value);
                                 setMilongaForm((prev) => ({
                                   ...prev,
-                                  monthlyRules: [
-                                    ...prev.monthlyRules,
-                                    { week: 1, day: 5 },
-                                  ],
-                                }))
-                              }
-                              className="rounded-full border border-white/15 px-3 py-1 text-xs text-gray-200"
+                                  weeklyDays: Number.isNaN(value) ? [] : [value],
+                                }));
+                              }}
+                              className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET} ${SELECT_STYLE}`}
                             >
-                              Add rule
-                            </button>
+                              <option value="">Select day</option>
+                              {WEEKDAY_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : milongaForm.frequencyType === 'monthly' ? (
+                          <div className="space-y-2">
+                            <p className="text-xs text-gray-400">Monthly rule</p>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              <select
+                                value={milongaForm.monthlyRules?.[0]?.week ?? 1}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value);
+                                  setMilongaForm((prev) => ({
+                                    ...prev,
+                                    monthlyRules: [
+                                      { week: value, day: prev.monthlyRules?.[0]?.day ?? 5 },
+                                      ...(prev.monthlyRules?.slice(1) || []),
+                                    ],
+                                  }));
+                                }}
+                                className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET} ${SELECT_STYLE}`}
+                              >
+                                {MONTHLY_WEEK_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <select
+                                value={milongaForm.monthlyRules?.[0]?.day ?? 5}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value);
+                                  setMilongaForm((prev) => ({
+                                    ...prev,
+                                    monthlyRules: [
+                                      { week: prev.monthlyRules?.[0]?.week ?? 1, day: value },
+                                      ...(prev.monthlyRules?.slice(1) || []),
+                                    ],
+                                  }));
+                                }}
+                                className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET} ${SELECT_STYLE}`}
+                              >
+                                {WEEKDAY_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
-                          <div className="mt-3 space-y-2">
-                            {milongaForm.monthlyRules.length === 0 && (
-                              <p className="text-xs text-gray-400">
-                                Add a rule like 1st Saturday.
-                              </p>
-                            )}
-                            {milongaForm.monthlyRules.map((rule, index) => (
-                              <div key={`${rule.week}-${rule.day}-${index}`} className="flex flex-wrap gap-2">
+                        ) : null}
+                      </div>
+                      {milongaForm.frequencyType === 'monthly' && (
+                        <div className="rounded-2xl  bg-[#30333a]">
+                          <div className="space-y-2">
+                            {milongaForm.monthlyRules.slice(1).map((rule, index) => (
+                              <div key={`${rule.week}-${rule.day}-${index}`} className="grid grid-cols-4 items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setMilongaForm((prev) => ({
+                                      ...prev,
+                                      monthlyRules: prev.monthlyRules.filter((_, idx) => idx !== index + 1),
+                                    }))
+                                  }
+                                  className="col-span-2 rounded-full px-3 py-2 text-xs text-gray-200"
+                                >
+                                  Remove
+                                </button>
                                 <select
                                   value={rule.week}
                                   onChange={(event) => {
@@ -1312,11 +1526,11 @@ export default function AccountPage() {
                                     setMilongaForm((prev) => ({
                                       ...prev,
                                       monthlyRules: prev.monthlyRules.map((item, idx) =>
-                                        idx === index ? { ...item, week: value } : item
+                                        idx === index + 1 ? { ...item, week: value } : item
                                       ),
                                     }));
                                   }}
-                                  className="rounded-2xl border border-white/10 bg-[#0f1115] px-3 py-1 text-xs text-gray-200"
+                                  className={`col-span-1 rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET} ${SELECT_STYLE}`}
                                 >
                                   {MONTHLY_WEEK_OPTIONS.map((option) => (
                                     <option key={option.value} value={option.value}>
@@ -1331,11 +1545,11 @@ export default function AccountPage() {
                                     setMilongaForm((prev) => ({
                                       ...prev,
                                       monthlyRules: prev.monthlyRules.map((item, idx) =>
-                                        idx === index ? { ...item, day: value } : item
+                                        idx === index + 1 ? { ...item, day: value } : item
                                       ),
                                     }));
                                   }}
-                                  className="rounded-2xl border border-white/10 bg-[#0f1115] px-3 py-1 text-xs text-gray-200"
+                                  className={`col-span-1 rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET} ${SELECT_STYLE}`}
                                 >
                                   {WEEKDAY_OPTIONS.map((option) => (
                                     <option key={option.value} value={option.value}>
@@ -1343,104 +1557,160 @@ export default function AccountPage() {
                                     </option>
                                   ))}
                                 </select>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setMilongaForm((prev) => ({
-                                      ...prev,
-                                      monthlyRules: prev.monthlyRules.filter((_, idx) => idx !== index),
-                                    }))
-                                  }
-                                  className="rounded-full border border-white/15 px-3 py-1 text-xs text-gray-200"
-                                >
-                                  Remove
-                                </button>
                               </div>
                             ))}
+                          </div>
+                          <div className="mt-2 flex items-center justify-end">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setMilongaForm((prev) => ({
+                                  ...prev,
+                                  monthlyRules: [
+                                    ...prev.monthlyRules,
+                                    { week: 1, day: 5 },
+                                  ],
+                                }))
+                              }
+                              className="rounded-full px-3 py-1 text-xs font-semibold text-[#25edda]"
+                            >
+                              + Add rule
+                            </button>
                           </div>
                         </div>
                       )}
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <input
-                          type="time"
-                          value={milongaForm.startTime}
-                          onChange={(event) =>
-                            setMilongaForm((prev) => ({ ...prev, startTime: event.target.value }))
-                          }
-                          className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                        />
-                        <input
-                          type="time"
-                          value={milongaForm.endTime}
-                          onChange={(event) =>
-                            setMilongaForm((prev) => ({ ...prev, endTime: event.target.value }))
-                          }
-                          className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                        />
+                        <label className="text-xs text-gray-400">
+                          Milonga start time
+                          <input
+                            type="time"
+                            value={milongaForm.startTime}
+                            onChange={(event) =>
+                              setMilongaForm((prev) => ({ ...prev, startTime: event.target.value }))
+                            }
+                            className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET}`}
+                          />
+                        </label>
+                        <label className="text-xs text-gray-400">
+                          Milonga end time
+                          <input
+                            type="time"
+                            value={milongaForm.endTime}
+                            onChange={(event) =>
+                              setMilongaForm((prev) => ({ ...prev, endTime: event.target.value }))
+                            }
+                            className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET}`}
+                          />
+                        </label>
                       </div>
-                      <input
-                        placeholder="Venue"
-                        value={milongaForm.venue}
-                        onChange={(event) =>
-                          setMilongaForm((prev) => ({ ...prev, venue: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
+                      {milongaForm.classBefore && (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="text-xs text-gray-400">
+                            Class start time
+                            <input
+                              type="time"
+                              value={milongaForm.classStartTime}
+                              onChange={(event) =>
+                                setMilongaForm((prev) => ({
+                                  ...prev,
+                                  classStartTime: event.target.value,
+                                }))
+                              }
+                              className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET}`}
+                            />
+                          </label>
+                          <label className="text-xs text-gray-400">
+                            Class end time
+                            <input
+                              type="time"
+                              value={milongaForm.classEndTime}
+                              onChange={(event) =>
+                                setMilongaForm((prev) => ({
+                                  ...prev,
+                                  classEndTime: event.target.value,
+                                }))
+                              }
+                              className={`mt-2 w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm text-white ${NEO_INSET}`}
+                            />
+                          </label>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl  bg-[#30333a]">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            Class before milonga
+                          </p>
+                          <p className="text-[11px] text-gray-500">Optional class times.</p>
+                        </div>
+                        <div className={`flex items-center gap-2 rounded-full  bg-[#30333a] text-xs font-semibold ${NEO_INSET}`}>
+                          {[
+                            { value: false, label: 'Off' },
+                            { value: true, label: 'On' },
+                          ].map((option) => {
+                            const isActive = milongaForm.classBefore === option.value;
+                            return (
+                              <button
+                                key={option.label}
+                                type="button"
+                                onClick={() =>
+                                  setMilongaForm((prev) => ({ ...prev, classBefore: option.value }))
+                                }
+                                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                                  isActive
+                                    ? `bg-[#30333a] text-[#25edda] ${NEO_CARD}`
+                                    : 'text-gray-300 hover:text-white'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                       <input
                         placeholder="Address"
                         value={milongaForm.address}
                         onChange={(event) =>
                           setMilongaForm((prev) => ({ ...prev, address: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
-                      <input
-                        placeholder="City"
-                        value={milongaForm.city}
-                        onChange={(event) =>
-                          setMilongaForm((prev) => ({ ...prev, city: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
-                      <input
-                        placeholder="Image URL"
-                        value={milongaForm.imageUrl}
-                        onChange={(event) =>
-                          setMilongaForm((prev) => ({ ...prev, imageUrl: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-gray-400">Upload image</span>
-                        <button
-                          type="button"
-                          onClick={() => milongaImageInputRef.current?.click()}
-                          disabled={!canBeOrganizer}
-                          className="rounded-full border border-white/15 px-3 py-1 text-xs text-gray-200 disabled:opacity-60"
-                        >
-                          Upload
-                        </button>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input
+                          placeholder="Venue"
+                          value={milongaForm.venue}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, venue: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
+                        <input
+                          placeholder="City"
+                          value={milongaForm.city}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, city: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
                       </div>
-                      <input
-                        ref={milongaImageInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) =>
-                          handleOrganizerImageUpload(event.target.files?.[0], 'milonga')
-                        }
-                        className="hidden"
-                      />
-                      <input
-                        placeholder="Signed Image URL (we'll download it)"
-                        value={milongaForm.signedImageUrl}
-                        onChange={(event) =>
-                          setMilongaForm((prev) => ({
-                            ...prev,
-                            signedImageUrl: event.target.value,
-                          }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input
+                          placeholder="State / Region"
+                          value={milongaForm.stateRegion}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, stateRegion: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
+                        <input
+                          placeholder="Country"
+                          value={milongaForm.country}
+                          onChange={(event) =>
+                            setMilongaForm((prev) => ({ ...prev, country: event.target.value }))
+                          }
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
+                        />
+                      </div>
                       <textarea
                         placeholder="Description"
                         rows={4}
@@ -1448,7 +1718,7 @@ export default function AccountPage() {
                         onChange={(event) =>
                           setMilongaForm((prev) => ({ ...prev, descriptionRaw: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
                     </div>
                     <button
@@ -1462,10 +1732,22 @@ export default function AccountPage() {
                 )}
 
                 {organizerMode === 'festival' && (
-                  <div className="rounded-2xl border border-white/10 bg-[#1f232b] p-5">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-[#25edda]/80">
-                      Festival / Marathon
-                    </h3>
+                  <div className="rounded-2xl bg-[#30333a] p-5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-[#25edda]/80">
+                        Festival / Marathon
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrganizerMode('');
+                          setEditTarget(null);
+                        }}
+                        className="rounded-full  px-3 py-1 text-xs text-gray-200"
+                      >
+                        Change type
+                      </button>
+                    </div>
                     <div className="mt-4 grid gap-3">
                       <input
                         placeholder="Title"
@@ -1473,18 +1755,18 @@ export default function AccountPage() {
                         onChange={(event) =>
                           setFestivalForm((prev) => ({ ...prev, title: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
-                      <select
-                        value={festivalForm.eventType}
-                        onChange={(event) =>
-                          setFestivalForm((prev) => ({ ...prev, eventType: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      >
-                        <option value="festival">Festival</option>
-                        <option value="marathon">Marathon</option>
-                      </select>
+                    <select
+                      value={festivalForm.eventType}
+                      onChange={(event) =>
+                        setFestivalForm((prev) => ({ ...prev, eventType: event.target.value }))
+                      }
+                      className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET} ${SELECT_STYLE}`}
+                    >
+                      <option value="festival">Festival</option>
+                      <option value="marathon">Marathon</option>
+                    </select>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <input
                           placeholder="City"
@@ -1492,7 +1774,7 @@ export default function AccountPage() {
                           onChange={(event) =>
                             setFestivalForm((prev) => ({ ...prev, city: event.target.value }))
                           }
-                          className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                         />
                         <input
                           placeholder="Country"
@@ -1500,7 +1782,7 @@ export default function AccountPage() {
                           onChange={(event) =>
                             setFestivalForm((prev) => ({ ...prev, country: event.target.value }))
                           }
-                          className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                         />
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -1510,7 +1792,7 @@ export default function AccountPage() {
                           onChange={(event) =>
                             setFestivalForm((prev) => ({ ...prev, startDate: event.target.value }))
                           }
-                          className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                         />
                         <input
                           type="date"
@@ -1518,7 +1800,7 @@ export default function AccountPage() {
                           onChange={(event) =>
                             setFestivalForm((prev) => ({ ...prev, endDate: event.target.value }))
                           }
-                          className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                          className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                         />
                       </div>
                       <input
@@ -1527,7 +1809,7 @@ export default function AccountPage() {
                         onChange={(event) =>
                           setFestivalForm((prev) => ({ ...prev, dateText: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
                       <input
                         placeholder="Website"
@@ -1535,27 +1817,17 @@ export default function AccountPage() {
                         onChange={(event) =>
                           setFestivalForm((prev) => ({ ...prev, website: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
-                      <input
-                        placeholder="Image URL"
-                        value={festivalForm.imageUrl}
-                        onChange={(event) =>
-                          setFestivalForm((prev) => ({ ...prev, imageUrl: event.target.value }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-gray-400">Upload image</span>
-                        <button
-                          type="button"
-                          onClick={() => festivalImageInputRef.current?.click()}
-                          disabled={!canBeOrganizer}
-                          className="rounded-full border border-white/15 px-3 py-1 text-xs text-gray-200 disabled:opacity-60"
-                        >
-                          Upload
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => festivalImageInputRef.current?.click()}
+                        disabled={!canBeOrganizer}
+                        className="inline-flex items-center gap-2 text-xs font-semibold text-[#25edda] disabled:opacity-60"
+                      >
+                        <ArrowUpTrayIcon className="h-4 w-4" />
+                        Upload image
+                      </button>
                       <input
                         ref={festivalImageInputRef}
                         type="file"
@@ -1565,17 +1837,6 @@ export default function AccountPage() {
                         }
                         className="hidden"
                       />
-                      <input
-                        placeholder="Signed Image URL (we'll download it)"
-                        value={festivalForm.signedImageUrl}
-                        onChange={(event) =>
-                          setFestivalForm((prev) => ({
-                            ...prev,
-                            signedImageUrl: event.target.value,
-                          }))
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
-                      />
                       <textarea
                         placeholder="Description"
                         rows={4}
@@ -1583,7 +1844,7 @@ export default function AccountPage() {
                         onChange={(event) =>
                           setFestivalForm((prev) => ({ ...prev, description: event.target.value }))
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-[#14161b] px-4 py-2 text-sm"
+                        className={`w-full rounded-2xl  bg-[#30333a] px-4 py-2 text-sm ${NEO_INSET}`}
                       />
                     </div>
                     <button
@@ -1601,11 +1862,11 @@ export default function AccountPage() {
             {activePanel === 'submissions' && (
               <div className="mt-5">
                 {eventsLoading ? (
-                  <div className="rounded-2xl border border-white/10 bg-[#1f232b] p-4 text-gray-300">
+                  <div className="rounded-2xl  bg-[#30333a] p-4 text-gray-300">
                     Loading events...
                   </div>
                 ) : myEvents.length === 0 ? (
-                  <div className="rounded-2xl border border-white/10 bg-[#1f232b] p-4 text-gray-300">
+                  <div className="rounded-2xl  bg-[#30333a] p-4 text-gray-300">
                     No events yet.
                   </div>
                 ) : (
@@ -1635,11 +1896,11 @@ export default function AccountPage() {
                       return (
                         <div
                           key={`${eventItem.kind}-${eventItem.id}`}
-                          className="rounded-2xl border border-white/10 bg-[#1f232b] p-4"
+                          className="rounded-2xl  bg-[#30333a] p-4"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
-                              <div className="h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-[#14161b]">
+                              <div className="h-12 w-12 overflow-hidden rounded-xl  bg-[#30333a]">
                                 {eventItem.imageUrl ? (
                                   <img
                                     src={eventItem.imageUrl}
@@ -1669,14 +1930,14 @@ export default function AccountPage() {
                               </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-wide text-gray-300">
+                              <span className="rounded-full  px-3 py-1 text-[11px] uppercase tracking-wide text-gray-300">
                                 {statusLabel}
                               </span>
                               {eventItem.kind !== 'submission' && (
                                 <button
                                   type="button"
                                   onClick={() => handlePauseToggle(eventItem)}
-                                  className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-gray-200"
+                                  className="rounded-full  px-3 py-1 text-[11px] text-gray-200"
                                 >
                                   {eventItem.status === 'paused' ? 'Resume' : 'Pause'}
                                 </button>
@@ -1684,7 +1945,7 @@ export default function AccountPage() {
                               <button
                                 type="button"
                                 onClick={() => openEdit(eventItem)}
-                                className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-gray-200"
+                                className="rounded-full  px-3 py-1 text-[11px] text-gray-200"
                               >
                                 Edit
                               </button>
@@ -1703,3 +1964,10 @@ export default function AccountPage() {
     </>
   );
 }
+
+
+
+
+
+
+
