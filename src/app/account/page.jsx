@@ -136,25 +136,26 @@ export default function AccountPage() {
     };
   }, [user]);
 
+  const reloadEvents = async (activeFlag) => {
+    setEventsLoading(true);
+    try {
+      const res = await fetch('/api/organizer/events', { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to load events.');
+      if (activeFlag && !activeFlag()) return;
+      setMyEvents(data?.events || []);
+    } catch (error) {
+      if (activeFlag && !activeFlag()) return;
+      setStatus({ type: 'error', message: error?.message || 'Failed to load events.' });
+    } finally {
+      if (!activeFlag || activeFlag()) setEventsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     let isActive = true;
-    const loadEvents = async () => {
-      setEventsLoading(true);
-      try {
-        const res = await fetch('/api/organizer/events', { cache: 'no-store' });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || 'Failed to load events.');
-        if (!isActive) return;
-        setMyEvents(data?.events || []);
-      } catch (error) {
-        if (!isActive) return;
-        setStatus({ type: 'error', message: error?.message || 'Failed to load events.' });
-      } finally {
-        if (isActive) setEventsLoading(false);
-      }
-    };
-    loadEvents();
+    reloadEvents(() => isActive);
     return () => {
       isActive = false;
     };
@@ -254,11 +255,16 @@ export default function AccountPage() {
         descriptionRaw: milongaForm.descriptionRaw.trim(),
         recurrence,
       };
+      const isSubmissionEdit = editTarget?.kind === 'submission';
       const res = editTarget
-        ? await fetch('/api/organizer/events', {
+        ? await fetch(isSubmissionEdit ? '/api/organizer/submissions' : '/api/organizer/events', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: editTarget.id, kind: editTarget.kind, action: 'update', payload }),
+            body: JSON.stringify(
+              isSubmissionEdit
+                ? { id: editTarget.id, type: 'milonga', payload }
+                : { id: editTarget.id, kind: editTarget.kind, action: 'update', payload }
+            ),
           })
         : await fetch('/api/organizer/submissions', {
             method: 'POST',
@@ -269,7 +275,11 @@ export default function AccountPage() {
       if (!res.ok) throw new Error(data?.error || 'Failed to submit milonga.');
       setStatus({
         type: 'success',
-        message: editTarget ? 'Milonga updated.' : 'Milonga submitted. It will be posted after review.',
+        message: editTarget
+          ? isSubmissionEdit
+            ? 'Submission updated.'
+            : 'Milonga updated.'
+          : 'Milonga submitted. It will be posted after review.',
       });
       setMilongaForm({
         title: '',
@@ -292,8 +302,11 @@ export default function AccountPage() {
         signedImageUrl: '',
         descriptionRaw: '',
       });
+      await reloadEvents();
       setEditTarget(null);
       setOrganizerMode('');
+      setActivePanel('');
+      router.push('/account');
     } catch (error) {
       setStatus({ type: 'error', message: error?.message || 'Failed to submit milonga.' });
     } finally {
@@ -318,11 +331,16 @@ export default function AccountPage() {
         description: festivalForm.description.trim(),
         eventType: festivalForm.eventType,
       };
+      const isSubmissionEdit = editTarget?.kind === 'submission';
       const res = editTarget
-        ? await fetch('/api/organizer/events', {
+        ? await fetch(isSubmissionEdit ? '/api/organizer/submissions' : '/api/organizer/events', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: editTarget.id, kind: editTarget.kind, action: 'update', payload }),
+            body: JSON.stringify(
+              isSubmissionEdit
+                ? { id: editTarget.id, type: 'festival', payload }
+                : { id: editTarget.id, kind: editTarget.kind, action: 'update', payload }
+            ),
           })
         : await fetch('/api/organizer/submissions', {
             method: 'POST',
@@ -333,7 +351,11 @@ export default function AccountPage() {
       if (!res.ok) throw new Error(data?.error || 'Failed to submit festival.');
       setStatus({
         type: 'success',
-        message: editTarget ? 'Festival updated.' : 'Festival submitted. It will be posted after review.',
+        message: editTarget
+          ? isSubmissionEdit
+            ? 'Submission updated.'
+            : 'Festival updated.'
+          : 'Festival submitted. It will be posted after review.',
       });
       setFestivalForm({
         title: '',
@@ -348,8 +370,11 @@ export default function AccountPage() {
         signedImageUrl: '',
         description: '',
       });
+      await reloadEvents();
       setEditTarget(null);
       setOrganizerMode('');
+      setActivePanel('');
+      router.push('/account');
     } catch (error) {
       setStatus({ type: 'error', message: error?.message || 'Failed to submit festival.' });
     } finally {
@@ -401,6 +426,30 @@ export default function AccountPage() {
     }
   };
 
+  const handleDeleteEvent = async (eventItem) => {
+    if (!eventItem) return;
+    const confirmDelete = window.confirm('Delete this event? This cannot be undone.');
+    if (!confirmDelete) return;
+    setStatus({ type: '', message: '' });
+    try {
+      const res = await fetch('/api/organizer/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: eventItem.id,
+          kind: eventItem.kind,
+          action: 'delete',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to delete event.');
+      await reloadEvents();
+      setStatus({ type: 'success', message: 'Event deleted.' });
+    } catch (error) {
+      setStatus({ type: 'error', message: error?.message || 'Failed to delete event.' });
+    }
+  };
+
   const openEdit = (eventItem) => {
     if (!eventItem) return;
     setEditTarget({ id: eventItem.id, kind: eventItem.kind });
@@ -413,6 +462,14 @@ export default function AccountPage() {
       const endTime = typeof eventItem.endTimeMinutes === 'number'
         ? `${String(Math.floor(eventItem.endTimeMinutes / 60)).padStart(2, '0')}:${String(eventItem.endTimeMinutes % 60).padStart(2, '0')}`
         : '';
+      const baseWeeklyDays = eventItem.recurrence?.weeklyDays || [];
+      const fallbackWeekday = eventItem.date ? new Date(`${eventItem.date}T12:00:00`).getDay() : null;
+      const weeklyDays =
+        baseWeeklyDays.length > 0
+          ? baseWeeklyDays
+          : Number.isInteger(fallbackWeekday)
+            ? [fallbackWeekday]
+            : [];
       setMilongaForm((prev) => ({
         ...prev,
         title: eventItem.title || '',
@@ -430,7 +487,7 @@ export default function AccountPage() {
             : '',
         eventType: eventItem.eventType || 'milonga',
         frequencyType: eventItem.recurrence?.type || 'weekly',
-        weeklyDays: eventItem.recurrence?.weeklyDays || [],
+        weeklyDays,
         monthlyRules: eventItem.recurrence?.monthlyRules?.length
           ? eventItem.recurrence.monthlyRules
           : [{ week: 1, day: 5 }],
@@ -1948,6 +2005,13 @@ export default function AccountPage() {
                                 className="rounded-full  px-3 py-1 text-[11px] text-gray-200"
                               >
                                 Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteEvent(eventItem)}
+                                className="rounded-full px-3 py-1 text-[11px] text-rose-200"
+                              >
+                                Delete
                               </button>
                             </div>
                           </div>

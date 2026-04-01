@@ -8,6 +8,31 @@ async function requireUser(request) {
   return { user };
 }
 
+const slugify = (value) =>
+  (value || '')
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+async function geocodeAddress(address, apiKey) {
+  if (!apiKey || !address) return null;
+  const url =
+    `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}` +
+    `&key=${apiKey}`;
+  const response = await fetch(url);
+  if (!response.ok) return null;
+  const data = await response.json();
+  const location = data?.results?.[0]?.geometry?.location;
+  return location ? { lat: location.lat, lng: location.lng } : null;
+}
+
+const shouldGeocode = (payload) =>
+  payload &&
+  ['address', 'city', 'stateRegion', 'country', 'venue'].some((key) =>
+    Object.prototype.hasOwnProperty.call(payload, key)
+  );
+
 const normalizeEvent = (item, type) => {
   const payload = item.payload || {};
   if (type === 'submission') {
@@ -19,6 +44,7 @@ const normalizeEvent = (item, type) => {
       title: payload.title || 'Untitled',
       status: item.status || 'pending',
       city: payload.city || null,
+      stateRegion: payload.stateRegion || null,
       country: payload.country || null,
       address: payload.address || null,
       venue: payload.venue || null,
@@ -27,6 +53,9 @@ const normalizeEvent = (item, type) => {
       endDate: payload.endDate || null,
       startTimeMinutes: payload.startTimeMinutes ?? null,
       endTimeMinutes: payload.endTimeMinutes ?? null,
+      classBefore: payload.classBefore ?? false,
+      classStartTimeMinutes: payload.classStartTimeMinutes ?? null,
+      classEndTimeMinutes: payload.classEndTimeMinutes ?? null,
       descriptionRaw: payload.descriptionRaw || null,
       description: payload.description || null,
       recurrence: payload.recurrence || null,
@@ -49,6 +78,9 @@ const normalizeEvent = (item, type) => {
     endDate: item.endDate || null,
     startTimeMinutes: item.startTimeMinutes ?? null,
     endTimeMinutes: item.endTimeMinutes ?? null,
+    classBefore: item.classBefore ?? false,
+    classStartTimeMinutes: item.classStartTimeMinutes ?? null,
+    classEndTimeMinutes: item.classEndTimeMinutes ?? null,
     descriptionRaw: item.descriptionRaw || null,
     description: item.description || null,
     website: item.website || null,
@@ -84,6 +116,8 @@ export async function GET(request) {
       normalizeEvent({ id: doc.id, ...doc.data() }, 'submission')
     );
 
+    const pendingSubmissions = submissions.filter((item) => item.status === 'pending');
+
     const milongas = milongaSnap.docs
       .map((doc) => ({ id: doc.id, ...doc.data() }))
       .filter((event) => event.isRecurrenceMaster !== false)
@@ -93,7 +127,7 @@ export async function GET(request) {
       .map((doc) => ({ id: doc.id, ...doc.data() }))
       .map((event) => normalizeEvent(event, 'festival'));
 
-    const allEvents = [...milongas, ...festivals, ...submissions];
+    const allEvents = [...milongas, ...festivals, ...pendingSubmissions];
     allEvents.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
     return NextResponse.json({ ok: true, events: allEvents });
@@ -128,6 +162,10 @@ export async function PATCH(request) {
       const data = doc.data();
       if (data?.submitter?.uid !== user.uid) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (action === 'delete') {
+        await docRef.delete();
+        return NextResponse.json({ ok: true });
       }
       if (data.status !== 'pending') {
         return NextResponse.json(
@@ -167,18 +205,53 @@ export async function PATCH(request) {
       if (action === 'update') Object.assign(updates, payload || {});
       updates.updatedAt = new Date().toISOString();
 
+      if (action === 'update' && shouldGeocode(payload)) {
+        const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        const addressParts = [
+          payload.address ?? event.address,
+          payload.city ?? event.city,
+          payload.stateRegion ?? event.stateRegion,
+          payload.country ?? event.country,
+        ].filter(Boolean);
+        const coords = await geocodeAddress(addressParts.join(', '), apiKey);
+        if (coords) {
+          updates.latitude = coords.lat;
+          updates.longitude = coords.lng;
+        }
+      }
+
+      if (action === 'update' && payload?.city) {
+        updates.citySlug = slugify(payload.city);
+      }
+
       if (event.recurrenceGroupId) {
         const groupSnap = await db
           .collection('external_events')
           .where('recurrenceGroupId', '==', event.recurrenceGroupId)
           .get();
         const batch = db.batch();
-        groupSnap.docs.forEach((docItem) => {
-          batch.set(docItem.ref, updates, { merge: true });
-        });
+        const groupUpdates =
+          action === 'update'
+            ? Object.fromEntries(
+                Object.entries(updates).filter(([key]) => !['date', 'recurrence'].includes(key))
+              )
+            : updates;
+        if (action === 'delete') {
+          groupSnap.docs.forEach((docItem) => {
+            batch.delete(docItem.ref);
+          });
+        } else {
+          groupSnap.docs.forEach((docItem) => {
+            batch.set(docItem.ref, groupUpdates, { merge: true });
+          });
+        }
         await batch.commit();
       } else {
-        await docRef.set(updates, { merge: true });
+        if (action === 'delete') {
+          await docRef.delete();
+        } else {
+          await docRef.set(updates, { merge: true });
+        }
       }
 
       return NextResponse.json({ ok: true });
@@ -199,7 +272,25 @@ export async function PATCH(request) {
       if (action === 'resume') updates.status = 'active';
       if (action === 'update') Object.assign(updates, payload || {});
       updates.updatedAt = new Date().toISOString();
-      await docRef.set(updates, { merge: true });
+
+      if (action === 'update' && shouldGeocode(payload)) {
+        const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        const addressParts = [
+          payload.city ?? event.city,
+          payload.country ?? event.country,
+        ].filter(Boolean);
+        const coords = await geocodeAddress(addressParts.join(', '), apiKey);
+        if (coords) {
+          updates.latitude = coords.lat;
+          updates.longitude = coords.lng;
+        }
+      }
+
+      if (action === 'delete') {
+        await docRef.delete();
+      } else {
+        await docRef.set(updates, { merge: true });
+      }
       return NextResponse.json({ ok: true });
     }
 

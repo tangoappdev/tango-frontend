@@ -9,21 +9,7 @@ import MapView from './MapView';
 import { useAuth } from '@/components/AuthProvider';
 import MilongaQuickEditModal from './MilongaQuickEditModal';
 
-const CITY_TIMEZONES = {
-  'new-york': 'America/New_York',
-  'buenos-aires': 'America/Argentina/Buenos_Aires',
-  'san-francisco': 'America/Los_Angeles',
-  berlin: 'Europe/Berlin',
-  'sao-paulo': 'America/Sao_Paulo',
-  athens: 'Europe/Athens',
-  turkiye: 'Europe/Istanbul',
-  england: 'Europe/London',
-  miami: 'America/New_York',
-  paris: 'Europe/Paris',
-  rome: 'Europe/Rome',
-  austin: 'America/Chicago',
-  barcelona: 'Europe/Madrid',
-};
+const DEFAULT_TIME_ZONE = 'UTC';
 
 function buildDateKeyFromParts(parts) {
   const year = parts.find((p) => p.type === 'year')?.value;
@@ -104,9 +90,9 @@ function buildDirectionsUrl(event) {
   return null;
 }
 
-export default function DayTabs({ groupedEvents, citySlug }) {
+export default function DayTabs({ groupedEvents, citySlug, timeZone: timeZoneProp }) {
   const { isAdmin } = useAuth();
-  const timeZone = CITY_TIMEZONES[citySlug] || 'UTC';
+  const timeZone = timeZoneProp || DEFAULT_TIME_ZONE;
   const [weekOffset, setWeekOffset] = useState(0);
   const [localGroupedEvents, setLocalGroupedEvents] = useState(groupedEvents);
   const [editingEvent, setEditingEvent] = useState(null);

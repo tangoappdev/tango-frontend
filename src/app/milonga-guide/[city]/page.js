@@ -1,44 +1,48 @@
+import { redirect, notFound } from 'next/navigation';
 import Header from '@/components/Header';
-import CityGuide from '../CityGuide';
-import CitySelect from '../CitySelect';
+import LocationSelect from '../LocationSelect';
+import CountryGuide from '../CountryGuide';
+import { getCities, getCountries, getCountryBySlug } from '../cities';
 
-const CITIES = [
-  { slug: 'new-york', label: 'New York' },
-  { slug: 'buenos-aires', label: 'Buenos Aires' },
-  { slug: 'san-francisco', label: 'San Francisco' },
-  { slug: 'berlin', label: 'Berlin' },
-  { slug: 'sao-paulo', label: 'Sao Paulo' },
-  { slug: 'athens', label: 'Athens' },
-  { slug: 'turkiye', label: 'Turkiye' },
-  { slug: 'england', label: 'England' },
-  { slug: 'miami', label: 'Miami' },
-  { slug: 'paris', label: 'Paris' },
-  { slug: 'rome', label: 'Rome' },
-  { slug: 'austin', label: 'Austin' },
-  { slug: 'barcelona', label: 'Barcelona' },
-];
+export const revalidate = 86400;
 
-const buildTitle = (cityLabel) => `Milonga Guide | ${cityLabel}`;
+export async function generateStaticParams() {
+  const countries = await getCountries();
+  return countries.map((c) => ({ city: c.slug }));
+}
 
 export async function generateMetadata({ params }) {
-  const { city } = await params;
-  const cityEntry = CITIES.find((item) => item.slug === city);
-  if (!cityEntry) {
+  const { city: segment } = await params;
+  const country = await getCountryBySlug(segment);
+  if (!country) {
     return {
-      title: 'Milonga Guide | Upcoming milongas & practicas',
-      description:
-        'Find upcoming tango milongas and practicas by city. Curated listings from trusted tango guides, updated daily.',
+      title: 'Milonga Guide | Tango Milongas & Practicas',
+      description: 'Find tango milongas and practicas worldwide.',
     };
   }
   return {
-    title: buildTitle(cityEntry.label),
-    description: `Upcoming milongas and practicas in ${cityEntry.label}, updated daily.`,
+    title: `Tango Milongas & Practicas in ${country.label} | Virtual Tango DJ`,
+    description: `Find upcoming tango milongas and practicas across ${country.label}. Curated listings updated daily.`,
   };
 }
 
-export default async function MilongaGuideCityPage({ params }) {
-  const { city } = await params;
-  const citySlug = CITIES.some((item) => item.slug === city) ? city : 'new-york';
+export default async function CountryPage({ params }) {
+  const { city: segment } = await params;
+  const [countries, cities] = await Promise.all([getCountries(), getCities()]);
+
+  // Check if this is a known country slug
+  const country = countries.find((c) => c.slug === segment);
+
+  if (!country) {
+    // Check if it's an old city slug → 301 redirect to new hierarchical URL
+    const cityEntry = cities.find((c) => c.slug === segment);
+    if (cityEntry?.countrySlug) {
+      redirect(`/milonga-guide/${cityEntry.countrySlug}/${cityEntry.slug}`);
+    }
+    notFound();
+  }
+
+  const citiesInCountry = cities.filter((c) => c.countrySlug === segment);
 
   return (
     <>
@@ -50,17 +54,36 @@ export default async function MilongaGuideCityPage({ params }) {
               Milonga Guide
             </p>
             <h1 className="mt-3 text-xl font-semibold sm:text-3xl">
-              Milongas & Practicas in {CITIES.find((item) => item.slug === citySlug)?.label || 'your city'}
+              Milongas & Practicas in {country.label}
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-gray-300">
               Curated listings from trusted tango guides. Events update daily and are grouped by date.
             </p>
             <div className="mt-5 sm:mt-6">
-              <CitySelect activeSlug={citySlug} cities={CITIES} />
+              <LocationSelect
+                countries={countries}
+                cities={cities}
+                activeCountrySlug={segment}
+                activeCitySlug={null}
+              />
             </div>
           </header>
 
-          <CityGuide citySlug={citySlug} />
+          {citiesInCountry.length > 0 && (
+            <div className="mb-6 flex flex-wrap gap-2">
+              {citiesInCountry.map((c) => (
+                <a
+                  key={c.slug}
+                  href={`/milonga-guide/${segment}/${c.slug}`}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-gray-300 hover:bg-white/10 transition-colors"
+                >
+                  {c.label}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <CountryGuide countrySlug={segment} />
         </div>
       </main>
     </>

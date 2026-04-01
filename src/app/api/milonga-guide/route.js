@@ -1,27 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getEventsByCity } from '@/app/milonga-guide/data';
-
-const VALID_CITIES = new Set([
-  'new-york',
-  'buenos-aires',
-  'san-francisco',
-  'berlin',
-  'sao-paulo',
-  'athens',
-  'turkiye',
-  'england',
-  'miami',
-  'paris',
-  'rome',
-  'austin',
-  'barcelona',
-]);
+import { getCities } from '@/app/milonga-guide/cities';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const city = searchParams.get('city') || 'new-york';
-  const citySlug = VALID_CITIES.has(city) ? city : 'new-york';
   try {
+    const cities = await getCities();
+    const citySlug = cities.some((item) => item.slug === city) ? city : 'new-york';
     const data = await getEventsByCity(citySlug);
     return NextResponse.json({ ok: true, citySlug, ...data });
   } catch (error) {

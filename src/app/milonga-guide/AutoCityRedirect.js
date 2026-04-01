@@ -2,21 +2,6 @@
 
 import { useEffect } from 'react';
 
-const CITY_COORDS = [
-  { slug: 'new-york', lat: 40.7128, lng: -74.006 },
-  { slug: 'buenos-aires', lat: -34.6037, lng: -58.3816 },
-  { slug: 'san-francisco', lat: 37.7749, lng: -122.4194 },
-  { slug: 'berlin', lat: 52.52, lng: 13.405 },
-  { slug: 'sao-paulo', lat: -23.5558, lng: -46.6396 },
-  { slug: 'athens', lat: 37.9838, lng: 23.7275 },
-  { slug: 'turkiye', lat: 41.0082, lng: 28.9784 },
-  { slug: 'england', lat: 51.5074, lng: -0.1278 },
-  { slug: 'miami', lat: 25.7617, lng: -80.1918 },
-  { slug: 'paris', lat: 48.8566, lng: 2.3522 },
-  { slug: 'rome', lat: 41.9028, lng: 12.4964 },
-  { slug: 'austin', lat: 30.2672, lng: -97.7431 },
-  { slug: 'barcelona', lat: 41.3851, lng: 2.1734 },
-];
 
 const toRad = (value) => (value * Math.PI) / 180;
 const distanceKm = (a, b) => {
@@ -30,10 +15,11 @@ const distanceKm = (a, b) => {
   return 2 * 6371 * Math.asin(Math.sqrt(hav));
 };
 
-const closestCity = (coords) => {
-  let best = CITY_COORDS[0];
+const closestCity = (coords, list) => {
+  if (!list?.length) return null;
+  let best = list[0];
   let bestDist = Number.POSITIVE_INFINITY;
-  CITY_COORDS.forEach((city) => {
+  list.forEach((city) => {
     const dist = distanceKm(coords, city);
     if (dist < bestDist) {
       bestDist = dist;
@@ -47,17 +33,37 @@ const AutoCityRedirect = ({ enabled = true }) => {
   useEffect(() => {
     if (!enabled) return;
 
-    const redirect = (coords) => {
-      const city = closestCity(coords);
+    const redirect = (coords, list) => {
+      const city = closestCity(coords, list);
       if (city?.slug) {
-        window.location.replace(`/milonga-guide/${city.slug}`);
+        window.location.replace(`/milonga-guide/${city.countrySlug}/${city.slug}`);
+      }
+    };
+
+    const resolveCityList = async () => {
+      try {
+        const res = await fetch('/api/milonga-guide/cities');
+        if (!res.ok) return [];
+        const data = await res.json();
+        const cities = (data?.cities || [])
+          .map((city) => ({
+            slug: city.slug,
+            countrySlug: city.countrySlug,
+            lat: city.lat,
+            lng: city.lng,
+          }))
+          .filter((city) => city.slug && city.countrySlug && typeof city.lat === 'number' && typeof city.lng === 'number');
+        return cities;
+      } catch (error) {
+        return [];
       }
     };
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          redirect({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        async (pos) => {
+          const list = await resolveCityList();
+          redirect({ lat: pos.coords.latitude, lng: pos.coords.longitude }, list);
         },
         async () => {
           try {
@@ -65,7 +71,8 @@ const AutoCityRedirect = ({ enabled = true }) => {
             if (!res.ok) return;
             const data = await res.json();
             if (data?.latitude && data?.longitude) {
-              redirect({ lat: data.latitude, lng: data.longitude });
+              const list = await resolveCityList();
+              redirect({ lat: data.latitude, lng: data.longitude }, list);
             }
           } catch (error) {
             // ignore

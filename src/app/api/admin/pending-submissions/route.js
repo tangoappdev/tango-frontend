@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import admin from 'firebase-admin';
 import { NextResponse } from 'next/server';
 import { getFirestore, getStorage } from '@/lib/firebaseAdmin.server';
 import { getUserFromRequest } from '@/lib/getUserFromRequest';
@@ -173,7 +174,54 @@ export async function GET(request) {
       .get();
 
     const submissions = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    return NextResponse.json({ ok: true, submissions });
+
+    const submitterUids = Array.from(
+      new Set(
+        submissions
+          .map((item) => item?.submitter?.uid)
+          .filter((uid) => typeof uid === 'string' && uid.length > 0)
+      )
+    );
+
+    const profilesByUid = {};
+    if (submitterUids.length) {
+      const chunks = [];
+      for (let i = 0; i < submitterUids.length; i += 10) {
+        chunks.push(submitterUids.slice(i, i + 10));
+      }
+      for (const chunk of chunks) {
+        const profileSnap = await db
+          .collection('users')
+          .where(admin.firestore.FieldPath.documentId(), 'in', chunk)
+          .get();
+        profileSnap.forEach((doc) => {
+          profilesByUid[doc.id] = doc.data();
+        });
+      }
+    }
+
+    const enriched = submissions.map((item) => {
+      const uid = item?.submitter?.uid;
+      const profile = uid ? profilesByUid[uid] || {} : {};
+      return {
+        ...item,
+        submitter: {
+          ...(item.submitter || {}),
+          name: profile.displayName || profile.name || null,
+          lastActivityLocation:
+            profile.lastActivityLocation && typeof profile.lastActivityLocation === 'object'
+              ? {
+                  city: profile.lastActivityLocation.city || null,
+                  region: profile.lastActivityLocation.region || null,
+                  country: profile.lastActivityLocation.country || null,
+                  countryCode: profile.lastActivityLocation.countryCode || null,
+                }
+              : null,
+        },
+      };
+    });
+
+    return NextResponse.json({ ok: true, submissions: enriched });
   } catch (error) {
     return NextResponse.json(
       { error: error?.message || 'Failed to load submissions' },
@@ -223,6 +271,7 @@ export async function POST(request) {
         payload.signedImageUrl && !payload.imageUrl
           ? await storeExternalImage(payload.signedImageUrl, 'milongas/imported')
           : payload.imageUrl || null;
+      const citySlug = payload.citySlug || slugify(payload.city);
 
       const recurrenceGroupId = payload.recurrence ? crypto.randomUUID() : null;
       const dates = payload.recurrence
@@ -239,11 +288,16 @@ export async function POST(request) {
           date,
           startTimeMinutes: payload.startTimeMinutes ?? null,
           endTimeMinutes: payload.endTimeMinutes ?? null,
+          classBefore: payload.classBefore ?? false,
+          classStartTimeMinutes: payload.classStartTimeMinutes ?? null,
+          classEndTimeMinutes: payload.classEndTimeMinutes ?? null,
           eventType: payload.eventType || 'milonga',
           venue: payload.venue || null,
           address: payload.address || null,
           city: payload.city || null,
-          citySlug: payload.citySlug || slugify(payload.city),
+          stateRegion: payload.stateRegion || null,
+          country: payload.country || null,
+          citySlug,
           imageUrl,
           descriptionRaw: payload.descriptionRaw || null,
           latitude: coords?.lat ?? null,
@@ -257,6 +311,21 @@ export async function POST(request) {
         })
       );
       await Promise.all(writes);
+
+      if (citySlug && payload.city) {
+        await db
+          .collection('cities')
+          .doc(citySlug)
+          .set(
+            {
+              slug: citySlug,
+              label: payload.city,
+              lat: coords?.lat ?? null,
+              lng: coords?.lng ?? null,
+            },
+            { merge: true }
+          );
+      }
     } else {
       const fullAddress = [payload.city, payload.country].filter(Boolean).join(', ');
       const coords = await geocodeAddress(fullAddress, apiKey);

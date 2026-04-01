@@ -1,22 +1,9 @@
 import { getFirestore } from '@/lib/firebaseAdmin.server';
+import { getCityBySlug } from './cities';
 
 const DAYS_AHEAD = 28;
 const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const CITY_TIMEZONES = {
-  'new-york': 'America/New_York',
-  'buenos-aires': 'America/Argentina/Buenos_Aires',
-  'san-francisco': 'America/Los_Angeles',
-  berlin: 'Europe/Berlin',
-  'sao-paulo': 'America/Sao_Paulo',
-  athens: 'Europe/Athens',
-  turkiye: 'Europe/Istanbul',
-  england: 'Europe/London',
-  miami: 'America/New_York',
-  paris: 'Europe/Paris',
-  rome: 'Europe/Rome',
-  austin: 'America/Chicago',
-  barcelona: 'Europe/Madrid',
-};
+const DEFAULT_TIME_ZONE = 'UTC';
 
 function buildDateKeyFromParts(parts) {
   const year = parts.find((p) => p.type === 'year')?.value;
@@ -77,7 +64,8 @@ function parseTimeRange(text) {
 
 export async function getEventsByCity(citySlug) {
   const db = getFirestore();
-  const timeZone = CITY_TIMEZONES[citySlug] || 'UTC';
+  const city = await getCityBySlug(citySlug);
+  const timeZone = city?.timeZone || DEFAULT_TIME_ZONE;
   const now = new Date();
   const todayKey = getDateKeyInTimeZone(now, timeZone);
   const base = todayKey ? new Date(`${todayKey}T12:00:00Z`) : now;
@@ -190,5 +178,59 @@ export async function getEventsByCity(citySlug) {
   return {
     groupedEvents: Array.from(grouped.entries()),
     recurringEvents: mergedRecurring,
+    timeZone,
   };
+}
+
+export async function getEventsByCountry(countrySlug) {
+  const db = getFirestore();
+  const citiesSnapshot = await db
+    .collection('cities')
+    .where('countrySlug', '==', countrySlug)
+    .get();
+
+  let citySlugs = citiesSnapshot.docs.map((doc) => doc.id);
+
+  // Fall back to BASE_CITIES if Firestore has no country data yet
+  if (!citySlugs.length) {
+    const { BASE_CITIES } = await import('./cities');
+    citySlugs = BASE_CITIES.filter((c) => c.countrySlug === countrySlug).map((c) => c.slug);
+  }
+
+  if (!citySlugs.length) return { groupedEvents: [], recurringEvents: [] };
+
+  // Fetch events for all cities in parallel
+  const results = await Promise.all(citySlugs.map((slug) => getEventsByCity(slug)));
+
+  // Merge grouped events across all cities
+  const mergedMap = new Map();
+  results.forEach(({ groupedEvents }) => {
+    groupedEvents.forEach(([date, events]) => {
+      if (!mergedMap.has(date)) mergedMap.set(date, []);
+      mergedMap.get(date).push(...events);
+    });
+  });
+
+  mergedMap.forEach((events) => {
+    events.sort((a, b) => (a.startTimeMinutes ?? 9999) - (b.startTimeMinutes ?? 9999));
+  });
+
+  const groupedEvents = Array.from(mergedMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+
+  // Merge recurring events, deduplicate by id
+  const recurringMap = new Map();
+  results.forEach(({ recurringEvents }) => {
+    recurringEvents.forEach((event) => {
+      if (!recurringMap.has(event.id)) recurringMap.set(event.id, event);
+    });
+  });
+
+  const recurringEvents = Array.from(recurringMap.values()).sort((a, b) => {
+    const aIdx = DAY_ORDER.indexOf(a.dayOfWeek || '');
+    const bIdx = DAY_ORDER.indexOf(b.dayOfWeek || '');
+    if (aIdx !== bIdx) return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+    return (a.title || '').localeCompare(b.title || '');
+  });
+
+  return { groupedEvents, recurringEvents };
 }

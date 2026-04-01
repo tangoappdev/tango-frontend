@@ -4,7 +4,7 @@ import { buildEventSchema } from './schema';
 import { getEventsByCity } from './data';
 
 export default async function CityGuide({ citySlug }) {
-  const { groupedEvents, recurringEvents } = await getEventsByCity(citySlug);
+  const { groupedEvents, recurringEvents, timeZone } = await getEventsByCity(citySlug);
   const schema = buildEventSchema({ citySlug, groupedEvents });
 
   return (
@@ -18,7 +18,7 @@ export default async function CityGuide({ citySlug }) {
           No upcoming events found yet. Please check back soon.
         </div>
       ) : (
-        <DayTabs groupedEvents={groupedEvents} citySlug={citySlug} />
+        <DayTabs groupedEvents={groupedEvents} citySlug={citySlug} timeZone={timeZone} />
       )}
 
       <RecurringEvents events={recurringEvents} />

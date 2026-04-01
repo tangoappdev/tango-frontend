@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import { getFirestore } from '@/lib/firebaseAdmin.server';
+import { geocodeSourceEvents } from '@/lib/geocodeSourceEvents';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -267,10 +268,13 @@ export async function POST(request) {
         { merge: true }
       );
 
+    const { geocoded } = await geocodeSourceEvents(db, SOURCE_ID);
+
     return NextResponse.json({
       ok: true,
       eventsParsed: events.length,
       eventsWritten,
+      geocoded,
     });
   } catch (error) {
     await db

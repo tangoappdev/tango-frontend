@@ -9,6 +9,11 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+        pathname: '/v0/b/tangoapp-8bd65-storage/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
         pathname: '/**',
       },

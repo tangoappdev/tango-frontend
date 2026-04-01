@@ -91,45 +91,81 @@ export default function PendingFestivalsPage() {
                   : payload.startDate || payload.dateText || 'Date TBD';
               return (
                 <div key={item.id} className="rounded-2xl border border-white/10 bg-[#2a2d33] p-5">
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-gray-200">
-                      {dateLabel}
-                    </span>
-                  </div>
-                  <h2 className="mt-3 text-lg font-semibold">{payload.title || 'Untitled'}</h2>
-                  {location && (
-                    <p className="mt-1 text-sm text-gray-300">{location}</p>
-                  )}
-                  {payload.description && (
-                    <p className="mt-3 text-sm text-gray-300 whitespace-pre-line">
-                      {payload.description}
-                    </p>
-                  )}
-                  {payload.website && (
-                    <a
-                      href={payload.website}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-3 inline-flex text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
-                    >
-                      Visit website
-                    </a>
-                  )}
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <button
-                      onClick={() => handleAction(item.id, 'approve')}
-                      disabled={workingId === item.id}
-                      className="rounded-full bg-[#25edda] px-4 py-2 text-xs font-semibold text-[#1f232b] disabled:opacity-60"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleAction(item.id, 'deny')}
-                      disabled={workingId === item.id}
-                      className="rounded-full border border-rose-400/60 px-4 py-2 text-xs font-semibold text-rose-200 disabled:opacity-60"
-                    >
-                      Deny
-                    </button>
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <div className="h-20 w-20 overflow-hidden rounded-2xl bg-[#30333a]">
+                      {payload.imageUrl ? (
+                        <img
+                          src={payload.imageUrl}
+                          alt={payload.title || 'Festival'}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-500">
+                          No image
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                        <span className="rounded-full bg-white/10 px-3 py-1 text-gray-200">
+                          {dateLabel}
+                        </span>
+                      </div>
+                      <h2 className="mt-3 text-lg font-semibold">{payload.title || 'Untitled'}</h2>
+                      {location && (
+                        <p className="mt-1 text-sm text-gray-300">{location}</p>
+                      )}
+                                            {(item.submitter?.name || item.submitter?.displayName) && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          Submitted by {item.submitter?.name || item.submitter?.displayName}
+                        </p>
+                      )}
+                      {item.submitter?.email && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          Submitted by {item.submitter.email}
+                        </p>
+                      )}
+                      {item.submitter?.lastActivityLocation && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Last location: {[
+                            item.submitter.lastActivityLocation.city,
+                            item.submitter.lastActivityLocation.region,
+                            item.submitter.lastActivityLocation.country,
+                          ].filter(Boolean).join(', ')}
+                        </p>
+                      )}
+{payload.description && (
+                        <p className="mt-3 text-sm text-gray-300 whitespace-pre-line">
+                          {payload.description}
+                        </p>
+                      )}
+                      {payload.website && (
+                        <a
+                          href={payload.website}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex text-xs font-semibold text-[#25edda] hover:text-[#23d9c8]"
+                        >
+                          Visit website
+                        </a>
+                      )}
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <button
+                          onClick={() => handleAction(item.id, 'approve')}
+                          disabled={workingId === item.id}
+                          className="rounded-full bg-[#25edda] px-4 py-2 text-xs font-semibold text-[#1f232b] disabled:opacity-60"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleAction(item.id, 'deny')}
+                          disabled={workingId === item.id}
+                          className="rounded-full border border-rose-400/60 px-4 py-2 text-xs font-semibold text-rose-200 disabled:opacity-60"
+                        >
+                          Deny
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
