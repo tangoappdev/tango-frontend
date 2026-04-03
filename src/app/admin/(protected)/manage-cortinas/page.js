@@ -455,16 +455,57 @@ export default function ManageCortinasPage() {
   };
   
   useEffect(() => {
-    if (currentlyPlaying && audioRef.current) {
-      const startTime = currentlyPlaying.startTime || 0;
-      audioRef.current.src = currentlyPlaying.playableUrl;
-      audioRef.current.currentTime = startTime;
-      audioRef.current.ontimeupdate = () => {
-        if (currentlyPlaying.endTime && audioRef.current.currentTime >= currentlyPlaying.endTime) audioRef.current.pause();
-      };
-      audioRef.current.play().catch(e => console.error("Audio play failed:", e));
-    }
-  }, [currentlyPlaying]);
+    if (!currentlyPlaying || !audioRef.current) return;
+
+    const audio = audioRef.current;
+    const startTime = currentlyPlaying.startTime || 0;
+    const endTime = currentlyPlaying.endTime ?? null;
+    const fadeIn = fadeSettings.fadeInSeconds || 0;
+    const fadeOut = fadeSettings.fadeOutSeconds || 0;
+
+    audio.src = currentlyPlaying.playableUrl;
+    audio.currentTime = startTime;
+    audio.volume = fadeIn > 0 ? 0 : 1;
+
+    let rafId = null;
+    let fadeOutStarted = false;
+
+    const tick = () => {
+      const now = audio.currentTime;
+      const elapsed = now - startTime;
+
+      if (fadeIn > 0 && elapsed < fadeIn) {
+        audio.volume = Math.min(elapsed / fadeIn, 1);
+      } else if (!fadeOutStarted) {
+        audio.volume = 1;
+      }
+
+      if (endTime !== null && fadeOut > 0) {
+        const fadeOutStart = endTime - fadeOut;
+        if (now >= fadeOutStart) {
+          fadeOutStarted = true;
+          const remaining = Math.max(endTime - now, 0);
+          audio.volume = remaining / fadeOut;
+        }
+      }
+
+      if (endTime !== null && now >= endTime) {
+        audio.pause();
+        audio.volume = 1;
+        return;
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    audio.play()
+      .then(() => { rafId = requestAnimationFrame(tick); })
+      .catch(e => console.error("Audio play failed:", e));
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [currentlyPlaying, fadeSettings]);
 
   // --- NEW FUNCTION to handle updates ---
   const handleUpdateCortina = async (cortinaId, updatedData) => {

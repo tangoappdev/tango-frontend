@@ -163,6 +163,7 @@ function buildEventId(payload) {
 function splitLinesFromHtml(html) {
   if (!html) return [];
   let normalized = html;
+  normalized = normalized.replace(/<!--[\s\S]*?-->/g, '');
   normalized = normalized.replace(/<br\s*\/?>/gi, '\n');
   normalized = normalized.replace(/<\/p>|<\/div>|<\/li>|<\/tr>|<\/h\d>|<\/table>|<\/ul>|<\/ol>/gi, '\n');
   normalized = normalized.replace(/<p[^>]*>|<div[^>]*>|<li[^>]*>|<tr[^>]*>|<td[^>]*>|<h\d[^>]*>|<table[^>]*>|<ul[^>]*>|<ol[^>]*>/gi, '');
@@ -206,6 +207,11 @@ function parseEventLine(text) {
   } else {
     title = cleaned.split(';')[0].trim();
   }
+
+  // Strip leading time range from title (e.g. "8:30-10p Noches de Tango" → "Noches de Tango")
+  title = title
+    .replace(/^\d{1,2}(?::\d{2})?\s*(?:a|p|am|pm)?\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:a|p|am|pm)?\s*/i, '')
+    .trim();
 
   if (venue) venue = venue.replace(/^[\s:;,.]+|[\s;,.]+$/g, '').trim();
   if (address) address = address.replace(/^[\s:;,.]+|[\s;,.]+$/g, '').trim();
@@ -435,7 +441,7 @@ export async function POST(request) {
         continue;
       }
 
-      if (/^Practicas?:/i.test(lineText)) {
+      if (/^Pr[aá]cticas?:?$/i.test(lineText)) {
         currentType = 'practica';
         lastEvent = null;
         continue;
